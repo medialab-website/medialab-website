@@ -2,3 +2,6 @@ node_modules/
 .netlify/
 .env
 .DS_Store
+._*
+site_files.json
+out.txt
