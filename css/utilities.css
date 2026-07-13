@@ -1,0 +1,31 @@
+/* Utility Classes */
+
+.text-center { text-align: center; }
+.text-gold { color: var(--accent-gold); }
+.text-white { color: var(--text-primary); }
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 2rem; }
+.mt-4 { margin-top: 3rem; }
+.mt-5 { margin-top: 5rem; }
+
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 2rem; }
+.mb-4 { margin-bottom: 3rem; }
+.mb-5 { margin-bottom: 5rem; }
+
+.bg-black { background-color: var(--bg-primary); }
+.bg-charcoal { background-color: var(--bg-secondary); }
+.bg-light { background-color: var(--bg-light); color: var(--text-dark); }
+.bg-light h1, .bg-light h2, .bg-light h3 { color: var(--text-dark); }
+
+/* Form Container Utility */
+.form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: var(--bg-light);
+  padding: 2rem;
+  border-radius: 8px;
+}

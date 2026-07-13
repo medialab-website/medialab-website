@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Professional real estate photography, video, and floor plans in the Tri-Cities.">
+  <title>Realtor Media Solutions | Tri-Cities MediaLab</title>
+  
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/utilities.css">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Raleway:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    .package-card {
+      background-color: var(--bg-primary); 
+      border: none;
+      padding: 0;
+      text-align: center;
+      transition: transform 0.3s ease;
+      overflow: hidden;
+    }
+    .package-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+      margin-bottom: 1.5rem;
+    }
+    .package-card .content {
+      padding: 0 1.5rem 2rem 1.5rem;
+    }
+    .package-card h3 {
+      color: var(--accent-gold);
+      margin-bottom: 0.2rem;
+      border: none;
+      padding-bottom: 0;
+    }
+    .package-card .price {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: 0.5rem 0 1rem 0;
+      color: var(--text-primary);
+    }
+    .package-card ul {
+      list-style: none;
+      margin-bottom: 0;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .package-card ul li {
+      margin-bottom: 0.4rem;
+    }
+    
+    .addon-section {
+      text-align: left;
+      margin-bottom: 3rem;
+      background-color: var(--bg-primary);
+      padding: 2rem;
+      border: 1px solid var(--accent-gold);
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    @media (min-width: 768px) {
+      .addon-section {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+    }
+    .addon-icon-container {
+      flex: 0 0 150px;
+      background-color: var(--accent-gold);
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .addon-icon-container svg {
+      width: 80px;
+      height: 80px;
+      fill: var(--bg-primary);
+    }
+    .addon-content {
+      flex: 1;
+    }
+    .addon-content h3 {
+      color: var(--accent-gold);
+      border: none;
+      padding: 0;
+      font-size: 1.5rem;
+    }
+    .addon-list {
+      color: var(--text-primary);
+      font-weight: bold;
+    }
+    .addon-list li {
+      margin-bottom: 0.5rem;
+    }
+    .addon-list .price-tag {
+      color: var(--accent-gold);
+    }
+
+    /* Floor Plan specific styling */
+    .fp-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid #444;
+      padding: 2rem;
+      height: 100%;
+    }
+    .fp-card h4 {
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--accent-gold);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+  <link rel="icon" type="image/png" href="assets/logos/brandicon.png">
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <header class="nav-header">
+    <div class="nav-logo">
+      <a href="index.html">
+        <img src="assets/logos/polishedlogo.jpg" alt="" style="height: 40px; display: block;">
+      </a>
+    </div>
+    <div class="hamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="real-estate.html" class="active">Realtor Media Solutions</a>
+      <a href="weddings.html">Weddings</a>
+      <a href="creative.html">Creative & Commercial</a>
+
+    </nav>
+  </header>
+
+  <!-- 1. TOP ACTIONS & 2. HEADER/POSITIONING -->
+  <div style="margin-top: var(--header-height); background-color: var(--bg-primary); text-align: center; border-bottom: 2px solid var(--accent-gold);">
+    
+    <div style="padding: 2rem 1rem; display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem;">
+      <a href="https://listings.medialab.fyi" class="btn btn-secondary" style="background: transparent; border-color: #fff; color: #fff;">Login Portal</a>
+      <a href="#order-form" class="btn btn-primary">Order Form</a>
+    </div>
+
+    <div class="trust-banner" style="background: #111; color: var(--text-primary); letter-spacing: 2px; font-weight: bold; text-transform: uppercase;">
+      Enhance Your Online Presence | Simplify Your Workflow | Sell Properties Faster
+    </div>
+
+    <div class="trust-banner" style="background: var(--accent-gold); color: #000; font-size: 1rem; font-weight: bold; padding: 1.5rem;">
+      All-encompassing marketing packages for realtors in Southwest Virginia and Northeast Tennessee
+    </div>
+  </div>
+
+  <!-- 3. PACKAGE SECTION -->
+  <section class="bg-charcoal pt-5 pb-5">
+    <div class="container text-center">
+      <h2 class="font-serif text-transform-none mb-5" style="font-size: 2.2rem; color: #fff;">Start by selecting your standard package...</h2>
+      
+      <div class="feature-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-bottom: 2rem;">
+        <!-- Small Home -->
+        <div class="card package-card">
+          <img src="assets/Small_Home_Package.jpg" alt="Small Home Package">
+          <div class="content">
+            <h3>Small Home Package</h3>
+            <p class="text-white" style="font-size: 0.8rem;">(Under 1200 sq ft)</p>
+            <div class="price">| $135 |</div>
+            <ul>
+               <li>Up to 25 Listing Photos</li>
+               <li>1 Aerial Photo</li>
+               <li>2D Floor Plan</li>
+               <li>Shareable Listing Webpage</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Medium Home -->
+        <div class="card package-card">
+          <img src="assets/Medium_Home_Package.PNG" alt="Medium Home Package">
+          <div class="content">
+            <h3>Medium Home Package</h3>
+            <p class="text-white" style="font-size: 0.8rem;">(1200-2400 sq ft)</p>
+             <div class="price">| $175 |</div>
+            <ul>
+               <li>Up to 40 Listing Photos</li>
+               <li>2 Aerial Photos</li>
+               <li>2D Floor Plan</li>
+               <li>Shareable Listing Webpage</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Large Home -->
+        <div class="card package-card">
+          <img src="assets/Large_Home_Package.jpg" alt="Large Home Package">
+          <div class="content">
+            <h3>Large Home Package</h3>
+            <p class="text-white" style="font-size: 0.8rem;">(2400-3500 sq ft)</p>
+             <div class="price">| $230 |</div>
+            <ul>
+               <li>Up to 55 Listing Photos</li>
+               <li>3 Aerial Photos</li>
+               <li>2D Floor Plan</li>
+               <li>Shareable Listing Webpage</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Bottom Row: Luxury, Prestigious, & Land -->
+      <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+        <!-- Luxury Home -->
+        <div class="card package-card" style="flex: 1; min-width: 300px; max-width: 400px;">
+          <img src="assets/Luxury_Home_Package.jpg" alt="Luxury Home Package" onerror="this.src='assets/Small_Home_Package.jpg';">
+          <div class="content">
+            <h3>Luxury Home Package</h3>
+            <p class="text-white" style="font-size: 0.8rem;">(3500-4500 sq ft)</p>
+             <div class="price">| $290 |</div>
+            <ul>
+               <li>Up to 70 Listing Photos</li>
+               <li>5 Aerial Photos</li>
+               <li>2D Floor Plan</li>
+               <li>Shareable Listing Webpage</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Prestigious Estate Package -->
+        <div class="card package-card" style="flex: 1; min-width: 300px; max-width: 400px;">
+          <img src="assets/Prestigious_Home_Package.jpg" alt="Prestigious Estate Package" onerror="this.src='assets/Small_Home_Package.jpg';">
+          <div class="content">
+            <h3>Prestigious Estate Package</h3>
+            <p class="text-white" style="font-size: 0.8rem;">(Over 4500 sq ft)</p>
+             <div class="price">| $345 |</div>
+            <ul>
+               <li>Up to 95 Listing Photos</li>
+               <li>5 Aerial Photos</li>
+               <li>2D Floor Plan</li>
+               <li>Shareable Listing Webpage</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Land Package Centered -->
+        <div class="card package-card" style="flex: 1; min-width: 300px; max-width: 400px;">
+          <img src="assets/Land_Package.PNG" alt="Land Package">
+          <div class="content">
+            <h3>Land Package</h3>
+             <div class="price">| $160 |</div>
+            <ul style="margin-top: 1.5rem;">
+               <li>4 Aerial Photos</li>
+               <li>1 With Property Boundary Lines</li>
+               <li>Shareable Listing Webpage</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. MAIN ADD-ONS SECTION -->
+  <section class="container mt-5 mb-5">
+    <div class="text-center mb-5">
+      <h2 class="font-serif text-transform-none" style="font-size: 2.2rem;">Then, choose your Add-Ons...</h2>
+    </div>
+
+    <!-- Photo Add-Ons -->
+    <div class="addon-section">
+      <div class="addon-icon-container">
+        <!-- Image Icon -->
+        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+      </div>
+      <div class="addon-content">
+        <h3>Photo Add-Ons</h3>
+        <p class="text-secondary mb-3" style="font-size: 0.9rem;">To ensure you are getting exactly what you need, there are a lot of options. You can add more photos, virtual twilight, and virtual staging.</p>
+        <ul class="addon-list" style="list-style: none; padding: 0;">
+          <li>Add'l Aerial/Exterior Photos - <span class="price-tag">[ $15 each ]</span></li>
+          <li>Virtual Twilight Photos - <span class="price-tag">[ $15 each ]</span></li>
+          <li>Virtual Staging - <span class="price-tag">[ $25 per photo ]</span></li>
+          <li>Property Boundary Lines - <span class="price-tag">[ $10 per photo ]</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Video Add-Ons -->
+    <div class="addon-section">
+      <div class="addon-icon-container">
+        <!-- Video Icon -->
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div class="addon-content">
+        <h3>Video Add-Ons</h3>
+        <p class="text-secondary mb-3" style="font-size: 0.9rem;">All videos are delivered via a branded link or can be directly downloaded to be hosted where needed.</p>
+        
+        <ul class="addon-list" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+          <li>AI Photo-to-Video Walkthrough (15 Photos) - <span class="price-tag">[ $40 ]</span></li>
+          <li>AI Photo-to-Video Walkthrough (25 Photos) - <span class="price-tag">[ $60 ]</span></li>
+          <li style="margin-top: 1rem;"><span class="text-gold" style="font-weight: normal; font-size: 1.1rem;">Cinematic Showcase Video</span> (&lt; 2800 sq ft) - <span class="price-tag">[ $220 ]</span></li>
+          <li><span class="text-gold" style="font-weight: normal; font-size: 1.1rem;">Cinematic Showcase Video</span> (2800 - 4000 sq ft) - <span class="price-tag">[ $265 ]</span></li>
+          <li><span class="text-gold" style="font-weight: normal; font-size: 1.1rem;">Cinematic Showcase Video</span> (&gt; 4000 sq ft) - <span class="price-tag">[ $295 ]</span></li>
+          <li style="margin-top: 1rem;">Aerial-only Video - <span class="price-tag">[ $175 ]</span></li>
+          <li>Add an Agent Intro to any video - <span class="price-tag">[ $50 ]</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Virtual Tours -->
+    <div class="addon-section mb-0">
+      <div class="addon-icon-container">
+        <!-- 360 icon -->
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+      </div>
+      <div class="addon-content">
+        <h3>Virtual Tours</h3>
+        <p class="text-secondary mb-3" style="font-size: 0.9rem;">Offer an immersive 3D walkthrough experience of the property using Matterport or Zillow 3D.</p>
+        <ul class="addon-list" style="list-style: none; padding: 0; display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+          <li>Matterport (Under 2.5k Sq Ft) - <span class="price-tag">[ $120 ]</span></li>
+          <li>Matterport (2k - 4k Sq Ft) - <span class="price-tag">[ $140 ]</span></li>
+          <li>Matterport (4k - 6k Sq Ft) - <span class="price-tag">[ $220 ]</span></li>
+          <li>Matterport (6k - 7k Sq Ft) - <span class="price-tag">[ $265 ]</span></li>
+          <li class="mt-2">Zillow 3D Home Tour (Under 3k Sq Ft) - <span class="price-tag">[ $50 ]</span></li>
+          <li class="mt-2">Zillow 3D Home Tour (Over 3k Sq Ft) - <span class="price-tag">[ $75 ]</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. FLOOR PLAN / CUBICASA SECTION -->
+  <section class="bg-charcoal pt-5 pb-5">
+    <div class="container text-center">
+      <h2 class="font-serif text-transform-none mb-3 text-gold" style="font-size: 2.2rem;">Floor Plan / CubiCasa Upgrades</h2>
+      <p class="text-white mb-5" style="font-style: italic; font-size: 1.1rem; max-width: 800px; margin: 0 auto;">
+        Most listings work perfectly with the included floor plan. Upgrades are available for properties that need a more detailed presentation.
+      </p>
+
+      <div class="feature-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); text-align: left;">
+        
+        <!-- Included 2D -->
+        <div class="fp-card">
+          <h4>Included 2D Floor Plan</h4>
+          <ul class="addon-list" style="font-weight: normal; list-style-type: disc; padding-left: 1.5rem;">
+            <li>Total area calculations</li>
+            <li>MLS-ready formats</li>
+          </ul>
+        </div>
+        
+        <!-- Enhanced Upgrade -->
+        <div class="fp-card">
+          <h4>Enhanced Floor Plan Upgrade</h4>
+          <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1rem;">Optional Add-Ons:</p>
+          <ul class="addon-list" style="list-style: none; padding: 0;">
+            <li>GLA Report - <span class="price-tag">[ +$15 ]</span></li>
+            <li>CAD Files - <span class="price-tag">[ +$30 ]</span></li>
+          </ul>
+        </div>
+
+        <!-- 3D Upgrade -->
+        <div class="fp-card">
+          <h4>3D Floor Plan Upgrade</h4>
+          <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1rem;">Optional Add-Ons:</p>
+          <ul class="addon-list" style="list-style: none; padding: 0;">
+            <li>GLA Report - <span class="price-tag">[ +$15 ]</span></li>
+            <li>CAD Files - <span class="price-tag">[ +$30 ]</span></li>
+            <li>3D Video - <span class="price-tag">[ +$65 ]</span></li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. SUPPORTING PROOF / PORTFOLIO LINK -->
+  <section class="container mt-5 mb-5 text-center">
+    <h2 class="font-serif text-gold text-transform-none mb-3">See Our Work in Action</h2>
+    <p class="text-secondary mb-4">View a curated selection of recent property shoots, cinematic tours, and completed floor plans.</p>
+    <a href="portfolio/real-estate.html" class="btn btn-secondary" style="font-size: 1.1rem; padding: 1rem 2rem;">View Real Estate Portfolio &rarr;</a>
+  </section>
+
+  <!-- 7. ORDER SECTION (ARYEO) -->
+  <section id="order-form" class="bg-charcoal pt-5 pb-5">
+    <div class="container">
+      <div class="form-container" style="background: var(--bg-primary); border: 1px solid var(--accent-gold); max-width: 900px; margin: 0 auto;">
+        <h2 class="text-center mb-2 font-serif text-transform-none" style="color: var(--text-primary);">Order Form</h2>
+        <p class="text-center text-secondary mb-4">Please use the Aryeo embed form below to quickly build your package and book your next shoot.</p>
+        
+        <div data-embed-url="https://listings.medialab.fyi/order-forms/24859664-6b05-4d85-8d05-96221870377c"><script src="https://listings.medialab.fyi/embeds/medialab"></script></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>&copy; 2026 Tri-Cities MediaLab. All rights reserved.</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

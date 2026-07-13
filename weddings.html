@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cinematic wedding films by Tri-Cities MediaLab.">
+  <title>Weddings | Tri-Cities MediaLab</title>
+  
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/utilities.css">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Raleway:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    .pricing-split {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    @media (min-width: 768px) {
+      .pricing-split {
+        flex-direction: row;
+        align-items: stretch;
+      }
+    }
+    .pricing-card {
+      flex: 1;
+      background-color: var(--bg-primary);
+      border: 1px solid #333;
+      padding: 3rem 2rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .bundle-card {
+      border: 2px solid var(--accent-gold);
+      position: relative;
+    }
+    .bundle-badge {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--accent-gold);
+      color: var(--bg-primary);
+      padding: 0.5rem 1.5rem;
+      font-family: var(--font-sans);
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.85rem;
+    }
+    .feature-list {
+      list-style: none;
+      margin: 2rem 0;
+      color: var(--text-primary);
+    }
+    .feature-list li {
+      margin-bottom: 0.8rem;
+      font-size: 1.05rem;
+    }
+    .price-display {
+      font-size: 2.5rem;
+      color: var(--text-primary);
+      font-weight: bold;
+      margin: 1rem 0;
+    }
+    .price-display span {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      font-weight: normal;
+    }
+    .gold-highlight {
+      color: var(--accent-gold);
+    }
+  </style>
+  <link rel="icon" type="image/png" href="assets/logos/brandicon.png">
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <header class="nav-header">
+    <div class="nav-logo">
+      <a href="index.html">
+        <img src="assets/logos/polishedlogo.jpg" alt="" style="height: 40px; display: block;">
+      </a>
+    </div>
+    <div class="hamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="real-estate.html">Realtor Media Solutions</a>
+      <a href="weddings.html" class="active">Weddings</a>
+      <a href="creative.html">Creative & Commercial</a>
+
+    </nav>
+  </header>
+
+  <!-- 1. HERO & POSITIONING -->
+  <section class="hero-section" style="height: 65vh; background-image: url('assets/WEDDING_HERO.jpg');">
+    <div class="hero-content">
+      <h1 class="font-serif">Wedding Films</h1>
+      <p style="font-size: 1.2rem; margin-top: 1rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+        Beautiful, timeless documentation of your big day.
+      </p>
+      <div class="hero-buttons mt-3">
+        <a href="https://weddings.medialab.fyi" class="btn btn-secondary" target="_blank" style="background: transparent; border-color: #fff; color: #fff;">Client Login</a>
+        <a href="#inquiry" class="btn btn-primary">Book a Consultation</a>
+        <a href="#pricing" class="btn btn-secondary">View Film & Bundle Options &rarr;</a>
+      </div>
+    </div>
+  </section>
+  
+  <div class="trust-banner" style="background: rgba(0,0,0,0.9); border-bottom: 1px solid #333; color: white;">
+    <span class="text-gold">Accepting a severely limited number of bookings each year to ensure uncompromising quality.</span>
+  </div>
+
+  <!-- 2. BUNDLE / OFFER SECTION -->
+  <section id="pricing" class="bg-charcoal pt-5 pb-5">
+    <div class="container text-center mt-4">
+      <h2 class="text-gold font-serif mb-3 text-transform-none" style="font-size: 2.5rem;">Your Investment</h2>
+      <p class="text-primary mb-5" style="font-weight: 400; font-size: 1.1rem; max-width: 800px; margin: 0 auto;">
+        We focus solely on high-end, emotional storytelling rather than cookie-cutter packages. Choose our dedicated cinematography, or take advantage of our exclusive, highly-sought-after collaboration.
+      </p>
+      
+      <div class="pricing-split">
+        
+        <!-- Film Only Path -->
+        <div class="pricing-card">
+          <div>
+            <h3 class="font-serif text-transform-none" style="font-size: 1.8rem;">Cinematic Wedding Film</h3>
+            <p class="text-secondary mt-2">Dedicated videography coverage focused purely on capturing the motion and emotion of your day.</p>
+            
+            <div class="price-display">
+              $2,950 <span>base rate</span>
+            </div>
+            
+            <ul class="feature-list">
+              <li>Full Day Coverage</li>
+              <li>Multi-Camera Setup</li>
+              <li>Professional Audio Capture</li>
+              <li>Drone Footage <span style="font-size: 0.85rem; color:#888;">(Weather Permitting)</span></li>
+              <li>5-8 Minute Highlight Film</li>
+            </ul>
+          </div>
+          <a href="#inquiry" class="btn btn-secondary mt-3">Inquire for Film Only</a>
+        </div>
+
+        <!-- Bundle Path -->
+        <div class="pricing-card bundle-card">
+          <div class="bundle-badge">Most Popular Choice</div>
+          <div>
+            <h3 class="font-serif text-gold text-transform-none" style="font-size: 1.8rem;">The Complete Experience</h3>
+            <p class="text-secondary mt-2">Book Photo + Video together through our collaboration with <strong class="text-white">Elena Gera / Focus On the Moment</strong> and save over $900.</p>
+            
+            <div class="price-display gold-highlight">
+              Save over $900
+            </div>
+            
+            <ul class="feature-list">
+              <li>Everything in the Cinematic Film</li>
+              <li>+ Lead Photographer (Elena Gera)</li>
+              <li>+ Comprehensive Digital Gallery</li>
+              <li>+ Seamless Team Coordination</li>
+              <li>+ Priority Booking Priority</li>
+            </ul>
+          </div>
+          <!-- PRIMARY BUTTON FOR BUNDLE -->
+          <a href="https://www.focusonmoment.com/wedding-photo-and-video" target="_blank" class="btn btn-primary mt-3" style="font-size: 1.1rem; padding: 1rem 2rem; box-shadow: 0 4px 15px rgba(235, 178, 56, 0.3);">View Photo + Video Bundle</a>
+        </div>
+
+      </div>
+      
+      <p class="text-secondary mt-5" style="font-style: italic; font-weight: bold;">Limited bookings each year to ensure quality and attention to every film.</p>
+    </div>
+  </section>
+
+  <!-- 3. VIDEO PROOF SECTION -->
+  <section class="container mt-3 mb-5">
+    <div class="text-center mb-5" style="padding-top: 2rem; border-top: 1px solid rgba(235, 178, 56, 0.3);">
+      <h2 class="font-serif text-gold text-transform-none" style="font-size: 2.2rem;">Featured Films</h2>
+      <p class="text-secondary">Watch examples of our recent high-end cinematic work.</p>
+    </div>
+    
+    <div class="feature-grid" style="gap: 3rem;">
+      <!-- NOTE TO USER: Replace data-id with the actual YouTube text ID after the ?v= -->
+      
+      <div class="lite-youtube" data-id="BZDdwXOhf6k" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+      <div class="lite-youtube" data-id="vmF2anBsGDo" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+      <div class="lite-youtube" data-id="CsbUvCDOb0A" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+    </div>
+    
+    <div class="text-center mt-5">
+      <a href="YOUR_YOUTUBE_PLAYLIST_LINK_HERE" target="_blank" class="btn btn-secondary">View Wedding Films Playlist on YouTube</a>
+    </div>
+  </section>
+
+  <!-- 4. VIDFLOW DELIVERY SECTION -->
+  <section class="bg-charcoal pt-5 pb-5 mt-5">
+    <div class="container text-center">
+      <h2 class="font-serif text-white text-transform-none" style="font-size: 2rem;">A Premium Viewing Experience</h2>
+      <p class="text-secondary mb-4 max-width" style="margin: 0 auto;">Finished films are delivered in high-definition through modern streaming galleries. Enjoy it on your phone, share it with family, or cast it directly to your Smart TV.</p>
+      
+      <div style="background: var(--bg-primary); max-width: 800px; margin: 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid var(--accent-gold);">
+        <div style="position: relative; padding: 20px; height: 650px;">
+          <iframe style="position: absolute; top: 0; left: 0; width: 125%; height: 125%; zoom: 0.8; transform: scale(0.8); -webkit-transform: scale(0.8); transform-origin: 0 0; -webkit-transform-origin: 0 0;" src="https://galleries.vidflow.co/embed/d/f9hfquf1" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. HONEYBOOK INQUIRY SECTION -->
+  <section id="inquiry" class="container mt-5 mb-5">
+    <div class="form-container" style="background: transparent; border: none; padding: 0;">
+      <h2 class="text-center mb-2 font-serif text-gold" style="text-transform:none; font-size: 2.2rem;">Check Availability</h2>
+      <p class="text-center text-secondary mb-4">If you're interested in booking us for your wedding film, or if you want to explore the collaborative photo+video bundle, fill out the form below and we'll be in touch shortly to set up a consultation call.</p>
+      
+      <div class="hb-p-65647b211769020008c5cf07-2"></div><img height="1" width="1" style="display:none" src="https://www.honeybook.com/p.png?pid=65647b211769020008c5cf07">
+      <script>
+        (function(h,b,s,n,i,p,e,t) {
+          h._HB_ = h._HB_ || {};h._HB_.pid = i;;;;
+          t=b.createElement(s);t.type="text/javascript";t.async=!0;t.src=n;
+          e=b.getElementsByTagName(s)[0];e.parentNode.insertBefore(t,e);
+      })(window,document,"script","https://widget.honeybook.com/assets_users_production/websiteplacements/placement-controller.min.js","65647b211769020008c5cf07");
+      </script>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>&copy; 2026 Tri-Cities MediaLab. All rights reserved.</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

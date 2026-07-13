@@ -1,0 +1,71 @@
+/* Core Variables & Typography */
+:root {
+  /* Brand Colors */
+  --bg-primary: #000000;
+  --bg-secondary: #121212;
+  --bg-light: #F9F9F9;
+  
+  --accent-gold: #EBB238;
+  --accent-gold-hover: #cf9b2a;
+  
+  --text-primary: #FFFFFF;
+  --text-secondary: #CCCCCC;
+  --text-dark: #333333;
+  
+  /* Layout */
+  --max-width: 1200px;
+  --header-height: 80px;
+  --section-padding: 4rem 1.5rem;
+  
+  /* Typography */
+  --font-sans: 'Montserrat', 'Oswald', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+  --font-body: 'Raleway', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 1rem;
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+a {
+  color: var(--accent-gold);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--text-primary);
+}
+
+img, video, iframe {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+section {
+  padding: var(--section-padding);
+}
