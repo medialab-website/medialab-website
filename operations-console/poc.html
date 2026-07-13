@@ -34,6 +34,37 @@
             background: #222;
             border-radius: 4px;
         }
+        .auth-hidden { display: none !important; }
+        .auth-visible { display: block; }
+        .btn-google {
+            background: #4285F4;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .btn-google:hover { background: #3367D6; }
+        .btn-signout {
+            background: transparent;
+            color: #ff4444;
+            border: 1px solid #ff4444;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+        }
+        .btn-signout:hover { background: #ff4444; color: #fff; }
+        .error-message {
+            color: #ff4444;
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #ff4444;
+            border-radius: 4px;
+            background: rgba(255, 68, 68, 0.1);
+        }
     </style>
 </head>
 <body class="bg-black text-white">
@@ -42,31 +73,119 @@
     </div>
 
     <div class="poc-container">
-        <h1>Operations Console PoC</h1>
-        <p>This is a non-functional placeholder for the infrastructure proof of concept.</p>
-        
-        <div class="status-grid">
-            <div class="status-item">
-                <strong>Firebase SQL Connect</strong><br>
-                Status: <span class="text-secondary">NOT INITIALIZED</span>
-            </div>
-            <div class="status-item">
-                <strong>Google Drive API</strong><br>
-                Status: <span class="text-secondary">NOT AUTHORIZED</span>
-            </div>
-            <div class="status-item">
-                <strong>Active Environment</strong><br>
-                Status: <span class="text-secondary">LOCAL</span>
-            </div>
-            <div class="status-item">
-                <strong>Last Verification</strong><br>
-                Status: <span class="text-secondary">PENDING</span>
+        <!-- Unauthenticated View -->
+        <div id="login-view" class="auth-visible" style="text-align: center;">
+            <h1 style="color: var(--accent-gold); margin-bottom: 0.5rem;">MediaLab Operations Console</h1>
+            <p>Authentication Required</p>
+            <button id="btn-login" class="btn-google">Sign in with Google</button>
+            <div id="auth-error" class="error-message auth-hidden"></div>
+            
+            <div style="margin-top: 2rem;">
+                <a href="../index.html" class="text-gold" style="text-decoration: none;">&larr; Return to Public Website</a>
             </div>
         </div>
 
-        <div style="margin-top: 2rem; padding: 1rem; border-top: 1px solid #333;">
-            <a href="../index.html" class="text-gold">&larr; Return to Website</a>
+        <!-- Authenticated View -->
+        <div id="console-view" class="auth-hidden">
+            <button id="btn-logout" class="btn-signout">Sign Out</button>
+            <h1 style="color: var(--accent-gold);">MediaLab Operations Console</h1>
+            <p>Welcome, <span id="user-email"></span>.</p>
+            <p style="color: #888;">This is a non-functional placeholder for the infrastructure proof of concept.</p>
+            
+            <div class="status-grid">
+                <div class="status-item">
+                    <strong>Firebase SQL Connect</strong><br>
+                    Status: <span class="text-secondary">NOT INITIALIZED</span>
+                </div>
+                <div class="status-item">
+                    <strong>Google Drive API</strong><br>
+                    Status: <span class="text-secondary">NOT AUTHORIZED</span>
+                </div>
+                <div class="status-item">
+                    <strong>Active Environment</strong><br>
+                    Status: <span class="text-secondary">LOCAL</span>
+                </div>
+                <div class="status-item">
+                    <strong>Last Verification</strong><br>
+                    Status: <span class="text-secondary">PENDING</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; padding: 1rem; border-top: 1px solid #333;">
+                <a href="../index.html" class="text-gold" style="text-decoration: none;">&larr; Return to Public Website</a>
+            </div>
         </div>
     </div>
+
+    <script type="module">
+        import { auth, provider, signInWithPopup, signOut, onAuthStateChanged } from './firebase-auth.js';
+
+        const loginView = document.getElementById('login-view');
+        const consoleView = document.getElementById('console-view');
+        const btnLogin = document.getElementById('btn-login');
+        const btnLogout = document.getElementById('btn-logout');
+        const errorMsg = document.getElementById('auth-error');
+        const userEmailSpan = document.getElementById('user-email');
+
+        const AUTHORIZED_EMAIL = "solutions@medialab.fyi";
+
+        function showLogin(error = null) {
+            loginView.classList.remove('auth-hidden');
+            consoleView.classList.add('auth-hidden');
+            if (error) {
+                errorMsg.textContent = error;
+                errorMsg.classList.remove('auth-hidden');
+            } else {
+                errorMsg.classList.add('auth-hidden');
+            }
+        }
+
+        function showConsole(user) {
+            loginView.classList.add('auth-hidden');
+            consoleView.classList.remove('auth-hidden');
+            userEmailSpan.textContent = user.email;
+            errorMsg.classList.add('auth-hidden');
+        }
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                if (user.email === AUTHORIZED_EMAIL) {
+                    showConsole(user);
+                } else {
+                    // Unauthorized user
+                    await signOut(auth);
+                    showLogin(`Access Denied: The account ${user.email} is not authorized for the Operations Console.`);
+                }
+            } else {
+                showLogin();
+            }
+        });
+
+        // Handle Login
+        btnLogin.addEventListener('click', async () => {
+            try {
+                errorMsg.classList.add('auth-hidden');
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                if (user.email !== AUTHORIZED_EMAIL) {
+                    await signOut(auth);
+                    showLogin(`Access Denied: The account ${user.email} is not authorized for the Operations Console.`);
+                }
+            } catch (error) {
+                console.error("Authentication Error:", error);
+                showLogin(`Authentication failed: ${error.message}`);
+            }
+        });
+
+        // Handle Logout
+        btnLogout.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Sign Out Error:", error);
+            }
+        });
+    </script>
 </body>
 </html>
