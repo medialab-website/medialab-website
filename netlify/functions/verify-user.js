@@ -1,11 +1,19 @@
-const { initializeApp, getApps } = require('firebase-admin/app');
+const { initializeApp, getApps, cert } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 
-// Initialize Firebase Admin with just the projectId.
-// This is sufficient to securely verify ID tokens using Google's public keys.
+// Initialize Firebase Admin using Service Account credentials from environment variables.
+// The private key might have literal '\n' characters from Netlify/dotenv that need to be parsed.
 if (!getApps().length) {
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY 
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    : undefined;
+
   initializeApp({
-    projectId: 'gen-lang-client-0976387792'
+    credential: cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: privateKey,
+    })
   });
 }
 
@@ -25,8 +33,8 @@ exports.handler = async (event, context) => {
   const idToken = authHeader.split('Bearer ')[1];
 
   try {
-    // Verify the ID token
-    const decodedToken = await getAuth().verifyIdToken(idToken);
+    // Verify the ID token and check if it has been revoked (requires IAM permission)
+    const decodedToken = await getAuth().verifyIdToken(idToken, true);
     
     // Require the verified email to match exactly
     if (decodedToken.email !== AUTHORIZED_EMAIL) {
