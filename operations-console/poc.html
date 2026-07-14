@@ -127,8 +127,6 @@
         const errorMsg = document.getElementById('auth-error');
         const userEmailSpan = document.getElementById('user-email');
 
-        const AUTHORIZED_EMAIL = "solutions@medialab.fyi";
-
         function showLogin(error = null) {
             loginView.classList.remove('auth-hidden');
             consoleView.classList.add('auth-hidden');
@@ -140,23 +138,47 @@
             }
         }
 
-        function showConsole(user) {
-            loginView.classList.add('auth-hidden');
-            consoleView.classList.remove('auth-hidden');
-            userEmailSpan.textContent = user.email;
-            errorMsg.classList.add('auth-hidden');
+        async function verifyUserAndShowConsole(user) {
+            try {
+                // Get the ID token
+                const idToken = await user.getIdToken();
+                
+                // Call the secure Netlify function
+                const response = await fetch('/.netlify/functions/verify-user', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Server verification failed');
+                }
+
+                const data = await response.json();
+                
+                if (data.authorized) {
+                    loginView.classList.add('auth-hidden');
+                    consoleView.classList.remove('auth-hidden');
+                    userEmailSpan.textContent = user.email;
+                    errorMsg.classList.add('auth-hidden');
+                } else {
+                    throw new Error('Server returned OK but not authorized');
+                }
+            } catch (error) {
+                console.error("Server Authorization Error:", error);
+                await signOut(auth);
+                showLogin(`Authorization Error: ${error.message}`);
+            }
         }
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                if (user.email === AUTHORIZED_EMAIL) {
-                    showConsole(user);
-                } else {
-                    // Unauthorized user
-                    await signOut(auth);
-                    showLogin(`Access Denied: The account ${user.email} is not authorized for the Operations Console.`);
-                }
+                // Defer to the server-side Netlify function for actual verification
+                await verifyUserAndShowConsole(user);
             } else {
                 showLogin();
             }
@@ -166,14 +188,26 @@
         btnLogin.addEventListener('click', async () => {
             try {
                 errorMsg.classList.add('auth-hidden');
+                errorMsg.textContent = "Authenticating...";
+                errorMsg.classList.remove('auth-hidden');
+                errorMsg.style.color = "var(--accent-gold)";
+                errorMsg.style.borderColor = "var(--accent-gold)";
+                errorMsg.style.background = "rgba(255, 204, 0, 0.1)";
+
                 const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-                if (user.email !== AUTHORIZED_EMAIL) {
-                    await signOut(auth);
-                    showLogin(`Access Denied: The account ${user.email} is not authorized for the Operations Console.`);
-                }
+                
+                // Reset error message styling
+                errorMsg.style.color = "";
+                errorMsg.style.borderColor = "";
+                errorMsg.style.background = "";
+                
+                // Verification happens in onAuthStateChanged
             } catch (error) {
                 console.error("Authentication Error:", error);
+                // Reset error message styling
+                errorMsg.style.color = "";
+                errorMsg.style.borderColor = "";
+                errorMsg.style.background = "";
                 showLogin(`Authentication failed: ${error.message}`);
             }
         });
