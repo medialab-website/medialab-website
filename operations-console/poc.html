@@ -65,6 +65,46 @@
             border-radius: 4px;
             background: rgba(255, 68, 68, 0.1);
         }
+        .drive-container {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 6px;
+        }
+        .drive-list {
+            margin-top: 1rem;
+            list-style: none;
+            padding: 0;
+        }
+        .drive-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drive-item:last-child {
+            border-bottom: none;
+        }
+        .drive-badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            background: #333;
+            color: #ccc;
+        }
+        .drive-btn {
+            background: #00C851;
+            color: #000;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .drive-btn:hover { background: #007E33; }
+        .drive-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
     </style>
 </head>
 <body class="bg-black text-white">
@@ -99,16 +139,26 @@
                 </div>
                 <div class="status-item">
                     <strong>Google Drive API</strong><br>
-                    Status: <span class="text-secondary">NOT AUTHORIZED</span>
+                    Status: <span id="status-drive" class="text-secondary">NOT AUTHORIZED</span>
                 </div>
                 <div class="status-item">
                     <strong>Active Environment</strong><br>
-                    Status: <span class="text-secondary">LOCAL</span>
+                    Status: <span id="status-env" class="text-secondary">LOCAL</span>
                 </div>
                 <div class="status-item">
                     <strong>Last Verification</strong><br>
-                    Status: <span class="text-secondary">PENDING</span>
+                    Status: <span id="status-verify" class="text-secondary">PENDING</span>
                 </div>
+            </div>
+
+            <div class="drive-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin: 0; color: #eee;">Drive Proof <span style="font-size: 0.8rem; background: #ff4444; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 10px;">READ ONLY</span></h2>
+                    <button id="btn-load-drive" class="drive-btn">Load Approved Folder</button>
+                </div>
+                <div id="drive-error" class="error-message auth-hidden"></div>
+                <div id="drive-loading" class="auth-hidden" style="color: #888; margin-top: 1rem;">Loading contents...</div>
+                <ul id="drive-list" class="drive-list"></ul>
             </div>
 
             <div style="margin-top: 2rem; padding: 1rem; border-top: 1px solid #333;">
@@ -126,6 +176,12 @@
         const btnLogout = document.getElementById('btn-logout');
         const errorMsg = document.getElementById('auth-error');
         const userEmailSpan = document.getElementById('user-email');
+        const btnLoadDrive = document.getElementById('btn-load-drive');
+        const driveList = document.getElementById('drive-list');
+        const driveError = document.getElementById('drive-error');
+        const driveLoading = document.getElementById('drive-loading');
+
+        let currentIdToken = null;
 
         function showLogin(error = null) {
             loginView.classList.remove('auth-hidden');
@@ -164,12 +220,14 @@
                     consoleView.classList.remove('auth-hidden');
                     userEmailSpan.textContent = user.email;
                     errorMsg.classList.add('auth-hidden');
+                    currentIdToken = idToken;
                 } else {
                     throw new Error('Server returned OK but not authorized');
                 }
             } catch (error) {
                 console.error("Server Authorization Error:", error);
                 await signOut(auth);
+                currentIdToken = null;
                 showLogin(`Authorization Error: ${error.message}`);
             }
         }
@@ -216,8 +274,99 @@
         btnLogout.addEventListener('click', async () => {
             try {
                 await signOut(auth);
+                currentIdToken = null;
+                driveList.innerHTML = '';
             } catch (error) {
                 console.error("Sign Out Error:", error);
+            }
+        });
+
+        // Handle Drive Load
+        btnLoadDrive.addEventListener('click', async () => {
+            if (!currentIdToken) return;
+
+            driveError.classList.add('auth-hidden');
+            driveList.innerHTML = '';
+            driveLoading.classList.remove('auth-hidden');
+            btnLoadDrive.disabled = true;
+
+            try {
+                const response = await fetch('/.netlify/functions/list-drive-folder', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentIdToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Server returned ${response.status}`);
+                }
+
+                if (data.items.length === 0) {
+                    driveList.innerHTML = '<li class="drive-item" style="justify-content: center; color: #888;">Folder is empty</li>';
+                } else {
+                    data.items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'drive-item';
+                        
+                        const leftDiv = document.createElement('div');
+                        const nameSpan = document.createElement('strong');
+                        nameSpan.textContent = item.name;
+                        const typeBadge = document.createElement('span');
+                        typeBadge.className = 'drive-badge';
+                        typeBadge.style.marginLeft = '8px';
+                        typeBadge.textContent = item.itemType;
+                        
+                        leftDiv.appendChild(nameSpan);
+                        leftDiv.appendChild(typeBadge);
+                        
+                        const rightDiv = document.createElement('div');
+                        rightDiv.style.fontSize = '0.85rem';
+                        rightDiv.style.color = '#888';
+                        
+                        if (item.modifiedTime) {
+                            const date = new Date(item.modifiedTime);
+                            rightDiv.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                        }
+
+                        if (item.webViewLink) {
+                            const link = document.createElement('a');
+                            link.href = item.webViewLink;
+                            link.target = '_blank';
+                            link.textContent = ' Open ↗';
+                            link.style.color = 'var(--accent-gold)';
+                            link.style.marginLeft = '10px';
+                            link.style.textDecoration = 'none';
+                            rightDiv.appendChild(link);
+                        }
+                        
+                        li.appendChild(leftDiv);
+                        li.appendChild(rightDiv);
+                        driveList.appendChild(li);
+                    });
+                    
+                    // Update status UI on success
+                    document.getElementById('status-drive').textContent = 'READ-ONLY AUTHORIZED';
+                    document.getElementById('status-drive').style.color = '#00C851';
+                    document.getElementById('status-verify').textContent = 'PASSED';
+                    document.getElementById('status-verify').style.color = '#00C851';
+                    
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        document.getElementById('status-env').textContent = 'LOCAL';
+                    } else {
+                        document.getElementById('status-env').textContent = 'DEPLOY PREVIEW';
+                        document.getElementById('status-env').style.color = '#00C851';
+                    }
+                }
+            } catch (error) {
+                console.error("Drive API Error:", error);
+                driveError.textContent = `Drive Error: ${error.message}`;
+                driveError.classList.remove('auth-hidden');
+            } finally {
+                driveLoading.classList.add('auth-hidden');
+                btnLoadDrive.disabled = false;
             }
         });
     </script>

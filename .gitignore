@@ -5,3 +5,4 @@ node_modules/
 ._*
 site_files.json
 out.txt
+deno.lock

@@ -3,6 +3,7 @@
     "netlify-cli": "^26.0.2"
   },
   "dependencies": {
-    "firebase-admin": "^14.1.0"
+    "firebase-admin": "^14.1.0",
+    "googleapis": "^173.0.0"
   }
 }
