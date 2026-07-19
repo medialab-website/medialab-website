@@ -1,10 +1,12 @@
-const CACHE_NAME = 'medialab-ops-v1';
+const CACHE_NAME = 'medialab-ops-v2';
 const ASSETS_TO_CACHE = [
   './poc.html',
   '../css/global.css',
   '../css/components.css',
   './manifest.json',
-  '../assets/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 self.addEventListener('install', event => {

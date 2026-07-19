@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#1e1e1e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Operations">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
     <title>Operations Console | TCML</title>
     <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/components.css">
@@ -688,6 +691,16 @@
             });
         }
 
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         const views = {
             login: document.getElementById('login-view'),
             consoleWrap: document.getElementById('console-wrap'),
@@ -1038,11 +1051,15 @@
             const btnCall = document.getElementById('btn-call-agent');
             const btnText = document.getElementById('btn-text-agent');
             if (data.customer_phone) {
-                const digits = data.customer_phone.replace(/[^\d+]/g, '');
+                const phoneStr = data.customer_phone.trim();
+                const hasPlus = phoneStr.startsWith('+');
+                const digits = phoneStr.replace(/[^\d]/g, '');
+                const formattedPhone = hasPlus ? '+' + digits : digits;
+                
                 if (digits.length >= 10) {
-                    btnCall.href = `tel:${digits}`;
+                    btnCall.href = `tel:${formattedPhone}`;
                     btnCall.classList.remove('disabled');
-                    btnText.href = `sms:${digits}`;
+                    btnText.href = `sms:${formattedPhone}`;
                     btnText.classList.remove('disabled');
                 } else {
                     btnCall.removeAttribute('href');
@@ -1164,20 +1181,35 @@
                 const plan = currentMissionPlans[currentDetailOrder.id];
                 const order = currentDetailOrder;
                 const d = order.start_at ? new Date(order.start_at) : null;
-                const timeStr = d ? new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: order.timezone }).format(d) : 'Not Scheduled';
+                const timeStr = d ? escapeHTML(new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: order.timezone }).format(d)) : 'Not Scheduled';
 
                 let routeHtml = '<p>Route unavailable</p>';
                 if (routeData && routeData.available) {
                     routeHtml = `
                         <div style="background: #1e1e1e; padding: 15px; border-radius: 4px; border: 1px solid #333; margin-bottom: 15px;">
-                            <h4 style="margin-top:0; color:#ffc107;">${routeData.target_label}</h4>
-                            <p style="font-size: 12px; color: #8e8e8e;">Distance: ${(routeData.distance/1609.34).toFixed(1)} mi | Est. Time: ${Math.round(routeData.duration/60)} min</p>
-                            ${routeData.warnings?.length > 0 ? `<p style="color:#f44336; font-size:12px;">⚠️ ${routeData.warnings.join('<br>')}</p>` : ''}
+                            <h4 style="margin-top:0; color:#ffc107;">${escapeHTML(routeData.target_label)}</h4>
+                            <p style="font-size: 12px; color: #8e8e8e;">Distance: ${escapeHTML((routeData.distance/1609.34).toFixed(1))} mi | Est. Time: ${escapeHTML(Math.round(routeData.duration/60))} min</p>
+                            ${routeData.warnings?.length > 0 ? `<p style="color:#f44336; font-size:12px;">⚠️ ${routeData.warnings.map(w => escapeHTML(w)).join('<br>')}</p>` : ''}
                             <ol style="font-size: 14px; padding-left: 20px;">
-                                ${routeData.steps.map(s => `<li>${s.instruction} ${s.distance > 0 ? `(${(s.distance/1609.34).toFixed(1)} mi)` : ''}</li>`).join('')}
+                                ${routeData.steps.map(s => `<li>${escapeHTML(s.instruction)} ${s.distance > 0 ? `(${escapeHTML((s.distance/1609.34).toFixed(1))} mi)` : ''}</li>`).join('')}
                             </ol>
+                            <p style="font-size: 10px; color: #666; margin-top: 10px;">${escapeHTML(routeData.attribution)}</p>
                         </div>
                     `;
+                }
+
+                const escapedAddress = escapeHTML(order.address);
+                const escapedCrew = escapeHTML(plan.crew);
+                const escapedServices = escapeHTML(plan.services);
+                const escapedCustomerName = escapeHTML(order.customer_name);
+                const escapedCustomerContact = escapeHTML([order.customer_phone, order.customer_email].filter(Boolean).join(" • "));
+                const escapedPlanWarnings = plan.warnings?.length > 0 ? `<p class="warning">⚠️ ${plan.warnings.map(w => escapeHTML(w)).join('<br>')}</p>` : '';
+
+                let escapedWeatherHtml = '';
+                if (plan.weather.available) {
+                    escapedWeatherHtml = `<p>${escapeHTML(plan.weather.temperature)}&deg;${escapeHTML(plan.weather.temperature_unit)} - ${escapeHTML(plan.weather.short_forecast)}</p>`;
+                } else {
+                    escapedWeatherHtml = `<p class="warning">${escapeHTML(plan.weather.message)}</p>`;
                 }
 
                 // Generate HTML Blob
@@ -1186,7 +1218,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Offline Brief: ${order.address}</title>
+<title>Offline Brief: ${escapedAddress}</title>
 <style>
 body { font-family: sans-serif; background: #121212; color: #f5f5f5; padding: 20px; line-height: 1.5; }
 h2 { color: #ffc107; margin-bottom: 5px; }
@@ -1197,20 +1229,27 @@ h2 { color: #ffc107; margin-bottom: 5px; }
 </style>
 </head>
 <body>
-    <h2>${order.address}</h2>
+    <h2>${escapedAddress}</h2>
+    ${escapedPlanWarnings}
+    
     <div class="label">Date & Time</div>
     <div class="value">${timeStr}</div>
 
     <div class="label">Crew & Scope</div>
-    <div class="value">${plan.crew} | ${plan.services}</div>
+    <div class="value">${escapedCrew} | ${escapedServices}</div>
     
     <div class="label">Customer Info</div>
-    <div class="value">${order.customer_name} | ${[order.customer_phone, order.customer_email].filter(Boolean).join(" • ")}</div>
+    <div class="value">${escapedCustomerName} | ${escapedCustomerContact}</div>
+    
+    <div class="section">
+        <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Weather Forecast</h3>
+        ${escapedWeatherHtml}
+    </div>
 
     <div class="section">
         <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Field Doctrine Gear Checklist</h3>
         <ul style="padding-left: 20px; font-size: 14px;">
-            ${plan.checklist.map(item => `<li>${item}</li>`).join('')}
+            ${plan.checklist.map(item => `<li>${escapeHTML(item)}</li>`).join('')}
         </ul>
     </div>
     
@@ -1222,14 +1261,34 @@ h2 { color: #ffc107; margin-bottom: 5px; }
 </html>`;
 
                 const blob = new Blob([htmlContent], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Brief_${order.id.substring(0,8)}.html`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                const safeFilename = `Brief_${order.id.substring(0,8)}.html`.replace(/[^a-zA-Z0-9_\-.]/g, '_');
+                const file = new File([blob], safeFilename, { type: 'text/html' });
+
+                let shared = false;
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({ files: [file] });
+                        shared = true; // Web Share succeeded
+                    } catch (shareErr) {
+                        if (shareErr.name === 'AbortError') {
+                            // User cancelled, do not fallback
+                            return;
+                        }
+                        console.warn("Share API failed, falling back to download", shareErr);
+                    }
+                }
+
+                if (!shared) {
+                    // Fallback to Blob download
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = safeFilename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
             } catch (err) {
                 alert(`Error generating brief: ${err.message}`);
             } finally {
