@@ -373,6 +373,23 @@
         }
         .drive-btn:hover { background: #007E33; }
         .drive-btn:disabled { background: var(--color-border); color: var(--color-text-muted); cursor: not-allowed; }
+
+        /* Mission Plan Styles */
+        #mission-plan-container {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--color-border);
+            display: none;
+        }
+        .mission-plan-section { margin-bottom: 16px; }
+        .mission-plan-section h4 { color: var(--color-text-primary); font-size: 14px; margin: 0 0 8px 0; text-transform: uppercase; }
+        .mission-plan-text { color: var(--color-text-secondary); font-size: 14px; line-height: 1.5; margin: 0; }
+        .mission-plan-checklist { list-style: none; padding: 0; margin: 0; }
+        .mission-plan-checklist li { color: var(--color-text-secondary); font-size: 14px; margin-bottom: 4px; display: flex; align-items: flex-start; gap: 8px; }
+        .mission-plan-checklist li::before { content: "•"; color: var(--color-primary); }
+        .warning-text { color: #ff9800; }
+        .critical-warning-text { color: #f44336; }
+        .action-btn { background: var(--color-primary); color: #000; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -413,7 +430,7 @@
                     <!-- Cards will be injected here -->
                 </div>
                 
-                <!-- Drive Proof Pane (Left Pane injection for non-order tabs) -->
+                <!-- Drive Proof Pane -->
                 <div class="list-container auth-hidden" id="drive-pane">
                     <h2>Stage 1C Google Drive API</h2>
                     <p style="color: var(--color-text-secondary); font-size: 0.9rem;">This view preserves the Stage 1C Google Drive backend authorization.</p>
@@ -484,6 +501,7 @@
                         </div>
                         <div class="detail-actions">
                             <span class="action-link" id="btn-refresh">REFRESH FROM ARYEO</span>
+                            <button id="btn-mission-plan" class="action-btn auth-hidden" style="margin-top: 5px;">BUILD MISSION PLAN</button>
                             <span style="font-size: 0.75rem; color: var(--color-text-secondary);" id="dt-last-sync"></span>
                         </div>
                     </div>
@@ -547,6 +565,37 @@
                             <div class="data-value" id="dt-notes" style="white-space: pre-wrap;"></div>
                         </div>
                     </div>
+
+                    <div id="mission-plan-container" class="detail-section">
+                        <h3>Mission Plan</h3>
+                        <p id="mission-plan-timestamp" class="mission-plan-text" style="font-size: 12px; margin-bottom: 16px;"></p>
+                        
+                        <div id="mission-plan-warnings" class="mission-plan-section auth-hidden">
+                            <h4>Warnings</h4>
+                            <div id="mission-plan-warnings-list"></div>
+                        </div>
+
+                        <div class="mission-plan-section">
+                            <h4>Weather Advisory</h4>
+                            <p class="mission-plan-text" style="font-size: 12px; color: var(--color-primary); margin-bottom: 4px;">Weather is advisory and time-sensitive.</p>
+                            <div id="mission-plan-weather"></div>
+                        </div>
+
+                        <div class="mission-plan-section">
+                            <h4>Directions</h4>
+                            <div id="mission-plan-directions"></div>
+                        </div>
+
+                        <div class="mission-plan-section">
+                            <h4>Crew & Scope</h4>
+                            <p id="mission-plan-crew-scope" class="mission-plan-text"></p>
+                        </div>
+
+                        <div class="mission-plan-section">
+                            <h4>Gear Checklist</h4>
+                            <ul id="mission-plan-checklist" class="mission-plan-checklist"></ul>
+                        </div>
+                    </div>
                     
                     <div style="text-align: right; font-size: 0.75rem; color: var(--color-text-muted);">
                         Internal UUID: <span id="dt-uuid"></span><br>
@@ -577,6 +626,8 @@
         let currentPage = 1;
         let searchQuery = '';
         let debounceTimer;
+        let currentDetailOrder = null;
+        let currentMissionPlans = {};
 
         function showLogin(error = null) {
             views.login.classList.remove('auth-hidden');
@@ -662,7 +713,7 @@
                     views.drivePane.classList.remove('auth-hidden');
                     document.getElementById('search-container').classList.add('auth-hidden');
                     document.getElementById('list-pagination').classList.add('auth-hidden');
-                    views.rightPaneContainer.classList.add('auth-hidden'); // Hide right pane fully in Drive mode
+                    views.rightPaneContainer.classList.add('auth-hidden');
                 } else {
                     views.listContainer.classList.remove('auth-hidden');
                     views.drivePane.classList.add('auth-hidden');
@@ -733,7 +784,6 @@
                 }
 
                 if (!response.ok) {
-                    // Check if it's the configuration missing state
                     if (response.status === 503 && data.error === 'ARYEO_NOT_CONFIGURED') {
                         throw new Error('Aryeo integration is currently unavailable. (ARYEO_NOT_CONFIGURED)');
                     }
@@ -817,13 +867,11 @@
             views.detailLoading.classList.add('auth-hidden');
             views.detailContent.classList.add('auth-hidden');
             views.detailError.classList.add('auth-hidden');
+            currentDetailOrder = null;
         }
-
-        let currentDetailId = null;
 
         async function loadDetail(orderId) {
             if (!currentIdToken) return;
-            currentDetailId = orderId;
 
             views.detailEmpty.classList.add('auth-hidden');
             views.detailContent.classList.add('auth-hidden');
@@ -835,21 +883,10 @@
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
 
-                let data;
-                try {
-                    const text = await response.text();
-                    data = JSON.parse(text);
-                } catch (e) {
-                    throw new Error('The order request timed out. Please try again.');
-                }
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to fetch order details');
 
-                if (!response.ok) {
-                    if (response.status === 503 && data.error === 'ARYEO_NOT_CONFIGURED') {
-                        throw new Error('Aryeo integration is currently unavailable. (ARYEO_NOT_CONFIGURED)');
-                    }
-                    throw new Error(data.error || 'Failed to fetch order details');
-                }
-
+                currentDetailOrder = data;
                 renderDetail(data);
             } catch (error) {
                 views.detailLoading.classList.add('auth-hidden');
@@ -883,24 +920,16 @@
             else if (data.status === 'CANCELLED') statusBadge = `<span class="badge badge-red">${data.status}</span>`;
             document.getElementById('dt-status-badge').innerHTML = statusBadge;
 
-            // Appt
             if (data.start_at) {
                 const d = new Date(data.start_at);
-                const formatter = new Intl.DateTimeFormat('en-US', { 
-                    dateStyle: 'full', timeStyle: 'short', timeZone: data.timezone 
-                });
-                
-                let tzSuffix = data.timezone;
-                if (tzSuffix === 'America/New_York') tzSuffix = 'Eastern Time';
-                
-                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${tzSuffix})`;
+                const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: data.timezone });
+                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${data.timezone})`;
             } else {
                 document.getElementById('dt-appointment-time').textContent = "Not scheduled";
             }
             document.getElementById('dt-appointment-status').textContent = data.appointment_status;
             document.getElementById('dt-crew').textContent = data.assigned_users;
 
-            // Delivery & Payment
             let deliveryStr = data.fulfillment_status || "UNFULFILLED";
             if (data.fulfilled_at) {
                 const d = new Date(data.fulfilled_at);
@@ -921,12 +950,10 @@
                 document.getElementById('dt-balance-group').style.display = 'none';
             }
 
-            // Customer
             document.getElementById('dt-customer-name').textContent = data.customer_name;
             const contact = [data.customer_phone, data.customer_email].filter(Boolean).join(" • ");
             document.getElementById('dt-customer-contact').textContent = contact || "No contact info";
 
-            // Scope
             document.getElementById('dt-services').textContent = data.services || "None";
             if (data.notes) {
                 document.getElementById('dt-notes-group').style.display = 'block';
@@ -936,27 +963,80 @@
             }
 
             if (data.updated_at) {
-                const d = new Date(data.updated_at);
-                document.getElementById('dt-updated-at').textContent = d.toLocaleString();
+                document.getElementById('dt-updated-at').textContent = new Date(data.updated_at).toLocaleString();
+            }
+
+            // Mission Plan Logic
+            const btnMP = document.getElementById('btn-mission-plan');
+            const mpContainer = document.getElementById('mission-plan-container');
+            if (data.status !== 'FULFILLED' && data.fulfillment_status !== 'FULFILLED') {
+                btnMP.classList.remove('auth-hidden');
+                if (currentMissionPlans[data.id]) {
+                    btnMP.textContent = 'REFRESH MISSION PLAN';
+                    renderMissionPlan(currentMissionPlans[data.id]);
+                } else {
+                    btnMP.textContent = 'BUILD MISSION PLAN';
+                    mpContainer.style.display = 'none';
+                }
             } else {
-                document.getElementById('dt-updated-at').textContent = "Unknown";
+                btnMP.classList.add('auth-hidden');
+                mpContainer.style.display = 'none';
             }
         }
 
-        document.getElementById('btn-refresh').addEventListener('click', () => {
-            if (currentDetailId) {
-                loadDetail(currentDetailId);
+        async function handleMissionPlan() {
+            if (!currentDetailOrder) return;
+            const btn = document.getElementById('btn-mission-plan');
+            btn.textContent = 'GENERATING...';
+            btn.disabled = true;
+            try {
+                const response = await fetch(`/.netlify/functions/get-mission-plan?order_id=${currentDetailOrder.id}`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                currentMissionPlans[currentDetailOrder.id] = data;
+                btn.textContent = 'REFRESH MISSION PLAN';
+                renderMissionPlan(data);
+            } catch (err) {
+                alert(err.message);
+                btn.textContent = 'BUILD MISSION PLAN';
+            } finally {
+                btn.disabled = false;
             }
+        }
+
+        document.getElementById('btn-mission-plan').addEventListener('click', handleMissionPlan);
+
+        function renderMissionPlan(plan) {
+            const container = document.getElementById('mission-plan-container');
+            container.style.display = 'block';
+            document.getElementById('mission-plan-timestamp').textContent = `Generated: ${new Date(plan.generated_at).toLocaleString()}`;
+            
+            const warningsContainer = document.getElementById('mission-plan-warnings');
+            if (plan.warnings?.length > 0) {
+                warningsContainer.classList.remove('auth-hidden');
+                document.getElementById('mission-plan-warnings-list').innerHTML = plan.warnings.map(w => `<p class="mission-plan-text warning-text">⚠️ ${w}</p>`).join('');
+            } else {
+                warningsContainer.classList.add('auth-hidden');
+            }
+            
+            document.getElementById('mission-plan-weather').innerHTML = plan.weather.available ? `<p class="mission-plan-text">${plan.weather.temperature}°${plan.weather.temperature_unit} - ${plan.weather.short_forecast}</p>` : `<p class="mission-plan-text warning-text">${plan.weather.message}</p>`;
+            document.getElementById('mission-plan-directions').innerHTML = plan.directions.available ? `<a href="${plan.directions.url}" target="_blank" class="action-btn" style="text-decoration:none;">OPEN DIRECTIONS</a>` : `<p class="mission-plan-text warning-text">${plan.directions.message}</p>`;
+            document.getElementById('mission-plan-crew-scope').textContent = `Crew: ${plan.crew} | Services: ${plan.services}`;
+            document.getElementById('mission-plan-checklist').innerHTML = plan.checklist.map(item => `<li>${item}</li>`).join('');
+        }
+
+        document.getElementById('btn-refresh').addEventListener('click', () => {
+            if (currentDetailOrder) loadDetail(currentDetailOrder.id);
         });
 
-        // Stage 1C Google Drive API Proof behavior
-        const btnLoadDrive = document.getElementById('btn-load-drive');
-        const driveList = document.getElementById('drive-list');
-        const driveError = document.getElementById('drive-error');
-        const driveLoading = document.getElementById('drive-loading');
-
-        btnLoadDrive.addEventListener('click', async () => {
-            if (!currentIdToken) return;
+        // Drive Proof behavior
+        document.getElementById('btn-load-drive').addEventListener('click', async () => {
+            const driveList = document.getElementById('drive-list');
+            const driveLoading = document.getElementById('drive-loading');
+            const driveError = document.getElementById('drive-error');
+            const btnLoadDrive = document.getElementById('btn-load-drive');
 
             driveError.classList.add('auth-hidden');
             driveList.innerHTML = '';
@@ -965,17 +1045,10 @@
 
             try {
                 const response = await fetch('/.netlify/functions/list-drive-folder', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${currentIdToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
-
                 const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || `Server returned ${response.status}`);
-                }
+                if (!response.ok) throw new Error(data.error);
 
                 if (data.items.length === 0) {
                     driveList.innerHTML = '<li class="drive-item" style="justify-content: center; color: var(--color-text-muted);">Folder is empty</li>';
@@ -983,57 +1056,17 @@
                     data.items.forEach(item => {
                         const li = document.createElement('li');
                         li.className = 'drive-item';
-                        
-                        const leftDiv = document.createElement('div');
-                        const nameSpan = document.createElement('strong');
-                        nameSpan.textContent = item.name;
-                        const typeBadge = document.createElement('span');
-                        typeBadge.className = 'drive-badge';
-                        typeBadge.style.marginLeft = '8px';
-                        typeBadge.textContent = item.itemType;
-                        
-                        leftDiv.appendChild(nameSpan);
-                        leftDiv.appendChild(typeBadge);
-                        
-                        const rightDiv = document.createElement('div');
-                        rightDiv.style.fontSize = '0.85rem';
-                        rightDiv.style.color = 'var(--color-text-secondary)';
-                        
-                        if (item.modifiedTime) {
-                            const date = new Date(item.modifiedTime);
-                            rightDiv.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-                        }
-
-                        if (item.webViewLink) {
-                            const link = document.createElement('a');
-                            link.href = item.webViewLink;
-                            link.target = '_blank';
-                            link.textContent = ' Open ↗';
-                            link.style.color = 'var(--color-primary)';
-                            link.style.marginLeft = '10px';
-                            link.style.textDecoration = 'none';
-                            rightDiv.appendChild(link);
-                        }
-                        
-                        li.appendChild(leftDiv);
-                        li.appendChild(rightDiv);
+                        li.innerHTML = `<div><strong>${item.name}</strong><span class="drive-badge" style="margin-left:8px;">${item.itemType}</span></div>
+                            <div style="font-size:0.85rem; color:var(--color-text-secondary);">${item.modifiedTime ? new Date(item.modifiedTime).toLocaleDateString() : ''} 
+                            ${item.webViewLink ? `<a href="${item.webViewLink}" target="_blank" style="color:var(--color-primary); margin-left:10px;">↗</a>` : ''}</div>`;
                         driveList.appendChild(li);
                     });
-                    
                     document.getElementById('status-drive').textContent = 'READ-ONLY AUTHORIZED';
                     document.getElementById('status-drive').style.color = '#00C851';
                     document.getElementById('status-verify').textContent = 'PASSED';
                     document.getElementById('status-verify').style.color = '#00C851';
-                    
-                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        document.getElementById('status-env').textContent = 'LOCAL';
-                    } else {
-                        document.getElementById('status-env').textContent = 'DEPLOY PREVIEW';
-                        document.getElementById('status-env').style.color = '#00C851';
-                    }
                 }
             } catch (error) {
-                console.error("Drive API Error:", error);
                 driveError.textContent = `Drive Error: ${error.message}`;
                 driveError.classList.remove('auth-hidden');
             } finally {
