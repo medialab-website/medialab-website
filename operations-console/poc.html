@@ -3,39 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PoC | TCML Operations Console</title>
+    <title>Aryeo Orders | TCML Operations Console</title>
     <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/components.css">
     <style>
-        .poc-banner {
-            background: #ffcc00;
-            color: #000;
-            padding: 1rem;
-            text-align: center;
+        /* Variables from BRANDING_GUIDE.md */
+        :root {
+            --color-primary: #ffc107;
+            --color-bg-base: #121212;
+            --color-bg-surface: #1e1e1e;
+            --color-bg-surface-hover: #2d2d2d;
+            --color-border: #333333;
+            --color-text-primary: #f5f5f5;
+            --color-text-secondary: #8e8e8e;
+            --color-text-muted: #666666;
+        }
+
+        body {
+            background-color: var(--color-bg-base);
+            color: var(--color-text-primary);
+            font-family: 'Inter', 'Roboto', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Header */
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background-color: var(--color-bg-surface);
+            border-bottom: 1px solid var(--color-border);
+            flex-shrink: 0;
+        }
+
+        .console-header h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--color-text-primary);
+            letter-spacing: normal;
+            text-transform: none;
+        }
+
+        .console-header span {
+            color: var(--color-primary);
+        }
+
+        .btn-signout {
+            background: transparent;
+            color: #ff4444;
+            border: 1px solid #ff4444;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
             font-weight: bold;
+            font-size: 0.85rem;
             text-transform: uppercase;
         }
-        .poc-container {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 2rem;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-        }
-        .status-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-        .status-item {
-            padding: 1rem;
-            background: #222;
-            border-radius: 4px;
-        }
+
+        .btn-signout:hover { background: #ff4444; color: #fff; }
+
         .auth-hidden { display: none !important; }
-        .auth-visible { display: block; }
+        .auth-visible { display: flex; }
+
+        /* Login Screen */
+        #login-view {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+        }
+
         .btn-google {
             background: #4285F4;
             color: white;
@@ -45,124 +90,424 @@
             font-size: 1rem;
             cursor: pointer;
             margin-top: 1rem;
+            font-family: inherit;
         }
         .btn-google:hover { background: #3367D6; }
-        .btn-signout {
-            background: transparent;
-            color: #ff4444;
-            border: 1px solid #ff4444;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            float: right;
+
+        /* Console Split Pane Layout */
+        #console-view {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 65px);
+            overflow: hidden;
         }
-        .btn-signout:hover { background: #ff4444; color: #fff; }
-        .error-message {
+
+        /* Left Pane (Master List) */
+        .left-pane {
+            width: 35%;
+            min-width: 300px;
+            border-right: 1px solid var(--color-border);
+            display: flex;
+            flex-direction: column;
+            background-color: var(--color-bg-base);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--color-border);
+            background-color: var(--color-bg-surface);
+            flex-shrink: 0;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 1rem 0;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            color: var(--color-text-primary);
+        }
+
+        .tab.active {
+            color: var(--color-primary);
+            border-bottom: 2px solid var(--color-primary);
+        }
+
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .list-search {
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+            background-color: var(--color-bg-surface);
+        }
+        .list-search input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--color-bg-base);
+            border: 1px solid var(--color-border);
+            color: var(--color-text-primary);
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        .list-search input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .order-card {
+            background-color: var(--color-bg-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .order-card:hover, .order-card.selected {
+            background-color: var(--color-bg-surface-hover);
+            border-color: var(--color-primary);
+        }
+
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .order-number {
+            font-weight: bold;
+            color: var(--color-primary);
+        }
+
+        .order-date {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+        }
+
+        .order-address {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .order-customer {
+            font-size: 0.9rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-amber { background: rgba(255, 193, 7, 0.15); color: var(--color-primary); }
+        .badge-green { background: rgba(0, 200, 81, 0.15); color: #00C851; }
+        .badge-red { background: rgba(255, 68, 68, 0.15); color: #ff4444; }
+        .badge-gray { background: rgba(136, 136, 136, 0.15); color: var(--color-text-secondary); }
+
+        /* Right Pane (Details) */
+        .right-pane {
+            width: 65%;
+            flex: 1;
+            background-color: var(--color-bg-base);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .detail-container {
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .detail-header h2 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.75rem;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .detail-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+
+        .action-link {
+            color: var(--color-primary);
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .action-link:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .detail-section {
+            background-color: var(--color-bg-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-section h3 {
+            color: var(--color-text-secondary);
+            font-size: 0.9rem;
+            margin: 0 0 1rem 0;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.5rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .data-group {
+            margin-bottom: 1rem;
+        }
+
+        .data-label {
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .data-value {
+            font-size: 1rem;
+            color: var(--color-text-primary);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--color-text-secondary);
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-state {
+            color: var(--color-primary);
+            text-align: center;
+            padding: 2rem;
+            font-weight: bold;
+        }
+
+        .error-state {
             color: #ff4444;
-            margin-top: 1rem;
+            background: rgba(255, 68, 68, 0.1);
             padding: 1rem;
             border: 1px solid #ff4444;
             border-radius: 4px;
-            background: rgba(255, 68, 68, 0.1);
+            margin: 1rem 0;
         }
-        .drive-container {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            background: #111;
-            border: 1px solid #444;
-            border-radius: 6px;
-        }
-        .drive-list {
-            margin-top: 1rem;
-            list-style: none;
-            padding: 0;
-        }
-        .drive-item {
-            padding: 0.75rem;
-            border-bottom: 1px solid #333;
+
+        .pagination {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            padding: 1rem 0;
+            border-top: 1px solid var(--color-border);
+            margin-top: 1rem;
         }
-        .drive-item:last-child {
-            border-bottom: none;
-        }
-        .drive-badge {
-            font-size: 0.75rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            background: #333;
-            color: #ccc;
-        }
-        .drive-btn {
-            background: #00C851;
-            color: #000;
+
+        .pagination button {
+            background: var(--color-bg-surface);
+            color: var(--color-primary);
+            border: 1px solid var(--color-border);
             padding: 0.5rem 1rem;
-            border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-weight: bold;
         }
-        .drive-btn:hover { background: #007E33; }
-        .drive-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+        .pagination button:disabled {
+            color: var(--color-text-muted);
+            cursor: not-allowed;
+        }
     </style>
 </head>
-<body class="bg-black text-white">
-    <div class="poc-banner">
-        TEST ENVIRONMENT — NOT PRODUCTION AUTHORITY
+<body>
+    <div id="login-view" class="auth-visible">
+        <h1 style="color: var(--color-primary); margin-bottom: 0.5rem;">MediaLab Operations Console</h1>
+        <p style="color: var(--color-text-secondary);">Authentication Required</p>
+        <button id="btn-login" class="btn-google">Sign in with Google</button>
+        <div id="auth-error" class="error-state auth-hidden" style="max-width: 400px; margin-top: 1rem;"></div>
+        <div style="margin-top: 2rem;">
+            <a href="../index.html" class="action-link" style="text-decoration: none;">&larr; Return to Public Website</a>
+        </div>
     </div>
 
-    <div class="poc-container">
-        <!-- Unauthenticated View -->
-        <div id="login-view" class="auth-visible" style="text-align: center;">
-            <h1 style="color: var(--accent-gold); margin-bottom: 0.5rem;">MediaLab Operations Console</h1>
-            <p>Authentication Required</p>
-            <button id="btn-login" class="btn-google">Sign in with Google</button>
-            <div id="auth-error" class="error-message auth-hidden"></div>
-            
-            <div style="margin-top: 2rem;">
-                <a href="../index.html" class="text-gold" style="text-decoration: none;">&larr; Return to Public Website</a>
+    <div id="console-wrap" class="auth-hidden" style="display: flex; flex-direction: column; height: 100%;">
+        <header class="console-header">
+            <h1>MediaLab <span>Operations Console</span></h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span id="user-email" style="color: var(--color-text-secondary); font-size: 0.9rem;"></span>
+                <button id="btn-logout" class="btn-signout">Sign Out</button>
             </div>
-        </div>
+        </header>
 
-        <!-- Authenticated View -->
-        <div id="console-view" class="auth-hidden">
-            <button id="btn-logout" class="btn-signout">Sign Out</button>
-            <h1 style="color: var(--accent-gold);">MediaLab Operations Console</h1>
-            <p>Welcome, <span id="user-email"></span>.</p>
-            <p style="color: #888;">This is a non-functional placeholder for the infrastructure proof of concept.</p>
-            
-            <div class="status-grid">
-                <div class="status-item">
-                    <strong>Firebase SQL Connect</strong><br>
-                    Status: <span class="text-secondary">NOT INITIALIZED</span>
+        <div id="console-view">
+            <!-- Left Pane -->
+            <div class="left-pane">
+                <div class="tabs">
+                    <div class="tab active" data-view="upcoming">Upcoming</div>
+                    <div class="tab" data-view="completed">Completed</div>
+                    <div class="tab" data-view="all">All Orders</div>
                 </div>
-                <div class="status-item">
-                    <strong>Google Drive API</strong><br>
-                    Status: <span id="status-drive" class="text-secondary">NOT AUTHORIZED</span>
+                
+                <div id="search-container" class="list-search auth-hidden">
+                    <input type="text" id="search-input" placeholder="Search orders by address, customer...">
                 </div>
-                <div class="status-item">
-                    <strong>Active Environment</strong><br>
-                    Status: <span id="status-env" class="text-secondary">LOCAL</span>
+
+                <div class="list-container" id="list-container">
+                    <!-- Cards will be injected here -->
                 </div>
-                <div class="status-item">
-                    <strong>Last Verification</strong><br>
-                    Status: <span id="status-verify" class="text-secondary">PENDING</span>
+                <div id="list-pagination" class="pagination auth-hidden" style="padding: 1rem; border-top: none;">
+                    <button id="btn-prev">Previous</button>
+                    <span id="page-info" style="color: var(--color-text-secondary); align-self: center; font-size: 0.85rem;"></span>
+                    <button id="btn-next">Next</button>
                 </div>
             </div>
 
-            <div class="drive-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0; color: #eee;">Drive Proof <span style="font-size: 0.8rem; background: #ff4444; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 10px;">READ ONLY</span></h2>
-                    <button id="btn-load-drive" class="drive-btn">Load Approved Folder</button>
+            <!-- Right Pane -->
+            <div class="right-pane">
+                <div id="detail-empty" class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; opacity: 0.5;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <h2>Select an order</h2>
+                    <p>Choose an order from the list to view full details.</p>
                 </div>
-                <div id="drive-error" class="error-message auth-hidden"></div>
-                <div id="drive-loading" class="auth-hidden" style="color: #888; margin-top: 1rem;">Loading contents...</div>
-                <ul id="drive-list" class="drive-list"></ul>
-            </div>
 
-            <div style="margin-top: 2rem; padding: 1rem; border-top: 1px solid #333;">
-                <a href="../index.html" class="text-gold" style="text-decoration: none;">&larr; Return to Public Website</a>
+                <div id="detail-loading" class="empty-state auth-hidden">
+                    <div class="loading-state">Fetching Aryeo data...</div>
+                </div>
+
+                <div id="detail-error" class="empty-state auth-hidden">
+                    <div id="detail-error-msg" class="error-state"></div>
+                </div>
+
+                <div id="detail-content" class="detail-container auth-hidden">
+                    <div class="detail-header">
+                        <div>
+                            <div class="data-label">Order <span id="dt-number"></span></div>
+                            <h2 id="dt-address"></h2>
+                            <span id="dt-status-badge" class="badge"></span>
+                        </div>
+                        <div class="detail-actions">
+                            <span class="action-link" id="btn-refresh">REFRESH FROM ARYEO</span>
+                            <span style="font-size: 0.75rem; color: var(--color-text-secondary);" id="dt-last-sync"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="detail-section">
+                            <h3>Appointment & Scheduling</h3>
+                            <div class="data-group">
+                                <div class="data-label">Date & Time</div>
+                                <div class="data-value" id="dt-appointment-time"></div>
+                            </div>
+                            <div class="data-group">
+                                <div class="data-label">Status</div>
+                                <div class="data-value" id="dt-appointment-status"></div>
+                            </div>
+                            <div class="data-group">
+                                <div class="data-label">Assigned Crew</div>
+                                <div class="data-value" id="dt-crew"></div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Delivery & Payment</h3>
+                            <div class="data-group">
+                                <div class="data-label">Delivery Status</div>
+                                <div class="data-value" id="dt-delivery-status"></div>
+                            </div>
+                            <div class="data-group">
+                                <div class="data-label">Payment Status</div>
+                                <div class="data-value" id="dt-payment-badge"></div>
+                            </div>
+                            <div class="data-group" id="dt-balance-group">
+                                <div class="data-label">Remaining Balance</div>
+                                <div class="data-value" id="dt-balance"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Customer Information</h3>
+                        <div class="grid-2">
+                            <div class="data-group">
+                                <div class="data-label">Name</div>
+                                <div class="data-value" id="dt-customer-name"></div>
+                            </div>
+                            <div class="data-group">
+                                <div class="data-label">Contact</div>
+                                <div class="data-value" id="dt-customer-contact"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Order Scope</h3>
+                        <div class="data-group">
+                            <div class="data-label">Ordered Services</div>
+                            <div class="data-value" id="dt-services"></div>
+                        </div>
+                        <div class="data-group" id="dt-notes-group">
+                            <div class="data-label">Order Notes / Access</div>
+                            <div class="data-value" id="dt-notes" style="white-space: pre-wrap;"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right; font-size: 0.75rem; color: var(--color-text-muted);">
+                        Internal UUID: <span id="dt-uuid"></span><br>
+                        Aryeo Last Updated: <span id="dt-updated-at"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -170,36 +515,38 @@
     <script type="module">
         import { auth, provider, signInWithPopup, signOut, onAuthStateChanged } from './firebase-auth.js';
 
-        const loginView = document.getElementById('login-view');
-        const consoleView = document.getElementById('console-view');
-        const btnLogin = document.getElementById('btn-login');
-        const btnLogout = document.getElementById('btn-logout');
-        const errorMsg = document.getElementById('auth-error');
-        const userEmailSpan = document.getElementById('user-email');
-        const btnLoadDrive = document.getElementById('btn-load-drive');
-        const driveList = document.getElementById('drive-list');
-        const driveError = document.getElementById('drive-error');
-        const driveLoading = document.getElementById('drive-loading');
+        const views = {
+            login: document.getElementById('login-view'),
+            consoleWrap: document.getElementById('console-wrap'),
+            listContainer: document.getElementById('list-container'),
+            detailEmpty: document.getElementById('detail-empty'),
+            detailLoading: document.getElementById('detail-loading'),
+            detailContent: document.getElementById('detail-content'),
+            detailError: document.getElementById('detail-error')
+        };
 
         let currentIdToken = null;
+        let currentView = 'upcoming';
+        let currentPage = 1;
+        let searchQuery = '';
+        let debounceTimer;
 
+        // UI State
         function showLogin(error = null) {
-            loginView.classList.remove('auth-hidden');
-            consoleView.classList.add('auth-hidden');
+            views.login.classList.remove('auth-hidden');
+            views.consoleWrap.classList.add('auth-hidden');
+            const errEl = document.getElementById('auth-error');
             if (error) {
-                errorMsg.textContent = error;
-                errorMsg.classList.remove('auth-hidden');
+                errEl.textContent = error;
+                errEl.classList.remove('auth-hidden');
             } else {
-                errorMsg.classList.add('auth-hidden');
+                errEl.classList.add('auth-hidden');
             }
         }
 
         async function verifyUserAndShowConsole(user) {
             try {
-                // Get the ID token
                 const idToken = await user.getIdToken();
-                
-                // Call the secure Netlify function
                 const response = await fetch('/.netlify/functions/verify-user', {
                     method: 'POST',
                     headers: {
@@ -214,13 +561,12 @@
                 }
 
                 const data = await response.json();
-                
                 if (data.authorized) {
-                    loginView.classList.add('auth-hidden');
-                    consoleView.classList.remove('auth-hidden');
-                    userEmailSpan.textContent = user.email;
-                    errorMsg.classList.add('auth-hidden');
+                    views.login.classList.add('auth-hidden');
+                    views.consoleWrap.classList.remove('auth-hidden');
+                    document.getElementById('user-email').textContent = user.email;
                     currentIdToken = idToken;
+                    loadList();
                 } else {
                     throw new Error('Server returned OK but not authorized');
                 }
@@ -232,143 +578,296 @@
             }
         }
 
-        // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Defer to the server-side Netlify function for actual verification
                 await verifyUserAndShowConsole(user);
             } else {
                 showLogin();
             }
         });
 
-        // Handle Login
-        btnLogin.addEventListener('click', async () => {
+        document.getElementById('btn-login').addEventListener('click', async () => {
             try {
-                errorMsg.classList.add('auth-hidden');
-                errorMsg.textContent = "Authenticating...";
-                errorMsg.classList.remove('auth-hidden');
-                errorMsg.style.color = "var(--accent-gold)";
-                errorMsg.style.borderColor = "var(--accent-gold)";
-                errorMsg.style.background = "rgba(255, 204, 0, 0.1)";
-
-                const result = await signInWithPopup(auth, provider);
-                
-                // Reset error message styling
-                errorMsg.style.color = "";
-                errorMsg.style.borderColor = "";
-                errorMsg.style.background = "";
-                
-                // Verification happens in onAuthStateChanged
+                const errEl = document.getElementById('auth-error');
+                errEl.classList.add('auth-hidden');
+                errEl.textContent = "Authenticating...";
+                errEl.classList.remove('auth-hidden');
+                await signInWithPopup(auth, provider);
             } catch (error) {
                 console.error("Authentication Error:", error);
-                // Reset error message styling
-                errorMsg.style.color = "";
-                errorMsg.style.borderColor = "";
-                errorMsg.style.background = "";
                 showLogin(`Authentication failed: ${error.message}`);
             }
         });
 
-        // Handle Logout
-        btnLogout.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                currentIdToken = null;
-                driveList.innerHTML = '';
-            } catch (error) {
-                console.error("Sign Out Error:", error);
-            }
+        document.getElementById('btn-logout').addEventListener('click', async () => {
+            await signOut(auth);
+            currentIdToken = null;
         });
 
-        // Handle Drive Load
-        btnLoadDrive.addEventListener('click', async () => {
-            if (!currentIdToken) return;
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                currentView = e.target.dataset.view;
+                currentPage = 1;
+                searchQuery = '';
+                document.getElementById('search-input').value = '';
+                
+                if (currentView === 'all') {
+                    document.getElementById('search-container').classList.remove('auth-hidden');
+                } else {
+                    document.getElementById('search-container').classList.add('auth-hidden');
+                }
+                
+                loadList();
+                hideDetail();
+            });
+        });
 
-            driveError.classList.add('auth-hidden');
-            driveList.innerHTML = '';
-            driveLoading.classList.remove('auth-hidden');
-            btnLoadDrive.disabled = true;
+        // Search
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            searchQuery = e.target.value;
+            debounceTimer = setTimeout(() => {
+                currentPage = 1;
+                loadList();
+            }, 500);
+        });
+
+        // Pagination
+        document.getElementById('btn-prev').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadList();
+            }
+        });
+        document.getElementById('btn-next').addEventListener('click', () => {
+            currentPage++;
+            loadList();
+        });
+
+        // Data Fetching
+        async function loadList() {
+            if (!currentIdToken) return;
+            
+            views.listContainer.innerHTML = '<div class="loading-state">Loading orders...</div>';
+            const paginationEl = document.getElementById('list-pagination');
+            paginationEl.classList.add('auth-hidden');
 
             try {
-                const response = await fetch('/.netlify/functions/list-drive-folder', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${currentIdToken}`
-                    }
+                let url = `/.netlify/functions/get-aryeo-orders?view=${currentView}&page=${currentPage}&per_page=25`;
+                if (searchQuery) {
+                    url += `&search=${encodeURIComponent(searchQuery)}`;
+                }
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || `Server returned ${response.status}`);
+                    throw new Error(data.error || 'Failed to fetch orders');
                 }
 
-                if (data.items.length === 0) {
-                    driveList.innerHTML = '<li class="drive-item" style="justify-content: center; color: #888;">Folder is empty</li>';
-                } else {
-                    data.items.forEach(item => {
-                        const li = document.createElement('li');
-                        li.className = 'drive-item';
-                        
-                        const leftDiv = document.createElement('div');
-                        const nameSpan = document.createElement('strong');
-                        nameSpan.textContent = item.name;
-                        const typeBadge = document.createElement('span');
-                        typeBadge.className = 'drive-badge';
-                        typeBadge.style.marginLeft = '8px';
-                        typeBadge.textContent = item.itemType;
-                        
-                        leftDiv.appendChild(nameSpan);
-                        leftDiv.appendChild(typeBadge);
-                        
-                        const rightDiv = document.createElement('div');
-                        rightDiv.style.fontSize = '0.85rem';
-                        rightDiv.style.color = '#888';
-                        
-                        if (item.modifiedTime) {
-                            const date = new Date(item.modifiedTime);
-                            rightDiv.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-                        }
-
-                        if (item.webViewLink) {
-                            const link = document.createElement('a');
-                            link.href = item.webViewLink;
-                            link.target = '_blank';
-                            link.textContent = ' Open ↗';
-                            link.style.color = 'var(--accent-gold)';
-                            link.style.marginLeft = '10px';
-                            link.style.textDecoration = 'none';
-                            rightDiv.appendChild(link);
-                        }
-                        
-                        li.appendChild(leftDiv);
-                        li.appendChild(rightDiv);
-                        driveList.appendChild(li);
-                    });
-                    
-                    // Update status UI on success
-                    document.getElementById('status-drive').textContent = 'READ-ONLY AUTHORIZED';
-                    document.getElementById('status-drive').style.color = '#00C851';
-                    document.getElementById('status-verify').textContent = 'PASSED';
-                    document.getElementById('status-verify').style.color = '#00C851';
-                    
-                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        document.getElementById('status-env').textContent = 'LOCAL';
-                    } else {
-                        document.getElementById('status-env').textContent = 'DEPLOY PREVIEW';
-                        document.getElementById('status-env').style.color = '#00C851';
-                    }
-                }
+                renderList(data.items, data.meta);
             } catch (error) {
-                console.error("Drive API Error:", error);
-                driveError.textContent = `Drive Error: ${error.message}`;
-                driveError.classList.remove('auth-hidden');
-            } finally {
-                driveLoading.classList.add('auth-hidden');
-                btnLoadDrive.disabled = false;
+                views.listContainer.innerHTML = `<div class="error-state">Error: ${error.message}</div>`;
+            }
+        }
+
+        function renderList(items, meta) {
+            views.listContainer.innerHTML = '';
+            if (items.length === 0) {
+                views.listContainer.innerHTML = '<div class="empty-state">No orders found.</div>';
+            } else {
+                items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'order-card';
+                    card.dataset.id = item.id;
+                    
+                    let dateStr = "Date TBD";
+                    if (item.start_at) {
+                        const d = new Date(item.start_at);
+                        dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    } else if (item.fulfilled_at) {
+                        const d = new Date(item.fulfilled_at);
+                        dateStr = "Fulfilled: " + d.toLocaleDateString();
+                    }
+
+                    let badgeHtml = '';
+                    if (currentView === 'upcoming') {
+                        badgeHtml = `<span class="badge badge-amber">${item.status}</span>`;
+                    } else if (currentView === 'completed') {
+                        let pStatus = "Status Unavailable";
+                        let bClass = "badge-gray";
+                        if (item.payment_status === "PAID") { pStatus = "Paid"; bClass = "badge-green"; }
+                        else if (item.payment_status === "PARTIALLY_PAID" || item.payment_status === "UNPAID") { pStatus = "Payment Pending"; bClass = "badge-amber"; }
+                        badgeHtml = `<span class="badge ${bClass}">${pStatus}</span>`;
+                    } else {
+                        badgeHtml = `<span class="badge badge-gray">${item.status || 'N/A'}</span>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="order-card-header">
+                            <span class="order-number">#${item.number}</span>
+                            <span class="order-date">${dateStr}</span>
+                        </div>
+                        <div class="order-address">${item.address}</div>
+                        <div class="order-customer">${item.customer_name}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            <div style="font-size:0.8rem; color:var(--color-text-muted); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px;">
+                                ${item.services}
+                            </div>
+                            <div>${badgeHtml}</div>
+                        </div>
+                    `;
+
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.order-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        loadDetail(item.id);
+                    });
+
+                    views.listContainer.appendChild(card);
+                });
+            }
+
+            // Pagination UI
+            if (currentView === 'all' && meta) {
+                const paginationEl = document.getElementById('list-pagination');
+                paginationEl.classList.remove('auth-hidden');
+                document.getElementById('page-info').textContent = `Page ${meta.current_page} of ${meta.last_page}`;
+                document.getElementById('btn-prev').disabled = meta.current_page <= 1;
+                document.getElementById('btn-next').disabled = meta.current_page >= meta.last_page;
+            }
+        }
+
+        function hideDetail() {
+            views.detailEmpty.classList.remove('auth-hidden');
+            views.detailLoading.classList.add('auth-hidden');
+            views.detailContent.classList.add('auth-hidden');
+            views.detailError.classList.add('auth-hidden');
+        }
+
+        let currentDetailId = null;
+
+        async function loadDetail(orderId) {
+            if (!currentIdToken) return;
+            currentDetailId = orderId;
+
+            views.detailEmpty.classList.add('auth-hidden');
+            views.detailContent.classList.add('auth-hidden');
+            views.detailError.classList.add('auth-hidden');
+            views.detailLoading.classList.remove('auth-hidden');
+
+            try {
+                const response = await fetch(`/.netlify/functions/get-aryeo-order-detail?order_id=${orderId}`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch order details');
+                }
+
+                renderDetail(data);
+            } catch (error) {
+                views.detailLoading.classList.add('auth-hidden');
+                views.detailError.classList.remove('auth-hidden');
+                document.getElementById('detail-error-msg').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function formatMoney(amount, currency) {
+            if (amount === null || amount === undefined) return "N/A";
+            const formatter = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency || 'USD',
+            });
+            return formatter.format(amount / 100);
+        }
+
+        function renderDetail(data) {
+            views.detailLoading.classList.add('auth-hidden');
+            views.detailContent.classList.remove('auth-hidden');
+
+            document.getElementById('dt-number').textContent = `#${data.number}`;
+            document.getElementById('dt-address').textContent = data.address;
+            document.getElementById('dt-uuid').textContent = data.id;
+            
+            const lastUpdated = new Date();
+            document.getElementById('dt-last-sync').textContent = "Synced: " + lastUpdated.toLocaleTimeString();
+            
+            let statusBadge = `<span class="badge badge-amber">${data.status}</span>`;
+            if (data.status === 'COMPLETED') statusBadge = `<span class="badge badge-green">${data.status}</span>`;
+            else if (data.status === 'CANCELLED') statusBadge = `<span class="badge badge-red">${data.status}</span>`;
+            document.getElementById('dt-status-badge').innerHTML = statusBadge;
+
+            // Appt
+            if (data.start_at) {
+                const d = new Date(data.start_at);
+                const formatter = new Intl.DateTimeFormat('en-US', { 
+                    dateStyle: 'full', timeStyle: 'short', timeZone: data.timezone 
+                });
+                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${data.timezone})`;
+            } else {
+                document.getElementById('dt-appointment-time').textContent = "Not scheduled";
+            }
+            document.getElementById('dt-appointment-status').textContent = data.appointment_status;
+            document.getElementById('dt-crew').textContent = data.assigned_users;
+
+            // Delivery & Payment
+            let deliveryStr = data.fulfillment_status || "UNFULFILLED";
+            if (data.fulfilled_at) {
+                const d = new Date(data.fulfilled_at);
+                deliveryStr += ` (${d.toLocaleDateString()})`;
+            }
+            document.getElementById('dt-delivery-status').textContent = deliveryStr;
+
+            let pStatus = "Status Unavailable";
+            let bClass = "badge-gray";
+            if (data.payment_status === "PAID") { pStatus = "Paid"; bClass = "badge-green"; }
+            else if (data.payment_status === "PARTIALLY_PAID" || data.payment_status === "UNPAID") { pStatus = "Payment Pending"; bClass = "badge-amber"; }
+            document.getElementById('dt-payment-badge').innerHTML = `<span class="badge ${bClass}">${pStatus}</span>`;
+
+            if (data.balance_amount !== null && data.balance_amount !== undefined) {
+                document.getElementById('dt-balance-group').style.display = 'block';
+                document.getElementById('dt-balance').textContent = formatMoney(data.balance_amount, data.currency);
+            } else {
+                document.getElementById('dt-balance-group').style.display = 'none';
+            }
+
+            // Customer
+            document.getElementById('dt-customer-name').textContent = data.customer_name;
+            const contact = [data.customer_phone, data.customer_email].filter(Boolean).join(" • ");
+            document.getElementById('dt-customer-contact').textContent = contact || "No contact info";
+
+            // Scope
+            document.getElementById('dt-services').textContent = data.services || "None";
+            if (data.notes) {
+                document.getElementById('dt-notes-group').style.display = 'block';
+                document.getElementById('dt-notes').textContent = data.notes;
+            } else {
+                document.getElementById('dt-notes-group').style.display = 'none';
+            }
+
+            if (data.updated_at) {
+                const d = new Date(data.updated_at);
+                document.getElementById('dt-updated-at').textContent = d.toLocaleString();
+            } else {
+                document.getElementById('dt-updated-at').textContent = "Unknown";
+            }
+        }
+
+        document.getElementById('btn-refresh').addEventListener('click', () => {
+            if (currentDetailId) {
+                loadDetail(currentDetailId);
             }
         });
+
     </script>
 </body>
 </html>
