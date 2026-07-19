@@ -98,9 +98,23 @@ exports.handler = async (event, context) => {
     });
 
     if (!response.ok) {
+      const status = response.status;
+      const statusText = response.statusText;
+      let safeErrorMessage = 'Unknown upstream error';
+      try {
+        const errBody = await response.json();
+        if (errBody && errBody.message && typeof errBody.message === 'string') safeErrorMessage = errBody.message;
+        else if (errBody && errBody.error && typeof errBody.error === 'string') safeErrorMessage = errBody.error;
+      } catch(e) {}
+      
+      console.error(`[Aryeo API Error] View: ${view} | Status: ${status} | StatusText: ${statusText} | Msg: ${safeErrorMessage}`);
+
       return {
         statusCode: 502,
-        body: JSON.stringify({ error: 'Upstream Aryeo API request failed' })
+        body: JSON.stringify({ 
+          error: 'Upstream Aryeo API request failed',
+          diagnostic: { status, statusText, message: safeErrorMessage }
+        })
       };
     }
 
@@ -111,6 +125,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify(normalizeResponse(data, view))
     };
   } catch (error) {
+    console.error(`[Aryeo API Error] View: ${view} | Fetch failed: ${error.message}`);
     return {
       statusCode: 502,
       body: JSON.stringify({ error: 'Upstream connection error' })
@@ -129,6 +144,8 @@ function normalizeResponse(payload, view) {
       if (appt.status === 'CANCELLED' || appt.status === 'canceled') return null;
       
       const order = appt.order || {};
+      if (!order.id) return null; // Exclude if no order UUID is present
+
       const customer = order.customer || appt.customer || {};
       const addressObj = order.address || (order.listing && order.listing.address) || (appt.listing && appt.listing.address) || {};
       let addressStr = addressObj.street_name || addressObj.unparsed_address_part_one || "Unknown Address";
@@ -139,7 +156,7 @@ function normalizeResponse(payload, view) {
       const services = (order.items || appt.order_items || []).map(i => i.title).join(", ");
 
       return {
-        id: order.id || appt.id, // Use order UUID as internal identifier
+        id: order.id, // Use order UUID as internal identifier
         number: order.number || "N/A", // Friendly Aryeo order number
         address: addressStr,
         start_at: appt.start_at,
@@ -152,6 +169,8 @@ function normalizeResponse(payload, view) {
   } else {
     // Payload contains orders
     items = (payload.data || []).map(order => {
+      if (!order || !order.id) return null; // Exclude if no order UUID is present
+
       const customer = order.customer || {};
       const addressObj = order.address || (order.listing && order.listing.address) || {};
       let addressStr = addressObj.street_name || addressObj.unparsed_address_part_one || "Unknown Address";
@@ -178,7 +197,7 @@ function normalizeResponse(payload, view) {
         currency: order.currency || "USD",
         status: order.status
       };
-    });
+    }).filter(Boolean);
   }
 
   return {

@@ -122,10 +122,32 @@ async function runTests() {
   });
   assert(res.statusCode === 400, "Invalid view returns 400");
 
-  // Test 10: Valid upstream data handling
+  // Test 10: Valid upstream data handling & UUID separation
   global.mockFetch = async (url) => {
     // Assert no write methods
     assert(!url.includes('POST') && !url.includes('PUT'), "No write HTTP methods sent to Aryeo");
+    
+    // Assert completed query construction
+    if (url.includes('filter%5Bfulfillment_status%5D=FULFILLED')) {
+      assert(url.includes('/v1/orders'), "Completed uses /v1/orders");
+    }
+
+    if (url.includes('/appointments')) {
+      return {
+        ok: true,
+        json: async () => ({
+          data: [{
+            id: "appt-uuid-not-order-uuid",
+            status: "SCHEDULED",
+            order: {
+              id: "111e4567-e89b-12d3-a456-426614174000",
+              number: 2002
+            }
+          }]
+        })
+      };
+    }
+
     return {
       ok: true,
       json: async () => ({
@@ -150,8 +172,41 @@ async function runTests() {
     queryStringParameters: { view: 'all' }
   });
   assert(res.statusCode === 200, "Valid data returns 200");
-  const parsed = JSON.parse(res.body);
+  let parsed = JSON.parse(res.body);
   assert(parsed.items[0].payment_status === "PARTIALLY_PAID", "Payment info parsed");
+  assert(parsed.items[0].id === "123e4567-e89b-12d3-a456-426614174000", "All Orders ID is UUID");
+  assert(parsed.items[0].number === 1001, "All Orders number is separate");
+
+  res = await ordersFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { view: 'upcoming' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(parsed.items[0].id === "111e4567-e89b-12d3-a456-426614174000", "Upcoming ID is normalized order UUID");
+  assert(parsed.items[0].number === 2002, "Upcoming number is separate");
+
+  // Test 11: Safe upstream diagnostic logging
+  global.mockFetch = async () => ({
+    ok: false,
+    status: 422,
+    statusText: 'Unprocessable Entity',
+    json: async () => ({ message: 'A safe Aryeo API error message' })
+  });
+  res = await ordersFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { view: 'completed' }
+  });
+  assert(res.statusCode === 502, "Returns 502 on upstream failure");
+  parsed = JSON.parse(res.body);
+  assert(parsed.diagnostic.status === 422, "Diagnostic contains upstream status");
+  assert(parsed.diagnostic.message === 'A safe Aryeo API error message', "Diagnostic contains safe message");
+
+  // Test 12: General UUID format accepted
+  res = await detailsFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: 'a23e4567-e89b-02d3-a456-426614174000' } // v0, not v1-5
+  });
+  assert(res.statusCode === 502, "Accepts generalized UUID");
 
   console.log(`\nTests Completed: ${passCount} Passed, ${failCount} Failed.`);
   if (failCount > 0) process.exit(1);

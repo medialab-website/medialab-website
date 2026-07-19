@@ -17,8 +17,8 @@ if (!getApps().length) {
 
 const AUTHORIZED_EMAIL = 'solutions@medialab.fyi';
 
-// Simple UUID regex
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// General UUID regex
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== 'GET') {
@@ -75,9 +75,23 @@ exports.handler = async (event, context) => {
     });
 
     if (!response.ok) {
+      const status = response.status;
+      const statusText = response.statusText;
+      let safeErrorMessage = 'Unknown upstream error';
+      try {
+        const errBody = await response.json();
+        if (errBody && errBody.message && typeof errBody.message === 'string') safeErrorMessage = errBody.message;
+        else if (errBody && errBody.error && typeof errBody.error === 'string') safeErrorMessage = errBody.error;
+      } catch(e) {}
+      
+      console.error(`[Aryeo API Error] Detail | Status: ${status} | StatusText: ${statusText} | Msg: ${safeErrorMessage}`);
+
       return {
         statusCode: 502,
-        body: JSON.stringify({ error: 'Upstream Aryeo API request failed' })
+        body: JSON.stringify({ 
+          error: 'Upstream Aryeo API request failed',
+          diagnostic: { status, statusText, message: safeErrorMessage }
+        })
       };
     }
 
@@ -88,6 +102,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify(normalizeDetailResponse(data))
     };
   } catch (error) {
+    console.error(`[Aryeo API Error] Detail | Fetch failed: ${error.message}`);
     return {
       statusCode: 502,
       body: JSON.stringify({ error: 'Upstream connection error' })
