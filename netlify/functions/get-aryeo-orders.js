@@ -133,58 +133,72 @@ exports.handler = async (event, context) => {
 
 async function fetchCompletedOrdersFallback(apiKey, pageNum, perPageNum) {
   let allFetchedOrders = [];
-  let currentUpstreamPage = 1;
   const safetyLimit = 20;
-  let isComplete = false;
   let diagnosticMsg = null;
+  const maxConcurrency = 4;
 
-  try {
+  const getPage = async (page) => {
     const fetchToUse = global.mockFetch || fetch;
-    while (currentUpstreamPage <= safetyLimit) {
-      const url = 'https://api.aryeo.com/v1/orders';
-      const q = new URLSearchParams();
-      q.append('page', currentUpstreamPage);
-      q.append('per_page', 100);
-      q.append('include', 'customer,listing,appointments,appointments.users,items');
-      q.append('sort', '-created_at');
+    const url = 'https://api.aryeo.com/v1/orders';
+    const q = new URLSearchParams();
+    q.append('page', page);
+    q.append('per_page', 100);
+    q.append('include', 'customer,listing');
+    q.append('sort', '-created_at');
 
-      const response = await fetchToUse(`${url}?${q.toString()}`, {
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' }
-      });
+    const response = await fetchToUse(`${url}?${q.toString()}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' }
+    });
 
-      if (!response.ok) {
-        const status = response.status;
-        const statusText = response.statusText;
-        let safeErrorMessage = 'Unknown upstream error';
-        try {
-          const errBody = await response.json();
-          if (errBody && errBody.message && typeof errBody.message === 'string') safeErrorMessage = errBody.message;
-          else if (errBody && errBody.error && typeof errBody.error === 'string') safeErrorMessage = errBody.error;
-        } catch(e) {}
-        
-        console.error(`[Aryeo API Error] View: completed | Status: ${status} | StatusText: ${statusText} | Msg: ${safeErrorMessage}`);
-        return {
-          statusCode: 502,
-          body: JSON.stringify({ 
-            error: 'Upstream Aryeo API request failed',
-            diagnostic: { status, statusText, message: safeErrorMessage }
-          })
-        };
-      }
-
-      const payload = await response.json();
-      allFetchedOrders = allFetchedOrders.concat(payload.data || []);
+    if (!response.ok) {
+      const status = response.status;
+      const statusText = response.statusText;
+      let safeErrorMessage = 'Unknown upstream error';
+      try {
+        const errBody = await response.json();
+        if (errBody && errBody.message && typeof errBody.message === 'string') safeErrorMessage = errBody.message;
+        else if (errBody && errBody.error && typeof errBody.error === 'string') safeErrorMessage = errBody.error;
+      } catch(e) {}
       
-      const meta = payload.meta || {};
-      if (meta.current_page >= meta.last_page || !meta.last_page) {
-        isComplete = true;
-        break;
-      }
-      currentUpstreamPage++;
+      const err = new Error('Upstream API request failed');
+      err.status = status;
+      err.statusText = statusText;
+      err.safeErrorMessage = safeErrorMessage;
+      throw err;
     }
 
-    if (!isComplete) {
+    return await response.json();
+  };
+
+  try {
+    // 1. Fetch first page to obtain pagination metadata
+    const firstPagePayload = await getPage(1);
+    allFetchedOrders = allFetchedOrders.concat(firstPagePayload.data || []);
+    
+    const meta = firstPagePayload.meta || {};
+    let lastPage = meta.last_page || 1;
+    
+    // 2. Determine target page count based on safety limit
+    let targetPageCount = lastPage;
+    if (targetPageCount > safetyLimit) {
+      targetPageCount = safetyLimit;
       diagnosticMsg = `Safety limit of ${safetyLimit} pages reached before retrieving all orders.`;
+    }
+
+    // 3. Fetch remaining pages with bounded concurrency (max 4)
+    if (targetPageCount > 1) {
+      const tasks = [];
+      for (let p = 2; p <= targetPageCount; p++) {
+        tasks.push(p);
+      }
+
+      for (let i = 0; i < tasks.length; i += maxConcurrency) {
+        const chunk = tasks.slice(i, i + maxConcurrency);
+        const results = await Promise.all(chunk.map(p => getPage(p)));
+        for (const res of results) {
+          allFetchedOrders = allFetchedOrders.concat(res.data || []);
+        }
+      }
     }
 
     // Deduplicate by UUID
@@ -238,6 +252,16 @@ async function fetchCompletedOrdersFallback(apiKey, pageNum, perPageNum) {
     };
 
   } catch (error) {
+    if (error.status) {
+      console.error(`[Aryeo API Error] View: completed | Status: ${error.status} | StatusText: ${error.statusText} | Msg: ${error.safeErrorMessage}`);
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ 
+          error: 'Upstream Aryeo API request failed',
+          diagnostic: { status: error.status, statusText: error.statusText, message: error.safeErrorMessage }
+        })
+      };
+    }
     console.error(`[Aryeo API Error] View: completed | Fetch failed: ${error.message}`);
     return {
       statusCode: 502,

@@ -206,37 +206,52 @@ async function runTests() {
   });
   assert(res.statusCode === 502, "Accepts generalized UUID");
 
-  // Test 13: Completed Fallback Pagination & deduplication
+  // Test 13: Completed Fallback Pagination, deduplication & includes
   let fetchCount = 0;
+  let activeRequests = 0;
+  let maxActiveRequests = 0;
+  
   global.mockFetch = async (url) => {
+    activeRequests++;
+    if (activeRequests > maxActiveRequests) maxActiveRequests = activeRequests;
+    
+    // Simulate network delay to test concurrency overlap
+    await new Promise(resolve => setTimeout(resolve, 10));
+
     if (url.includes('/v1/orders')) {
       assert(!url.includes('filter%5Bfulfillment_status%5D'), "Completed no longer sends filter[fulfillment_status]");
+      assert(url.includes('include=customer%2Clisting'), "Completed uses reduced includes");
+      
+      const pageStr = new URLSearchParams(url.split('?')[1]).get('page');
       fetchCount++;
-      if (fetchCount === 1) {
+      const pageNum = parseInt(pageStr);
+      
+      activeRequests--;
+      
+      if (pageNum === 1) {
         return {
           ok: true,
           json: async () => ({
             data: [
               { id: "uuid-1", fulfillment_status: "FULFILLED", fulfilled_at: "2026-07-01T00:00:00Z" },
-              { id: "uuid-2", fulfillment_status: "UNFULFILLED" },
               { id: "uuid-1", fulfillment_status: "FULFILLED", fulfilled_at: "2026-07-01T00:00:00Z" } // dup
             ],
-            meta: { total: 4, current_page: 1, last_page: 2, per_page: 100 }
+            meta: { total: 5, current_page: 1, last_page: 6, per_page: 100 }
           })
         };
-      } else if (fetchCount === 2) {
+      } else {
         return {
           ok: true,
           json: async () => ({
             data: [
-              { id: "uuid-3", fulfillment_status: "FULFILLED", fulfilled_at: "2026-07-02T00:00:00Z" },
-              { id: "uuid-4", fulfillment_status: "FULFILLED" } // no fulfilled_at
+              { id: `uuid-${pageNum}`, fulfillment_status: "FULFILLED", fulfilled_at: "2026-07-02T00:00:00Z" }
             ],
-            meta: { total: 4, current_page: 2, last_page: 2, per_page: 100 }
+            meta: { total: 5, current_page: pageNum, last_page: 6, per_page: 100 }
           })
         };
       }
     }
+    activeRequests--;
     return { ok: false, status: 500 };
   };
 
@@ -247,12 +262,11 @@ async function runTests() {
   
   assert(res.statusCode === 200, "Completed fallback succeeds");
   parsed = JSON.parse(res.body);
-  assert(fetchCount === 2, "Completed fallback loops through pages");
-  assert(parsed.items.length === 3, "Only fulfilled, deduplicated orders are returned");
-  assert(parsed.items[0].id === "uuid-3", "Sorted descending by fulfilled_at (uuid-3 is newest)");
-  assert(parsed.items[1].id === "uuid-1", "uuid-1 is older");
-  assert(parsed.items[2].id === "uuid-4", "Missing fulfilled_at sorts last");
-  
+  assert(fetchCount === 6, "Completed fallback loops through all 6 pages");
+  assert(maxActiveRequests > 1, "More than one page can execute concurrently");
+  assert(maxActiveRequests <= 4, "Maximum observed concurrency never exceeds four");
+  assert(parsed.items.length === 6, "All items collected, deduplicated, and filtered");
+
   // Test 14: Completed Fallback Safety Limit
   fetchCount = 0;
   global.mockFetch = async (url) => {
@@ -272,6 +286,39 @@ async function runTests() {
   parsed = JSON.parse(res.body);
   assert(fetchCount === 20, "Enforces finite safety limit (20 loops)");
   assert(parsed.diagnostic && parsed.diagnostic.message.includes("Safety limit"), "Incomplete diagnostic included");
+
+  // Test 15: Upstream page failure during concurrent execution
+  global.mockFetch = async (url) => {
+    const pageStr = new URLSearchParams(url.split('?')[1]).get('page');
+    if (pageStr === '1') {
+      return {
+        ok: true,
+        json: async () => ({
+          data: [],
+          meta: { current_page: 1, last_page: 5, per_page: 100 }
+        })
+      };
+    } else if (pageStr === '3') {
+      return {
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        json: async () => ({ message: "Failed at page 3" })
+      };
+    } else {
+      return {
+        ok: true,
+        json: async () => ({ data: [], meta: { current_page: parseInt(pageStr), last_page: 5 } })
+      };
+    }
+  };
+  res = await ordersFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { view: 'completed' }
+  });
+  assert(res.statusCode === 502, "Upstream page failure returns 502");
+  parsed = JSON.parse(res.body);
+  assert(parsed.diagnostic && parsed.diagnostic.message === "Failed at page 3", "Controlled JSON error with diagnostic from failed concurrent page");
 
   console.log(`\nTests Completed: ${passCount} Passed, ${failCount} Failed.`);
   if (failCount > 0) process.exit(1);

@@ -724,7 +724,13 @@
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
 
-                const data = await response.json();
+                let data;
+                try {
+                    const text = await response.text();
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('The order request timed out. Please try again.');
+                }
 
                 if (!response.ok) {
                     // Check if it's the configuration missing state
@@ -829,7 +835,13 @@
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
 
-                const data = await response.json();
+                let data;
+                try {
+                    const text = await response.text();
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('The order request timed out. Please try again.');
+                }
 
                 if (!response.ok) {
                     if (response.status === 503 && data.error === 'ARYEO_NOT_CONFIGURED') {
