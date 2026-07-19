@@ -682,8 +682,7 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { auth, provider, signInWithPopup, signOut, onAuthStateChanged } from "./firebase-auth.js";
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
