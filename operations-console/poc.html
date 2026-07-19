@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aryeo Orders | TCML Operations Console</title>
+    <title>Operations Console | TCML</title>
     <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/components.css">
     <style>
@@ -31,7 +31,6 @@
             overflow: hidden;
         }
 
-        /* Top Header */
         .console-header {
             display: flex;
             justify-content: space-between;
@@ -72,7 +71,6 @@
         .auth-hidden { display: none !important; }
         .auth-visible { display: flex; }
 
-        /* Login Screen */
         #login-view {
             flex-direction: column;
             align-items: center;
@@ -94,7 +92,6 @@
         }
         .btn-google:hover { background: #3367D6; }
 
-        /* Console Split Pane Layout */
         #console-view {
             display: flex;
             flex: 1;
@@ -102,7 +99,6 @@
             overflow: hidden;
         }
 
-        /* Left Pane (Master List) */
         .left-pane {
             width: 35%;
             min-width: 300px;
@@ -126,20 +122,14 @@
             cursor: pointer;
             color: var(--color-text-secondary);
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             border-bottom: 2px solid transparent;
             transition: all 0.2s ease;
         }
 
-        .tab:hover {
-            color: var(--color-text-primary);
-        }
-
-        .tab.active {
-            color: var(--color-primary);
-            border-bottom: 2px solid var(--color-primary);
-        }
+        .tab:hover { color: var(--color-text-primary); }
+        .tab.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
 
         .list-container {
             flex: 1;
@@ -187,27 +177,10 @@
             margin-bottom: 0.5rem;
         }
 
-        .order-number {
-            font-weight: bold;
-            color: var(--color-primary);
-        }
-
-        .order-date {
-            font-size: 0.85rem;
-            color: var(--color-text-secondary);
-        }
-
-        .order-address {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .order-customer {
-            font-size: 0.9rem;
-            color: var(--color-text-secondary);
-            margin-bottom: 0.5rem;
-        }
+        .order-number { font-weight: bold; color: var(--color-primary); }
+        .order-date { font-size: 0.85rem; color: var(--color-text-secondary); }
+        .order-address { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .order-customer { font-size: 0.9rem; color: var(--color-text-secondary); margin-bottom: 0.5rem; }
 
         .badge {
             display: inline-block;
@@ -223,7 +196,6 @@
         .badge-red { background: rgba(255, 68, 68, 0.15); color: #ff4444; }
         .badge-gray { background: rgba(136, 136, 136, 0.15); color: var(--color-text-secondary); }
 
-        /* Right Pane (Details) */
         .right-pane {
             width: 65%;
             flex: 1;
@@ -300,21 +272,9 @@
             gap: 1rem;
         }
 
-        .data-group {
-            margin-bottom: 1rem;
-        }
-
-        .data-label {
-            font-size: 0.8rem;
-            color: var(--color-text-secondary);
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-        }
-
-        .data-value {
-            font-size: 1rem;
-            color: var(--color-text-primary);
-        }
+        .data-group { margin-bottom: 1rem; }
+        .data-label { font-size: 0.8rem; color: var(--color-text-secondary); text-transform: uppercase; margin-bottom: 0.25rem; }
+        .data-value { font-size: 1rem; color: var(--color-text-primary); }
 
         .empty-state {
             display: flex;
@@ -360,10 +320,59 @@
             cursor: pointer;
         }
 
-        .pagination button:disabled {
-            color: var(--color-text-muted);
-            cursor: not-allowed;
+        .pagination button:disabled { color: var(--color-text-muted); cursor: not-allowed; }
+
+        /* Legacy Drive Proof Styles */
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
+        .status-item {
+            padding: 1rem;
+            background: var(--color-bg-surface);
+            border-radius: 4px;
+            border: 1px solid var(--color-border);
+        }
+        .drive-container {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--color-bg-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+        }
+        .drive-list {
+            margin-top: 1rem;
+            list-style: none;
+            padding: 0;
+        }
+        .drive-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drive-item:last-child { border-bottom: none; }
+        .drive-badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            background: var(--color-bg-base);
+            color: var(--color-text-secondary);
+        }
+        .drive-btn {
+            background: #00C851;
+            color: #000;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .drive-btn:hover { background: #007E33; }
+        .drive-btn:disabled { background: var(--color-border); color: var(--color-text-muted); cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -393,6 +402,7 @@
                     <div class="tab active" data-view="upcoming">Upcoming</div>
                     <div class="tab" data-view="completed">Completed</div>
                     <div class="tab" data-view="all">All Orders</div>
+                    <div class="tab" data-view="drive">Drive Proof</div>
                 </div>
                 
                 <div id="search-container" class="list-search auth-hidden">
@@ -402,6 +412,41 @@
                 <div class="list-container" id="list-container">
                     <!-- Cards will be injected here -->
                 </div>
+                
+                <!-- Drive Proof Pane (Left Pane injection for non-order tabs) -->
+                <div class="list-container auth-hidden" id="drive-pane">
+                    <h2>Stage 1C Google Drive API</h2>
+                    <p style="color: var(--color-text-secondary); font-size: 0.9rem;">This view preserves the Stage 1C Google Drive backend authorization.</p>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <strong>Firebase SQL Connect</strong><br>
+                            Status: <span style="color: var(--color-text-secondary);">NOT INITIALIZED</span>
+                        </div>
+                        <div class="status-item">
+                            <strong>Google Drive API</strong><br>
+                            Status: <span id="status-drive" style="color: var(--color-text-secondary);">NOT AUTHORIZED</span>
+                        </div>
+                        <div class="status-item">
+                            <strong>Active Environment</strong><br>
+                            Status: <span id="status-env" style="color: var(--color-text-secondary);">LOCAL</span>
+                        </div>
+                        <div class="status-item">
+                            <strong>Last Verification</strong><br>
+                            Status: <span id="status-verify" style="color: var(--color-text-secondary);">PENDING</span>
+                        </div>
+                    </div>
+
+                    <div class="drive-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="margin: 0; color: #eee; font-size: 1rem;">Drive Proof <span style="font-size: 0.8rem; background: #ff4444; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 10px;">READ ONLY</span></h3>
+                            <button id="btn-load-drive" class="drive-btn">Load Approved Folder</button>
+                        </div>
+                        <div id="drive-error" class="error-state auth-hidden"></div>
+                        <div id="drive-loading" class="auth-hidden" style="color: var(--color-text-secondary); margin-top: 1rem;">Loading contents...</div>
+                        <ul id="drive-list" class="drive-list"></ul>
+                    </div>
+                </div>
+
                 <div id="list-pagination" class="pagination auth-hidden" style="padding: 1rem; border-top: none;">
                     <button id="btn-prev">Previous</button>
                     <span id="page-info" style="color: var(--color-text-secondary); align-self: center; font-size: 0.85rem;"></span>
@@ -410,7 +455,7 @@
             </div>
 
             <!-- Right Pane -->
-            <div class="right-pane">
+            <div class="right-pane" id="right-pane-container">
                 <div id="detail-empty" class="empty-state">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; opacity: 0.5;">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -519,6 +564,8 @@
             login: document.getElementById('login-view'),
             consoleWrap: document.getElementById('console-wrap'),
             listContainer: document.getElementById('list-container'),
+            drivePane: document.getElementById('drive-pane'),
+            rightPaneContainer: document.getElementById('right-pane-container'),
             detailEmpty: document.getElementById('detail-empty'),
             detailLoading: document.getElementById('detail-loading'),
             detailContent: document.getElementById('detail-content'),
@@ -531,7 +578,6 @@
         let searchQuery = '';
         let debounceTimer;
 
-        // UI State
         function showLogin(error = null) {
             views.login.classList.remove('auth-hidden');
             views.consoleWrap.classList.add('auth-hidden');
@@ -610,18 +656,31 @@
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 e.target.classList.add('active');
                 currentView = e.target.dataset.view;
-                currentPage = 1;
-                searchQuery = '';
-                document.getElementById('search-input').value = '';
                 
-                if (currentView === 'all') {
-                    document.getElementById('search-container').classList.remove('auth-hidden');
-                } else {
+                if (currentView === 'drive') {
+                    views.listContainer.classList.add('auth-hidden');
+                    views.drivePane.classList.remove('auth-hidden');
                     document.getElementById('search-container').classList.add('auth-hidden');
+                    document.getElementById('list-pagination').classList.add('auth-hidden');
+                    views.rightPaneContainer.classList.add('auth-hidden'); // Hide right pane fully in Drive mode
+                } else {
+                    views.listContainer.classList.remove('auth-hidden');
+                    views.drivePane.classList.add('auth-hidden');
+                    views.rightPaneContainer.classList.remove('auth-hidden');
+                    
+                    currentPage = 1;
+                    searchQuery = '';
+                    document.getElementById('search-input').value = '';
+                    
+                    if (currentView === 'all') {
+                        document.getElementById('search-container').classList.remove('auth-hidden');
+                    } else {
+                        document.getElementById('search-container').classList.add('auth-hidden');
+                    }
+                    
+                    loadList();
+                    hideDetail();
                 }
-                
-                loadList();
-                hideDetail();
             });
         });
 
@@ -668,6 +727,10 @@
                 const data = await response.json();
 
                 if (!response.ok) {
+                    // Check if it's the configuration missing state
+                    if (response.status === 503 && data.error === 'ARYEO_NOT_CONFIGURED') {
+                        throw new Error('Aryeo integration is currently unavailable. (ARYEO_NOT_CONFIGURED)');
+                    }
                     throw new Error(data.error || 'Failed to fetch orders');
                 }
 
@@ -734,7 +797,6 @@
                 });
             }
 
-            // Pagination UI
             if (currentView === 'all' && meta) {
                 const paginationEl = document.getElementById('list-pagination');
                 paginationEl.classList.remove('auth-hidden');
@@ -770,6 +832,9 @@
                 const data = await response.json();
 
                 if (!response.ok) {
+                    if (response.status === 503 && data.error === 'ARYEO_NOT_CONFIGURED') {
+                        throw new Error('Aryeo integration is currently unavailable. (ARYEO_NOT_CONFIGURED)');
+                    }
                     throw new Error(data.error || 'Failed to fetch order details');
                 }
 
@@ -868,6 +933,98 @@
             }
         });
 
+        // Stage 1C Google Drive API Proof behavior
+        const btnLoadDrive = document.getElementById('btn-load-drive');
+        const driveList = document.getElementById('drive-list');
+        const driveError = document.getElementById('drive-error');
+        const driveLoading = document.getElementById('drive-loading');
+
+        btnLoadDrive.addEventListener('click', async () => {
+            if (!currentIdToken) return;
+
+            driveError.classList.add('auth-hidden');
+            driveList.innerHTML = '';
+            driveLoading.classList.remove('auth-hidden');
+            btnLoadDrive.disabled = true;
+
+            try {
+                const response = await fetch('/.netlify/functions/list-drive-folder', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentIdToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Server returned ${response.status}`);
+                }
+
+                if (data.items.length === 0) {
+                    driveList.innerHTML = '<li class="drive-item" style="justify-content: center; color: var(--color-text-muted);">Folder is empty</li>';
+                } else {
+                    data.items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'drive-item';
+                        
+                        const leftDiv = document.createElement('div');
+                        const nameSpan = document.createElement('strong');
+                        nameSpan.textContent = item.name;
+                        const typeBadge = document.createElement('span');
+                        typeBadge.className = 'drive-badge';
+                        typeBadge.style.marginLeft = '8px';
+                        typeBadge.textContent = item.itemType;
+                        
+                        leftDiv.appendChild(nameSpan);
+                        leftDiv.appendChild(typeBadge);
+                        
+                        const rightDiv = document.createElement('div');
+                        rightDiv.style.fontSize = '0.85rem';
+                        rightDiv.style.color = 'var(--color-text-secondary)';
+                        
+                        if (item.modifiedTime) {
+                            const date = new Date(item.modifiedTime);
+                            rightDiv.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                        }
+
+                        if (item.webViewLink) {
+                            const link = document.createElement('a');
+                            link.href = item.webViewLink;
+                            link.target = '_blank';
+                            link.textContent = ' Open ↗';
+                            link.style.color = 'var(--color-primary)';
+                            link.style.marginLeft = '10px';
+                            link.style.textDecoration = 'none';
+                            rightDiv.appendChild(link);
+                        }
+                        
+                        li.appendChild(leftDiv);
+                        li.appendChild(rightDiv);
+                        driveList.appendChild(li);
+                    });
+                    
+                    document.getElementById('status-drive').textContent = 'READ-ONLY AUTHORIZED';
+                    document.getElementById('status-drive').style.color = '#00C851';
+                    document.getElementById('status-verify').textContent = 'PASSED';
+                    document.getElementById('status-verify').style.color = '#00C851';
+                    
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        document.getElementById('status-env').textContent = 'LOCAL';
+                    } else {
+                        document.getElementById('status-env').textContent = 'DEPLOY PREVIEW';
+                        document.getElementById('status-env').style.color = '#00C851';
+                    }
+                }
+            } catch (error) {
+                console.error("Drive API Error:", error);
+                driveError.textContent = `Drive Error: ${error.message}`;
+                driveError.classList.remove('auth-hidden');
+            } finally {
+                driveLoading.classList.add('auth-hidden');
+                btnLoadDrive.disabled = false;
+            }
+        });
     </script>
 </body>
 </html>

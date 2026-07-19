@@ -45,14 +45,18 @@ exports.handler = async (event, context) => {
   if (isNaN(pageNum) || pageNum < 1) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid page parameter' }) };
   if (isNaN(perPageNum) || perPageNum < 1 || perPageNum > 100) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid per_page parameter' }) };
 
+  const validViews = ['upcoming', 'completed', 'all'];
+  if (view && !validViews.includes(view)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid view parameter' }) };
+  }
+
   const apiKey = process.env.ARYEO_API_KEY;
 
   if (!apiKey) {
-    // MOCK MODE
     return {
-      statusCode: 200,
+      statusCode: 503,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(getMockData(view, pageNum, perPageNum))
+      body: JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' })
     };
   }
 
@@ -64,20 +68,19 @@ exports.handler = async (event, context) => {
   if (view === 'upcoming') {
     apiUrl += '/appointments';
     queryParams.append('filter[tense]', 'UPCOMING');
-    // Using explicit string includes requested: order, customer, address/listing, users, order_items
-    queryParams.append('include', 'order,customer,listing,users,order_items');
-    // For upcoming appointments, sort ascending
+    // Using documented appointment-related expansions. 
+    queryParams.append('include', 'order,order.customer,order.listing,order.items,users');
     queryParams.append('sort', 'start_at');
   } else if (view === 'completed') {
     apiUrl += '/orders';
     queryParams.append('filter[fulfillment_status]', 'FULFILLED');
-    queryParams.append('include', 'customer,listing,appointments,items');
-    // Newest fulfilled first
-    queryParams.append('sort', '-fulfilled_at'); 
+    queryParams.append('include', 'customer,listing,appointments,appointments.users,items');
+    // Using created_at as safe documented sort, since fulfilled_at sorting requires live verification
+    queryParams.append('sort', '-created_at'); 
   } else {
     // ALL ORDERS
     apiUrl += '/orders';
-    queryParams.append('include', 'customer,listing,appointments,items');
+    queryParams.append('include', 'customer,listing,appointments,appointments.users,items');
     queryParams.append('sort', '-created_at');
     if (search && search.trim() !== '') {
       queryParams.append('filter[search]', search.trim());
@@ -85,7 +88,9 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const response = await fetch(`${apiUrl}?${queryParams.toString()}`, {
+    // Allow injecting a mocked fetch for isolated local tests
+    const fetchToUse = global.mockFetch || fetch;
+    const response = await fetchToUse(`${apiUrl}?${queryParams.toString()}`, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'application/json'
@@ -93,8 +98,6 @@ exports.handler = async (event, context) => {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Aryeo API Error (${response.status}):`, errorText);
       return {
         statusCode: 502,
         body: JSON.stringify({ error: 'Upstream Aryeo API request failed' })
@@ -108,7 +111,6 @@ exports.handler = async (event, context) => {
       body: JSON.stringify(normalizeResponse(data, view))
     };
   } catch (error) {
-    console.error('Fetch error:', error);
     return {
       statusCode: 502,
       body: JSON.stringify({ error: 'Upstream connection error' })
@@ -188,55 +190,4 @@ function normalizeResponse(payload, view) {
       per_page: meta.per_page || items.length
     }
   };
-}
-
-function getMockData(view, page, perPage) {
-  const items = [];
-  if (view === 'upcoming') {
-    items.push({
-      id: "mock-uuid-1",
-      number: 301,
-      address: "123 Mockingbird Ln",
-      start_at: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
-      timezone: "America/New_York",
-      customer_name: "Jane Realtor",
-      services: "HDR Photos, Drone Video",
-      status: "CONFIRMED"
-    });
-  } else if (view === 'completed') {
-    items.push({
-      id: "mock-uuid-2",
-      number: 299,
-      address: "456 Historic Ave",
-      start_at: new Date(Date.now() - 86400000).toISOString(),
-      timezone: "America/New_York",
-      customer_name: "John Broker",
-      services: "Virtual Tour",
-      fulfillment_status: "FULFILLED",
-      fulfilled_at: new Date(Date.now() - 40000000).toISOString(),
-      payment_status: "PAID",
-      total_amount: 25000,
-      balance_amount: 0,
-      currency: "USD",
-      status: "COMPLETED"
-    });
-  } else {
-    items.push({
-      id: "mock-uuid-3",
-      number: 295,
-      address: "789 Main St",
-      start_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-      timezone: "America/New_York",
-      customer_name: "Mary Lee",
-      services: "Photos",
-      fulfillment_status: "FULFILLED",
-      fulfilled_at: new Date(Date.now() - 86400000 * 4).toISOString(),
-      payment_status: "PARTIALLY_PAID",
-      total_amount: 15000,
-      balance_amount: 5000,
-      currency: "USD",
-      status: "COMPLETED"
-    });
-  }
-  return { items, meta: { total: items.length, current_page: page, last_page: 1, per_page: perPage } };
 }

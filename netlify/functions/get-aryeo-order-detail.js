@@ -45,30 +45,29 @@ exports.handler = async (event, context) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing order_id parameter' }) };
   }
   
-  // If we're mocking, we might pass 'mock-uuid-x'. Skip UUID validation in mock testing if we detect our own mock prefix, or just enforce UUID if we use real mock UUIDs.
-  // Actually, to be safe, I'll allow "mock-" prefix for local testing.
-  if (!uuidRegex.test(orderId) && !orderId.startsWith('mock-')) {
+  if (!uuidRegex.test(orderId)) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid order_id format (must be UUID)' }) };
   }
 
   const apiKey = process.env.ARYEO_API_KEY;
 
   if (!apiKey) {
-    // MOCK MODE
     return {
-      statusCode: 200,
+      statusCode: 503,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(getMockDetailData(orderId))
+      body: JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' })
     };
   }
 
   // Real request
   const apiUrl = `https://api.aryeo.com/v1/orders/${orderId}`;
   let queryParams = new URLSearchParams();
-  queryParams.append('include', 'customer,listing,appointments,items,users');
+  queryParams.append('include', 'customer,listing,appointments,appointments.users,items');
 
   try {
-    const response = await fetch(`${apiUrl}?${queryParams.toString()}`, {
+    // Allow injecting a mocked fetch for isolated local tests
+    const fetchToUse = global.mockFetch || fetch;
+    const response = await fetchToUse(`${apiUrl}?${queryParams.toString()}`, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'application/json'
@@ -76,8 +75,6 @@ exports.handler = async (event, context) => {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Aryeo API Error (${response.status}):`, errorText);
       return {
         statusCode: 502,
         body: JSON.stringify({ error: 'Upstream Aryeo API request failed' })
@@ -91,7 +88,6 @@ exports.handler = async (event, context) => {
       body: JSON.stringify(normalizeDetailResponse(data))
     };
   } catch (error) {
-    console.error('Fetch error:', error);
     return {
       statusCode: 502,
       body: JSON.stringify({ error: 'Upstream connection error' })
@@ -141,35 +137,5 @@ function normalizeDetailResponse(payload) {
     notes: order.notes || "",
     
     updated_at: order.updated_at || new Date().toISOString()
-  };
-}
-
-function getMockDetailData(orderId) {
-  return {
-    id: orderId,
-    number: 301,
-    status: "CONFIRMED",
-    fulfillment_status: "UNFULFILLED",
-    fulfilled_at: null,
-    payment_status: "UNPAID",
-    total_amount: 35000,
-    balance_amount: 35000,
-    currency: "USD",
-    
-    customer_name: "Jane Realtor",
-    customer_email: "jane@example.com",
-    customer_phone: "555-0100",
-    
-    address: "123 Mockingbird Ln, Tri-Cities, TN 37620",
-    
-    start_at: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
-    timezone: "America/New_York",
-    appointment_status: "CONFIRMED",
-    
-    assigned_users: "John Shooter",
-    services: "HDR Photos, Drone Video, Floor Plan",
-    notes: "Lockbox code is 1234. Please ensure lights are on.",
-    
-    updated_at: new Date().toISOString()
   };
 }
