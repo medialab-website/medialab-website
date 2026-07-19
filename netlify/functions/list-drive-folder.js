@@ -2,47 +2,19 @@ const { getAuth } = require('firebase-admin/auth');
 const { initializeApp, getApps, cert } = require('firebase-admin/app');
 const { google } = require('googleapis');
 
-// Initialize Firebase Admin (reused logic)
-if (!getApps().length) {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY 
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-    : undefined;
-
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey,
-    })
-  });
-}
-
-const AUTHORIZED_EMAIL = 'solutions@medialab.fyi';
+const { verifyAuth } = require('./_shared/auth');
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== 'GET') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
-  const authHeader = event.headers.authorization || event.headers.Authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'Missing or malformed Authorization header' }) };
-  }
-
-  const idToken = authHeader.split('Bearer ')[1];
-
-  try {
-    const decodedToken = await getAuth().verifyIdToken(idToken, true);
-    
-    if (decodedToken.email !== AUTHORIZED_EMAIL) {
-      return {
-        statusCode: 403,
-        body: JSON.stringify({ error: `Access Denied: The account ${decodedToken.email} is not authorized for server-side access.` })
-      };
-    }
-  } catch (error) {
-    console.error('Error verifying token:', error);
-    return { statusCode: 401, body: JSON.stringify({ error: 'Invalid, expired, or revoked token' }) };
+  const authResult = await verifyAuth(event);
+  if (!authResult.ok) {
+    return {
+      statusCode: authResult.statusCode,
+      body: JSON.stringify({ error: authResult.error })
+    };
   }
 
   try {

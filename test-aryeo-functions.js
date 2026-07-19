@@ -19,8 +19,8 @@ require('module').Module._cache[require.resolve('firebase-admin/auth')] = {
   exports: {
     getAuth: () => ({
       verifyIdToken: async (token) => {
-        if (token === "mock-valid-token-authorized") return { email: 'solutions@medialab.fyi' };
-        if (token === "mock-valid-token-unauthorized") return { email: 'wrong@example.com' };
+        if (token === "mock-valid-token-authorized") return { email: 'solutions@medialab.fyi', email_verified: true };
+        if (token === "mock-valid-token-unauthorized") return { email: 'wrong@example.com', email_verified: true };
         throw new Error('Invalid token');
       }
     })

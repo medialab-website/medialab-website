@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1e1e1e">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
     <title>Operations Console | TCML</title>
     <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/components.css">
@@ -390,6 +393,67 @@
         .warning-text { color: #ff9800; }
         .critical-warning-text { color: #f44336; }
         .action-btn { background: var(--color-primary); color: #000; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; }
+
+        /* Mobile specific styling */
+        .btn-back-mobile {
+            display: none;
+            background: transparent;
+            color: var(--color-text-secondary);
+            border: 1px solid var(--color-border);
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            width: 100%;
+            text-align: center;
+        }
+
+        .mobile-contact-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .mobile-contact-actions .action-btn {
+            flex: 1;
+            text-align: center;
+            background: var(--color-bg-surface-hover);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border);
+            text-decoration: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .mobile-contact-actions .action-btn.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            #console-view { flex-direction: column; }
+            .left-pane, .right-pane { width: 100%; flex: none; height: 100%; }
+            .right-pane { display: none; }
+            
+            /* Toggle visibility via JS classes */
+            #console-view.show-detail .left-pane { display: none; }
+            #console-view.show-detail .right-pane { display: flex; }
+            
+            .btn-back-mobile { display: block; }
+            
+            .detail-container { padding: 1rem; padding-bottom: env(safe-area-inset-bottom); }
+            .grid-2 { grid-template-columns: 1fr; }
+            
+            .tab { padding: 1.25rem 0; }
+            .order-card { padding: 1.25rem; }
+            .action-link, .action-btn, .btn-signout { padding: 0.75rem 1rem; min-height: 44px; }
+            .detail-actions { align-items: stretch; width: 100%; margin-top: 1rem; }
+            .detail-header { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
@@ -473,6 +537,7 @@
 
             <!-- Right Pane -->
             <div class="right-pane" id="right-pane-container">
+                <button id="btn-back-mobile" class="btn-back-mobile">&larr; Back to Orders</button>
                 <div id="detail-empty" class="empty-state">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; opacity: 0.5;">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -550,6 +615,10 @@
                             <div class="data-group">
                                 <div class="data-label">Contact</div>
                                 <div class="data-value" id="dt-customer-contact"></div>
+                                <div id="mobile-contact-actions" class="mobile-contact-actions">
+                                    <a href="#" id="btn-call-agent" class="action-btn disabled">CALL AGENT</a>
+                                    <a href="#" id="btn-text-agent" class="action-btn disabled">TEXT AGENT</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -568,7 +637,10 @@
 
                     <div id="mission-plan-container" class="detail-section">
                         <h3>Mission Plan</h3>
-                        <p id="mission-plan-timestamp" class="mission-plan-text" style="font-size: 12px; margin-bottom: 16px;"></p>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 16px;">
+                            <p id="mission-plan-timestamp" class="mission-plan-text" style="font-size: 12px; margin: 0;"></p>
+                            <button id="btn-save-offline" class="action-btn" style="width: fit-content;">SAVE OFFLINE BRIEF</button>
+                        </div>
                         
                         <div id="mission-plan-warnings" class="mission-plan-section auth-hidden">
                             <h4>Warnings</h4>
@@ -607,7 +679,14 @@
     </div>
 
     <script type="module">
-        import { auth, provider, signInWithPopup, signOut, onAuthStateChanged } from './firebase-auth.js';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.error('ServiceWorker registration failed: ', err));
+            });
+        }
 
         const views = {
             login: document.getElementById('login-view'),
@@ -905,6 +984,7 @@
         }
 
         function renderDetail(data) {
+            document.getElementById('console-view').classList.add('show-detail');
             views.detailLoading.classList.add('auth-hidden');
             views.detailContent.classList.remove('auth-hidden');
 
@@ -954,6 +1034,29 @@
             const contact = [data.customer_phone, data.customer_email].filter(Boolean).join(" • ");
             document.getElementById('dt-customer-contact').textContent = contact || "No contact info";
 
+            // Mobile Actions
+            const btnCall = document.getElementById('btn-call-agent');
+            const btnText = document.getElementById('btn-text-agent');
+            if (data.customer_phone) {
+                const digits = data.customer_phone.replace(/[^\d+]/g, '');
+                if (digits.length >= 10) {
+                    btnCall.href = `tel:${digits}`;
+                    btnCall.classList.remove('disabled');
+                    btnText.href = `sms:${digits}`;
+                    btnText.classList.remove('disabled');
+                } else {
+                    btnCall.removeAttribute('href');
+                    btnCall.classList.add('disabled');
+                    btnText.removeAttribute('href');
+                    btnText.classList.add('disabled');
+                }
+            } else {
+                btnCall.removeAttribute('href');
+                btnCall.classList.add('disabled');
+                btnText.removeAttribute('href');
+                btnText.classList.add('disabled');
+            }
+
             document.getElementById('dt-services').textContent = data.services || "None";
             if (data.notes) {
                 document.getElementById('dt-notes-group').style.display = 'block';
@@ -985,6 +1088,10 @@
                 mpContainer.style.display = 'none';
             }
         }
+
+        document.getElementById('btn-back-mobile').addEventListener('click', () => {
+            document.getElementById('console-view').classList.remove('show-detail');
+        });
 
         async function handleMissionPlan() {
             if (!currentDetailOrder) return;
@@ -1031,6 +1138,104 @@
 
         document.getElementById('btn-refresh').addEventListener('click', () => {
             if (currentDetailOrder) loadDetail(currentDetailOrder.id);
+        });
+
+        document.getElementById('btn-save-offline').addEventListener('click', async () => {
+            if (!currentDetailOrder || !currentMissionPlans[currentDetailOrder.id]) return;
+            const btn = document.getElementById('btn-save-offline');
+            const originalText = btn.textContent;
+            btn.textContent = 'GENERATING BRIEF...';
+            btn.disabled = true;
+
+            try {
+                // Fetch Route
+                let routeData = null;
+                try {
+                    const res = await fetch(`/.netlify/functions/get-exit-route?order_id=${currentDetailOrder.id}`, {
+                        headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                    });
+                    if (res.ok) {
+                        routeData = await res.json();
+                    }
+                } catch (e) {
+                    console.error("Exit route fetch failed", e);
+                }
+
+                const plan = currentMissionPlans[currentDetailOrder.id];
+                const order = currentDetailOrder;
+                const d = order.start_at ? new Date(order.start_at) : null;
+                const timeStr = d ? new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: order.timezone }).format(d) : 'Not Scheduled';
+
+                let routeHtml = '<p>Route unavailable</p>';
+                if (routeData && routeData.available) {
+                    routeHtml = `
+                        <div style="background: #1e1e1e; padding: 15px; border-radius: 4px; border: 1px solid #333; margin-bottom: 15px;">
+                            <h4 style="margin-top:0; color:#ffc107;">${routeData.target_label}</h4>
+                            <p style="font-size: 12px; color: #8e8e8e;">Distance: ${(routeData.distance/1609.34).toFixed(1)} mi | Est. Time: ${Math.round(routeData.duration/60)} min</p>
+                            ${routeData.warnings?.length > 0 ? `<p style="color:#f44336; font-size:12px;">⚠️ ${routeData.warnings.join('<br>')}</p>` : ''}
+                            <ol style="font-size: 14px; padding-left: 20px;">
+                                ${routeData.steps.map(s => `<li>${s.instruction} ${s.distance > 0 ? `(${(s.distance/1609.34).toFixed(1)} mi)` : ''}</li>`).join('')}
+                            </ol>
+                        </div>
+                    `;
+                }
+
+                // Generate HTML Blob
+                const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offline Brief: ${order.address}</title>
+<style>
+body { font-family: sans-serif; background: #121212; color: #f5f5f5; padding: 20px; line-height: 1.5; }
+h2 { color: #ffc107; margin-bottom: 5px; }
+.section { margin-bottom: 20px; }
+.label { font-size: 12px; color: #8e8e8e; text-transform: uppercase; margin-bottom: 2px; }
+.value { font-size: 16px; margin-bottom: 10px; }
+.warning { color: #f44336; }
+</style>
+</head>
+<body>
+    <h2>${order.address}</h2>
+    <div class="label">Date & Time</div>
+    <div class="value">${timeStr}</div>
+
+    <div class="label">Crew & Scope</div>
+    <div class="value">${plan.crew} | ${plan.services}</div>
+    
+    <div class="label">Customer Info</div>
+    <div class="value">${order.customer_name} | ${[order.customer_phone, order.customer_email].filter(Boolean).join(" • ")}</div>
+
+    <div class="section">
+        <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Field Doctrine Gear Checklist</h3>
+        <ul style="padding-left: 20px; font-size: 14px;">
+            ${plan.checklist.map(item => `<li>${item}</li>`).join('')}
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Exit Route</h3>
+        ${routeHtml}
+    </div>
+</body>
+</html>`;
+
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Brief_${order.id.substring(0,8)}.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert(`Error generating brief: ${err.message}`);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         });
 
         // Drive Proof behavior

@@ -1,0 +1,16 @@
+{
+  "name": "MediaLab Operations Console",
+  "short_name": "Operations",
+  "start_url": "./poc.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#1e1e1e",
+  "icons": [
+    {
+      "src": "../assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

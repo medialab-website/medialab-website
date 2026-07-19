@@ -8,8 +8,8 @@ require('module').prototype.require = function(path) {
     return { 
       getAuth: () => ({
         verifyIdToken: async (token) => {
-          if (token === 'VALID_TOKEN') return { email: 'solutions@medialab.fyi' };
-          if (token === 'UNAUTHORIZED_USER') return { email: 'stranger@example.com' };
+          if (token === 'VALID_TOKEN') return { email: 'solutions@medialab.fyi', email_verified: true };
+          if (token === 'UNAUTHORIZED_USER') return { email: 'stranger@example.com', email_verified: true };
           throw new Error('Invalid token');
         }
       }) 
