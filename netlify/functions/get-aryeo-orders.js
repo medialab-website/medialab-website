@@ -60,6 +60,10 @@ exports.handler = async (event, context) => {
     };
   }
 
+  if (view === 'completed') {
+    return await fetchCompletedOrdersFallback(apiKey, pageNum, perPageNum);
+  }
+
   let apiUrl = 'https://api.aryeo.com/v1';
   let queryParams = new URLSearchParams();
   queryParams.append('page', pageNum);
@@ -71,12 +75,6 @@ exports.handler = async (event, context) => {
     // Using documented appointment-related expansions. 
     queryParams.append('include', 'order,order.customer,order.listing,order.items,users');
     queryParams.append('sort', 'start_at');
-  } else if (view === 'completed') {
-    apiUrl += '/orders';
-    queryParams.append('filter[fulfillment_status]', 'FULFILLED');
-    queryParams.append('include', 'customer,listing,appointments,appointments.users,items');
-    // Using created_at as safe documented sort, since fulfilled_at sorting requires live verification
-    queryParams.append('sort', '-created_at'); 
   } else {
     // ALL ORDERS
     apiUrl += '/orders';
@@ -133,6 +131,121 @@ exports.handler = async (event, context) => {
   }
 };
 
+async function fetchCompletedOrdersFallback(apiKey, pageNum, perPageNum) {
+  let allFetchedOrders = [];
+  let currentUpstreamPage = 1;
+  const safetyLimit = 20;
+  let isComplete = false;
+  let diagnosticMsg = null;
+
+  try {
+    const fetchToUse = global.mockFetch || fetch;
+    while (currentUpstreamPage <= safetyLimit) {
+      const url = 'https://api.aryeo.com/v1/orders';
+      const q = new URLSearchParams();
+      q.append('page', currentUpstreamPage);
+      q.append('per_page', 100);
+      q.append('include', 'customer,listing,appointments,appointments.users,items');
+      q.append('sort', '-created_at');
+
+      const response = await fetchToUse(`${url}?${q.toString()}`, {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' }
+      });
+
+      if (!response.ok) {
+        const status = response.status;
+        const statusText = response.statusText;
+        let safeErrorMessage = 'Unknown upstream error';
+        try {
+          const errBody = await response.json();
+          if (errBody && errBody.message && typeof errBody.message === 'string') safeErrorMessage = errBody.message;
+          else if (errBody && errBody.error && typeof errBody.error === 'string') safeErrorMessage = errBody.error;
+        } catch(e) {}
+        
+        console.error(`[Aryeo API Error] View: completed | Status: ${status} | StatusText: ${statusText} | Msg: ${safeErrorMessage}`);
+        return {
+          statusCode: 502,
+          body: JSON.stringify({ 
+            error: 'Upstream Aryeo API request failed',
+            diagnostic: { status, statusText, message: safeErrorMessage }
+          })
+        };
+      }
+
+      const payload = await response.json();
+      allFetchedOrders = allFetchedOrders.concat(payload.data || []);
+      
+      const meta = payload.meta || {};
+      if (meta.current_page >= meta.last_page || !meta.last_page) {
+        isComplete = true;
+        break;
+      }
+      currentUpstreamPage++;
+    }
+
+    if (!isComplete) {
+      diagnosticMsg = `Safety limit of ${safetyLimit} pages reached before retrieving all orders.`;
+    }
+
+    // Deduplicate by UUID
+    const seen = new Set();
+    const deduplicated = [];
+    for (const o of allFetchedOrders) {
+      if (o && o.id && !seen.has(o.id)) {
+        seen.add(o.id);
+        deduplicated.push(o);
+      }
+    }
+
+    // Filter
+    const fulfilled = deduplicated.filter(o => o.fulfillment_status === 'FULFILLED');
+
+    // Sort by fulfilled_at descending
+    fulfilled.sort((a, b) => {
+      if (a.fulfilled_at && b.fulfilled_at) {
+        return new Date(b.fulfilled_at) - new Date(a.fulfilled_at);
+      }
+      if (a.fulfilled_at) return -1;
+      if (b.fulfilled_at) return 1;
+      return 0; // both lack fulfilled_at
+    });
+
+    // Paginate
+    const totalItems = fulfilled.length;
+    const totalPages = Math.ceil(totalItems / perPageNum) || 1;
+    const p = Math.max(1, Math.min(pageNum, totalPages));
+    const startIndex = (p - 1) * perPageNum;
+    const paginatedOrders = fulfilled.slice(startIndex, startIndex + perPageNum);
+
+    // Normalize
+    const items = normalizeResponse({ data: paginatedOrders }, 'completed').items;
+
+    const resBody = {
+      items,
+      meta: {
+        total: totalItems,
+        current_page: p,
+        last_page: totalPages,
+        per_page: items.length
+      }
+    };
+    if (diagnosticMsg) resBody.diagnostic = { message: diagnosticMsg };
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(resBody)
+    };
+
+  } catch (error) {
+    console.error(`[Aryeo API Error] View: completed | Fetch failed: ${error.message}`);
+    return {
+      statusCode: 502,
+      body: JSON.stringify({ error: 'Upstream connection error' })
+    };
+  }
+}
+
 function normalizeResponse(payload, view) {
   const meta = payload.meta || {};
   let items = [];
@@ -155,12 +268,17 @@ function normalizeResponse(payload, view) {
 
       const services = (order.items || appt.order_items || []).map(i => i.title).join(", ");
 
+      let tz = "America/New_York";
+      if (order.address && order.address.timezone) tz = order.address.timezone;
+      else if (order.listing && order.listing.address && order.listing.address.timezone) tz = order.listing.address.timezone;
+      else if (appt.timezone) tz = appt.timezone;
+
       return {
         id: order.id, // Use order UUID as internal identifier
         number: order.number || "N/A", // Friendly Aryeo order number
         address: addressStr,
         start_at: appt.start_at,
-        timezone: appt.timezone || "America/New_York",
+        timezone: tz,
         customer_name: customer.name || "Unknown",
         services: services,
         status: appt.status || "SCHEDULED"
@@ -181,12 +299,17 @@ function normalizeResponse(payload, view) {
       const appointments = order.appointments || [];
       const firstAppt = appointments.length > 0 ? appointments[0] : null;
 
+      let tz = "America/New_York";
+      if (order.address && order.address.timezone) tz = order.address.timezone;
+      else if (order.listing && order.listing.address && order.listing.address.timezone) tz = order.listing.address.timezone;
+      else if (firstAppt && firstAppt.timezone) tz = firstAppt.timezone;
+
       return {
         id: order.id,
         number: order.number,
         address: addressStr,
         start_at: firstAppt ? firstAppt.start_at : null,
-        timezone: firstAppt ? firstAppt.timezone : "America/New_York",
+        timezone: tz,
         customer_name: customer.name || "Unknown",
         services: (order.items || []).map(i => i.title).join(", "),
         fulfillment_status: order.fulfillment_status,

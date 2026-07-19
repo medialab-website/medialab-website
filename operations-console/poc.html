@@ -877,7 +877,11 @@
                 const formatter = new Intl.DateTimeFormat('en-US', { 
                     dateStyle: 'full', timeStyle: 'short', timeZone: data.timezone 
                 });
-                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${data.timezone})`;
+                
+                let tzSuffix = data.timezone;
+                if (tzSuffix === 'America/New_York') tzSuffix = 'Eastern Time';
+                
+                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${tzSuffix})`;
             } else {
                 document.getElementById('dt-appointment-time').textContent = "Not scheduled";
             }

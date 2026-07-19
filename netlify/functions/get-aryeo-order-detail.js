@@ -126,6 +126,11 @@ function normalizeDetailResponse(payload) {
   const firstAppt = appointments.length > 0 ? appointments[0] : null;
   const users = firstAppt && firstAppt.users ? firstAppt.users.map(u => u.first_name + " " + u.last_name).join(', ') : (order.users || []).map(u => u.first_name + " " + u.last_name).join(', ');
 
+  let tz = "America/New_York";
+  if (order.address && order.address.timezone) tz = order.address.timezone;
+  else if (order.listing && order.listing.address && order.listing.address.timezone) tz = order.listing.address.timezone;
+  else if (firstAppt && firstAppt.timezone) tz = firstAppt.timezone;
+
   return {
     id: order.id,
     number: order.number,
@@ -144,7 +149,7 @@ function normalizeDetailResponse(payload) {
     address: addressStr,
     
     start_at: firstAppt ? firstAppt.start_at : null,
-    timezone: firstAppt ? firstAppt.timezone : "America/New_York",
+    timezone: tz,
     appointment_status: firstAppt ? firstAppt.status : "N/A",
     
     assigned_users: users || "Unassigned",

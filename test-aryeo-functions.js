@@ -126,11 +126,6 @@ async function runTests() {
   global.mockFetch = async (url) => {
     // Assert no write methods
     assert(!url.includes('POST') && !url.includes('PUT'), "No write HTTP methods sent to Aryeo");
-    
-    // Assert completed query construction
-    if (url.includes('filter%5Bfulfillment_status%5D=FULFILLED')) {
-      assert(url.includes('/v1/orders'), "Completed uses /v1/orders");
-    }
 
     if (url.includes('/appointments')) {
       return {
@@ -139,6 +134,7 @@ async function runTests() {
           data: [{
             id: "appt-uuid-not-order-uuid",
             status: "SCHEDULED",
+            timezone: "America/Chicago",
             order: {
               id: "111e4567-e89b-12d3-a456-426614174000",
               number: 2002
@@ -155,7 +151,7 @@ async function runTests() {
           id: "123e4567-e89b-12d3-a456-426614174000",
           number: 1001,
           status: "SCHEDULED",
-          appointments: [{ status: "SCHEDULED" }],
+          appointments: [{ status: "SCHEDULED", timezone: "America/Los_Angeles" }],
           payment_status: "PARTIALLY_PAID",
           currency: "USD",
           balance_amount: 15000,
@@ -176,6 +172,7 @@ async function runTests() {
   assert(parsed.items[0].payment_status === "PARTIALLY_PAID", "Payment info parsed");
   assert(parsed.items[0].id === "123e4567-e89b-12d3-a456-426614174000", "All Orders ID is UUID");
   assert(parsed.items[0].number === 1001, "All Orders number is separate");
+  assert(parsed.items[0].timezone === "America/Los_Angeles", "Timezone respects priority (appointment fallback)");
 
   res = await ordersFunction.handler({ 
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
@@ -184,6 +181,7 @@ async function runTests() {
   parsed = JSON.parse(res.body);
   assert(parsed.items[0].id === "111e4567-e89b-12d3-a456-426614174000", "Upcoming ID is normalized order UUID");
   assert(parsed.items[0].number === 2002, "Upcoming number is separate");
+  assert(parsed.items[0].timezone === "America/Chicago", "Upcoming timezone respects fallback");
 
   // Test 11: Safe upstream diagnostic logging
   global.mockFetch = async () => ({
@@ -207,6 +205,73 @@ async function runTests() {
     queryStringParameters: { order_id: 'a23e4567-e89b-02d3-a456-426614174000' } // v0, not v1-5
   });
   assert(res.statusCode === 502, "Accepts generalized UUID");
+
+  // Test 13: Completed Fallback Pagination & deduplication
+  let fetchCount = 0;
+  global.mockFetch = async (url) => {
+    if (url.includes('/v1/orders')) {
+      assert(!url.includes('filter%5Bfulfillment_status%5D'), "Completed no longer sends filter[fulfillment_status]");
+      fetchCount++;
+      if (fetchCount === 1) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: [
+              { id: "uuid-1", fulfillment_status: "FULFILLED", fulfilled_at: "2026-07-01T00:00:00Z" },
+              { id: "uuid-2", fulfillment_status: "UNFULFILLED" },
+              { id: "uuid-1", fulfillment_status: "FULFILLED", fulfilled_at: "2026-07-01T00:00:00Z" } // dup
+            ],
+            meta: { total: 4, current_page: 1, last_page: 2, per_page: 100 }
+          })
+        };
+      } else if (fetchCount === 2) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: [
+              { id: "uuid-3", fulfillment_status: "FULFILLED", fulfilled_at: "2026-07-02T00:00:00Z" },
+              { id: "uuid-4", fulfillment_status: "FULFILLED" } // no fulfilled_at
+            ],
+            meta: { total: 4, current_page: 2, last_page: 2, per_page: 100 }
+          })
+        };
+      }
+    }
+    return { ok: false, status: 500 };
+  };
+
+  res = await ordersFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { view: 'completed', page: '1', per_page: '10' }
+  });
+  
+  assert(res.statusCode === 200, "Completed fallback succeeds");
+  parsed = JSON.parse(res.body);
+  assert(fetchCount === 2, "Completed fallback loops through pages");
+  assert(parsed.items.length === 3, "Only fulfilled, deduplicated orders are returned");
+  assert(parsed.items[0].id === "uuid-3", "Sorted descending by fulfilled_at (uuid-3 is newest)");
+  assert(parsed.items[1].id === "uuid-1", "uuid-1 is older");
+  assert(parsed.items[2].id === "uuid-4", "Missing fulfilled_at sorts last");
+  
+  // Test 14: Completed Fallback Safety Limit
+  fetchCount = 0;
+  global.mockFetch = async (url) => {
+    fetchCount++;
+    return {
+      ok: true,
+      json: async () => ({
+        data: [],
+        meta: { current_page: fetchCount, last_page: 100 } // infinite pages
+      })
+    };
+  };
+  res = await ordersFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { view: 'completed' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(fetchCount === 20, "Enforces finite safety limit (20 loops)");
+  assert(parsed.diagnostic && parsed.diagnostic.message.includes("Safety limit"), "Incomplete diagnostic included");
 
   console.log(`\nTests Completed: ${passCount} Passed, ${failCount} Failed.`);
   if (failCount > 0) process.exit(1);
