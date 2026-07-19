@@ -120,14 +120,15 @@ async function generateMissionPlan(order, origin, fetchToUse) {
 
   // 1. Order Normalization
   const customer = order.customer || {};
-  const services = (order.items || []).map(i => i.title).join(", ");
+  const services = (order.items || []).map(i => i.title || i.name).filter(Boolean).join(", ");
   
   // 2. Appointment Selection
   const appointments = order.appointments || [];
   let selectedAppt = null;
   
   for (const appt of appointments) {
-    if (appt.status !== 'CANCELLED' && appt.status !== 'canceled') {
+    const statusLower = (appt.status || "").toLowerCase();
+    if (statusLower !== 'cancelled' && statusLower !== 'canceled') {
       const start = new Date(appt.start_at);
       if (start >= now) {
         if (!selectedAppt || start < new Date(selectedAppt.start_at)) {
@@ -139,8 +140,11 @@ async function generateMissionPlan(order, origin, fetchToUse) {
   
   if (!selectedAppt) {
     warnings.push("No upcoming active appointment found.");
-  } else if (selectedAppt.status !== 'SCHEDULED' && selectedAppt.status !== 'CONFIRMED') {
-    warnings.push("Appointment is unconfirmed.");
+  } else {
+    const sLower = (selectedAppt.status || "").toLowerCase();
+    if (sLower !== 'scheduled' && sLower !== 'confirmed') {
+      warnings.push("Appointment is unconfirmed.");
+    }
   }
 
   const users = selectedAppt && selectedAppt.users ? selectedAppt.users.map(u => u.first_name + " " + u.last_name).join(', ') : "Unassigned";
@@ -149,12 +153,32 @@ async function generateMissionPlan(order, origin, fetchToUse) {
   }
 
   // 3. Address & Coordinates
-  const addressObj = order.address || (order.listing && order.listing.address) || {};
-  let addressStr = addressObj.street_name || addressObj.unparsed_address_part_one || "";
-  if (addressObj.street_number && addressObj.street_name && !addressObj.unparsed_address_part_one) {
-    addressStr = `${addressObj.street_number} ${addressObj.street_name}, ${addressObj.city || ''}, ${addressObj.state_or_province || ''} ${addressObj.postal_code || ''}`.trim();
+  let addressObj = {};
+  if (order.listing && order.listing.address && (order.listing.address.street_name || order.listing.address.unparsed_address_part_one)) {
+    addressObj = order.listing.address;
+  } else if (order.address && (order.address.street_name || order.address.unparsed_address_part_one)) {
+    addressObj = order.address;
   }
-  addressStr = addressStr.replace(/,\s*$/, "");
+
+  let addressParts = [];
+  if (addressObj.unparsed_address_part_one) {
+    addressParts.push(addressObj.unparsed_address_part_one);
+  } else if (addressObj.street_number && addressObj.street_name) {
+    addressParts.push(`${addressObj.street_number} ${addressObj.street_name}`);
+  }
+
+  if (addressParts.length > 0) {
+    if (addressObj.city) addressParts.push(addressObj.city);
+    if (addressObj.state_or_province) {
+      let stZip = addressObj.state_or_province;
+      if (addressObj.postal_code) stZip += ` ${addressObj.postal_code}`;
+      addressParts.push(stZip);
+    } else if (addressObj.postal_code) {
+      addressParts.push(addressObj.postal_code);
+    }
+  }
+
+  let addressStr = addressParts.join(", ").trim();
 
   const hasMissingAddress = !addressStr || addressStr.toLowerCase().includes('tbd');
   if (hasMissingAddress) {
@@ -162,15 +186,15 @@ async function generateMissionPlan(order, origin, fetchToUse) {
   }
 
   let lat = null, lng = null;
-  if (order.listing && order.listing.address && order.listing.address.latitude && order.listing.address.longitude) {
-    lat = order.listing.address.latitude;
-    lng = order.listing.address.longitude;
-  } else if (order.address && order.address.latitude && order.address.longitude) {
-    lat = order.address.latitude;
-    lng = order.address.longitude;
+  if (order.listing && order.listing.address && Number.isFinite(parseFloat(order.listing.address.latitude)) && Number.isFinite(parseFloat(order.listing.address.longitude))) {
+    lat = parseFloat(order.listing.address.latitude);
+    lng = parseFloat(order.listing.address.longitude);
+  } else if (order.address && Number.isFinite(parseFloat(order.address.latitude)) && Number.isFinite(parseFloat(order.address.longitude))) {
+    lat = parseFloat(order.address.latitude);
+    lng = parseFloat(order.address.longitude);
   }
 
-  if (!lat || !lng) {
+  if (lat === null || lng === null) {
     warnings.push("Property coordinates are missing.");
   }
 
@@ -238,25 +262,42 @@ async function generateMissionPlan(order, origin, fetchToUse) {
     try {
       const nwsController = new AbortController();
       const nwsTimeout = setTimeout(() => nwsController.abort(), 8000);
-      
-      const pRes = await fetchToUse(`https://api.weather.gov/points/${lat},${lng}`, {
-        headers: { 'User-Agent': 'MediaLabOperationsConsole/0.1 (https://medialab.fyi)', 'Accept': 'application/geo+json' },
-        signal: nwsController.signal
-      });
-      clearTimeout(nwsTimeout);
+      let pRes;
+      try {
+        pRes = await fetchToUse(`https://api.weather.gov/points/${lat},${lng}`, {
+          headers: { 'User-Agent': 'MediaLabOperationsConsole/0.1 (https://medialab.fyi)', 'Accept': 'application/geo+json' },
+          signal: nwsController.signal
+        });
+      } finally {
+        clearTimeout(nwsTimeout);
+      }
 
       if (pRes.ok) {
         const pData = await pRes.json();
         const forecastUrl = pData.properties?.forecastHourly;
 
-        if (forecastUrl && forecastUrl.startsWith('https://api.weather.gov/')) {
+        let isValidUrl = false;
+        if (forecastUrl) {
+          try {
+            const u = new URL(forecastUrl);
+            isValidUrl = (u.protocol === 'https:' && u.hostname === 'api.weather.gov');
+          } catch (e) {
+            isValidUrl = false;
+          }
+        }
+
+        if (isValidUrl) {
           const fController = new AbortController();
           const fTimeout = setTimeout(() => fController.abort(), 8000);
-          const fRes = await fetchToUse(forecastUrl, {
-             headers: { 'User-Agent': 'MediaLabOperationsConsole/0.1 (https://medialab.fyi)', 'Accept': 'application/geo+json' },
-             signal: fController.signal
-          });
-          clearTimeout(fTimeout);
+          let fRes;
+          try {
+            fRes = await fetchToUse(forecastUrl, {
+               headers: { 'User-Agent': 'MediaLabOperationsConsole/0.1 (https://medialab.fyi)', 'Accept': 'application/geo+json' },
+               signal: fController.signal
+            });
+          } finally {
+            clearTimeout(fTimeout);
+          }
 
           if (fRes.ok) {
             const fData = await fRes.json();
@@ -303,8 +344,8 @@ async function generateMissionPlan(order, origin, fetchToUse) {
          weather.message = "Weather service temporarily unavailable.";
          warnings.push("Weather service temporarily unavailable.");
       }
-    } catch (e) {
-      console.error(`[Mission Plan NWS Error] ${e.message}`);
+    } catch (error) {
+      console.error(`[Weather Fetch Error] ${error.message}`);
       weather.message = "Weather service temporarily unavailable.";
       warnings.push("Weather service temporarily unavailable.");
     }

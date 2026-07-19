@@ -969,7 +969,9 @@
             // Mission Plan Logic
             const btnMP = document.getElementById('btn-mission-plan');
             const mpContainer = document.getElementById('mission-plan-container');
-            if (data.status !== 'FULFILLED' && data.fulfillment_status !== 'FULFILLED') {
+            const isUpcomingAppt = data.start_at && new Date(data.start_at) >= new Date();
+            
+            if (data.status !== 'FULFILLED' && data.fulfillment_status !== 'FULFILLED' && isUpcomingAppt) {
                 btnMP.classList.remove('auth-hidden');
                 if (currentMissionPlans[data.id]) {
                     btnMP.textContent = 'REFRESH MISSION PLAN';

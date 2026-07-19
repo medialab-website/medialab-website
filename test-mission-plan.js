@@ -201,6 +201,40 @@ async function runTests() {
   parsed = JSON.parse(res.body);
   assert(parsed.appointment.id === "appt-future-1", "Selected earliest future non-cancelled appointment");
 
+  // Test 10: Empty order address fallback & Complete construction
+  const emptyAddrOrder = JSON.parse(JSON.stringify(baseOrder));
+  emptyAddrOrder.address = {};
+  emptyAddrOrder.listing.address = {
+    unparsed_address_part_one: "456 Test Blvd",
+    city: "Testville",
+    state_or_province: "TX",
+    postal_code: "67890"
+  };
+  global.mockFetch = async (url) => {
+    if (url.includes('api.aryeo.com')) return { ok: true, json: async () => ({ data: emptyAddrOrder }) };
+    if (url.includes('api.weather.gov')) return { ok: false };
+    return { ok: false };
+  };
+  res = await missionPlanFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN }, queryStringParameters: { order_id: baseOrder.id } 
+  });
+  parsed = JSON.parse(res.body);
+  assert(parsed.directions.url.includes(encodeURIComponent('456 Test Blvd, Testville, TX 67890').replace(/%20/g, '+')) || parsed.directions.url.includes(encodeURIComponent('456 Test Blvd, Testville, TX 67890')), "Listing address fallback and complete construction succeeded");
+
+  // Test 11: item.name service matching
+  const itemNameOrder = JSON.parse(JSON.stringify(baseOrder));
+  itemNameOrder.items = [{ name: "Drone Photography" }];
+  global.mockFetch = async (url) => {
+    if (url.includes('api.aryeo.com')) return { ok: true, json: async () => ({ data: itemNameOrder }) };
+    if (url.includes('api.weather.gov')) return { ok: false };
+    return { ok: false };
+  };
+  res = await missionPlanFunction.handler({ 
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN }, queryStringParameters: { order_id: baseOrder.id } 
+  });
+  parsed = JSON.parse(res.body);
+  const c2 = parsed.checklist.join(' ');
+  assert(c2.includes('Drone batteries charged'), "item.name service matched drone condition");
   console.log(`\nTests Completed: ${passCount} Passed, ${failCount} Failed.`);
   if (failCount > 0) process.exit(1);
 }
