@@ -1,1 +1,46 @@
-{}
+{
+  "functions": {
+    "source": "firebase-functions",
+    "codebase": "default",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log"
+    ]
+  },
+  "hosting": {
+    "public": "firebase-public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/.netlify/functions/verify-user",
+        "function": "verifyUser"
+      },
+      {
+        "source": "/.netlify/functions/get-aryeo-orders",
+        "function": "getAryeoOrders"
+      },
+      {
+        "source": "/.netlify/functions/get-aryeo-order-detail",
+        "function": "getAryeoOrderDetail"
+      },
+      {
+        "source": "/.netlify/functions/get-mission-plan",
+        "function": "getMissionPlan"
+      },
+      {
+        "source": "/.netlify/functions/get-exit-route",
+        "function": "getExitRoute"
+      },
+      {
+        "source": "/.netlify/functions/list-drive-folder",
+        "function": "listDriveFolder"
+      }
+    ]
+  }
+}
