@@ -1,11 +1,10 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { getAuth } = require('firebase-admin/auth');
-const { initializeApp, getApps, cert } = require('firebase-admin/app');
 const { google } = require('googleapis');
 
 import authModule from './_shared/auth.js';
 const { verifyAuth } = authModule;
+import { executeDriveList } from './_shared/drive-core.mjs';
 
 export default async (req, context) => {
   if (req.method !== 'GET') {
@@ -39,31 +38,12 @@ export default async (req, context) => {
 
     const drive = google.drive({ version: 'v3', auth });
 
-    const response = await drive.files.list({
-      q: `'${folderId}' in parents and trashed = false`,
-      fields: 'files(id, name, mimeType, modifiedTime, webViewLink)',
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-      corpora: 'allDrives'
-    });
+    const result = await executeDriveList(drive, folderId);
 
-    const items = response.data.files.map(file => ({
-      id: file.id,
-      name: file.name,
-      mimeType: file.mimeType,
-      itemType: file.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : 'file',
-      modifiedTime: file.modifiedTime || null,
-      webViewLink: file.webViewLink || null
-    }));
-
-    return new Response(JSON.stringify({
-      ok: true,
-      scope: "approved-proof-folder",
-      items: items
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error('Error fetching Drive data:', error);
-    return new Response(JSON.stringify({ error: 'Upstream API failure' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
+    const status = error.message === 'Server configuration error: missing folder ID' ? 500 : 502;
+    return new Response(JSON.stringify({ error: error.message || 'Upstream API failure' }), { status, headers: { 'Content-Type': 'application/json' } });
   }
 };

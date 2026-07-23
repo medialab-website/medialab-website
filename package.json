@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "appledouble:check": "node scripts/appledouble-hygiene.mjs",
+    "appledouble:clean": "node scripts/appledouble-hygiene.mjs --clean",
+    "verify:netlify": "node scripts/appledouble-hygiene.mjs --clean && COPYFILE_DISABLE=1 npx netlify build"
+  },
   "devDependencies": {
     "esbuild": "^0.28.1",
     "firebase": "^10.12.2",

@@ -6,3 +6,7 @@ node_modules/
 site_files.json
 out.txt
 deno.lock
+
+firebase-debug.log
+firebase-functions/dist/
+firebase-public/operations-console/

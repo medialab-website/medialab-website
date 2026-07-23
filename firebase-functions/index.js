@@ -12,7 +12,12 @@ import getAryeoOrdersHandler from "../netlify/functions/get-aryeo-orders.mjs";
 import getAryeoOrderDetailHandler from "../netlify/functions/get-aryeo-order-detail.mjs";
 import getMissionPlanHandler from "../netlify/functions/get-mission-plan.mjs";
 import getExitRouteHandler from "../netlify/functions/get-exit-route.mjs";
-import listDriveFolderHandler from "../netlify/functions/list-drive-folder.mjs";
+
+// Import Shared Drive Core for Firebase adapter
+import { executeDriveList } from "../netlify/functions/_shared/drive-core.mjs";
+import authModule from "../netlify/functions/_shared/auth.js";
+const { verifyAuth } = authModule;
+import { google } from "googleapis";
 
 // Define Secrets and Params preserving existing configuration names
 const ARYEO_API_KEY = defineSecret("ARYEO_API_KEY");
@@ -48,7 +53,41 @@ export const getExitRoute = onRequest(
   createHandler(getExitRouteHandler)
 );
 
+// Firebase specific adapter for listDriveFolder using ADC
+async function firebaseListDriveFolderHandler(req, context) {
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const authResult = await verifyAuth(req);
+  if (!authResult.ok) {
+    return new Response(JSON.stringify({ error: authResult.error }), { status: authResult.statusCode, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  try {
+    const folderId = GOOGLE_DRIVE_FOLDER_ID.value();
+    if (!folderId) {
+      console.error('Missing Drive server configuration: GOOGLE_DRIVE_FOLDER_ID');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/drive.metadata.readonly']
+    });
+
+    const drive = google.drive({ version: 'v3', auth });
+
+    const result = await executeDriveList(drive, folderId);
+
+    return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  } catch (error) {
+    const status = error.message === 'Server configuration error: missing folder ID' ? 500 : 502;
+    return new Response(JSON.stringify({ error: error.message || 'Upstream API failure' }), { status, headers: { 'Content-Type': 'application/json' } });
+  }
+}
+
 export const listDriveFolder = onRequest(
   baseOpts,
-  createHandler(listDriveFolderHandler)
+  createHandler(firebaseListDriveFolderHandler)
 );
