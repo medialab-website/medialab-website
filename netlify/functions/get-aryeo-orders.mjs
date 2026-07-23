@@ -1,39 +1,37 @@
-const { verifyAuth } = require('./_shared/auth');
+import authModule from './_shared/auth.js';
+const { verifyAuth } = authModule;
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+export default async (req, context) => {
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const authResult = await verifyAuth(event);
+  const authResult = await verifyAuth(req);
   if (!authResult.ok) {
-    return {
-      statusCode: authResult.statusCode,
-      body: JSON.stringify({ error: authResult.error })
-    };
+    return new Response(JSON.stringify({ error: authResult.error }), { status: authResult.statusCode, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const { view, page = 1, per_page = 25, search = '' } = event.queryStringParameters || {};
+  const _url = new URL(req.url);
+  const view = _url.searchParams.get('view') ?? undefined;
+  const page = _url.searchParams.get('page') ?? 1;
+  const per_page = _url.searchParams.get('per_page') ?? 25;
+  const search = _url.searchParams.get('search') ?? '';
   
   // Parameter validation
   const pageNum = parseInt(page, 10);
   const perPageNum = parseInt(per_page, 10);
-  if (isNaN(pageNum) || pageNum < 1) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid page parameter' }) };
-  if (isNaN(perPageNum) || perPageNum < 1 || perPageNum > 100) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid per_page parameter' }) };
+  if (isNaN(pageNum) || pageNum < 1) return new Response(JSON.stringify({ error: 'Invalid page parameter' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  if (isNaN(perPageNum) || perPageNum < 1 || perPageNum > 100) return new Response(JSON.stringify({ error: 'Invalid per_page parameter' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
   const validViews = ['upcoming', 'completed', 'all'];
   if (view && !validViews.includes(view)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid view parameter' }) };
+    return new Response(JSON.stringify({ error: 'Invalid view parameter' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   const apiKey = process.env.ARYEO_API_KEY;
 
   if (!apiKey) {
-    return {
-      statusCode: 503,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' })
-    };
+    return new Response(JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
   if (view === 'completed') {
@@ -83,27 +81,17 @@ exports.handler = async (event, context) => {
       
       console.error(`[Aryeo API Error] View: ${view} | Status: ${status} | StatusText: ${statusText} | Msg: ${safeErrorMessage}`);
 
-      return {
-        statusCode: 502,
-        body: JSON.stringify({ 
-          error: 'Upstream Aryeo API request failed',
-          diagnostic: { status, statusText, message: safeErrorMessage }
-        })
-      };
+      return new Response(JSON.stringify({ 
+        error: 'Upstream Aryeo API request failed',
+        diagnostic: { status, statusText, message: safeErrorMessage }
+      }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
 
     const data = await response.json();
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(normalizeResponse(data, view))
-    };
+    return new Response(JSON.stringify(normalizeResponse(data, view)), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error(`[Aryeo API Error] View: ${view} | Fetch failed: ${error.message}`);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Upstream connection error' })
-    };
+    return new Response(JSON.stringify({ error: 'Upstream connection error' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
@@ -221,28 +209,18 @@ async function fetchCompletedOrdersFallback(apiKey, pageNum, perPageNum) {
     };
     if (diagnosticMsg) resBody.diagnostic = { message: diagnosticMsg };
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(resBody)
-    };
+    return new Response(JSON.stringify(resBody), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
     if (error.status) {
       console.error(`[Aryeo API Error] View: completed | Status: ${error.status} | StatusText: ${error.statusText} | Msg: ${error.safeErrorMessage}`);
-      return {
-        statusCode: 502,
-        body: JSON.stringify({ 
+      return new Response(JSON.stringify({ 
           error: 'Upstream Aryeo API request failed',
           diagnostic: { status: error.status, statusText: error.statusText, message: error.safeErrorMessage }
-        })
-      };
+        }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
     console.error(`[Aryeo API Error] View: completed | Fetch failed: ${error.message}`);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Upstream connection error' })
-    };
+    return new Response(JSON.stringify({ error: 'Upstream connection error' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
   }
 }
 

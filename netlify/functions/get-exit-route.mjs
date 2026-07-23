@@ -1,4 +1,5 @@
-const { verifyAuth } = require('./_shared/auth');
+import authModule from './_shared/auth.js';
+const { verifyAuth } = authModule;
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -6,57 +7,63 @@ async function geocode(address, apiKey) {
   const url = new URL('https://api.openrouteservice.org/geocode/search');
   url.searchParams.append('api_key', apiKey);
   url.searchParams.append('text', address);
+  url.searchParams.append('size', '1');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url.toString(), { signal: controller.signal });
     if (!res.ok) return null;
-    const data = await res.json();
-    if (data.features && data.features.length > 0) {
+    let data;
+    try {
+      const text = await res.text();
+      data = JSON.parse(text);
+    } catch (e) {
+      return null;
+    }
+    if (data && data.features && data.features.length > 0 && data.features[0].geometry && data.features[0].geometry.coordinates) {
       // GeoJSON: [longitude, latitude]
       const coords = data.features[0].geometry.coordinates;
-      return { lng: coords[0], lat: coords[1] };
+      if (Array.isArray(coords) && coords.length >= 2 && Number.isFinite(coords[0]) && Number.isFinite(coords[1])) {
+        return { lng: coords[0], lat: coords[1] };
+      }
     }
   } catch (error) {
-    console.error(`Geocode error: ${error.message}`);
+    // Return null without logging or exposing url/keys
   } finally {
     clearTimeout(timeoutId);
   }
   return null;
 }
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+export default async (req, context) => {
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
-  const authResult = await verifyAuth(event);
+  const authResult = await verifyAuth(req);
   if (!authResult.ok) {
-    return { statusCode: authResult.statusCode, body: JSON.stringify({ error: authResult.error }) };
+    return new Response(JSON.stringify({ error: authResult.error }), { status: authResult.statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
-  const orderId = event.queryStringParameters?.order_id;
+  const orderId = new URL(req.url).searchParams.get('order_id');
   if (!orderId || !uuidRegex.test(orderId)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid or missing order_id format (must be UUID)' }) };
+    return new Response(JSON.stringify({ error: 'Invalid or missing order_id format (must be UUID)' }), { status: 400, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
   const aryeoKey = process.env.ARYEO_API_KEY;
   if (!aryeoKey) {
-    return { statusCode: 503, body: JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo API key is missing.' }) };
+    return new Response(JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo API key is missing.' }), { status: 503, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
   const orsKey = process.env.OPENROUTESERVICE_API_KEY;
   const originAddress = process.env.MEDIALAB_ROUTE_ORIGIN;
 
   if (!orsKey || !originAddress) {
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
+    return new Response(JSON.stringify({
         available: false,
         warnings: ["Routing configuration is incomplete. Missing OPENROUTESERVICE_API_KEY or MEDIALAB_ROUTE_ORIGIN."]
-      })
-    };
+      }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
   // Fetch from Aryeo
@@ -72,12 +79,12 @@ exports.handler = async (event, context) => {
       signal: aryeoController.signal
     });
     if (!aryeoRes.ok) {
-      return { statusCode: 502, body: JSON.stringify({ error: 'Upstream Aryeo API request failed' }) };
+      return new Response(JSON.stringify({ error: 'Upstream Aryeo API request failed' }), { status: 502, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
     }
     const json = await aryeoRes.json();
     orderData = json.data;
   } catch (error) {
-    return { statusCode: 502, body: JSON.stringify({ error: 'Upstream Aryeo API request failed' }) };
+    return new Response(JSON.stringify({ error: 'Upstream Aryeo API request failed' }), { status: 502, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   } finally {
     clearTimeout(aryeoTimeout);
   }
@@ -110,32 +117,23 @@ exports.handler = async (event, context) => {
   }
 
   if (listingLat === null || listingLng === null) {
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ available: false, warnings: ["Cannot determine listing coordinates."] })
-    };
+    return new Response(JSON.stringify({ available: false, warnings: ["Cannot determine listing coordinates."] }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
   const isVA = listingState === "va" || listingState === "virginia";
   const isTN = listingState === "tn" || listingState === "tennessee";
 
   if (!isVA && !isTN) {
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
+    return new Response(JSON.stringify({
         available: false,
         warnings: ["Listing state is unsupported for offline return route detection. Must be VA or TN."]
-      })
-    };
+      }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
   // Resolve Origin Coordinates
   const originGeo = await geocode(originAddress, orsKey);
   if (!originGeo) {
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ available: false, warnings: ["Cannot determine MEDIALAB_ROUTE_ORIGIN coordinates."] })
-    };
+    return new Response(JSON.stringify({ available: false, warnings: ["Cannot determine MEDIALAB_ROUTE_ORIGIN coordinates."] }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
   // Fetch OpenRouteService directions
@@ -150,17 +148,17 @@ exports.handler = async (event, context) => {
     
     const orsRes = await fetch(dirUrl.toString(), { signal: orsController.signal });
     if (!orsRes.ok) {
-       return { statusCode: 200, body: JSON.stringify({ available: false, warnings: ["OpenRouteService request failed."] }) };
+       return new Response(JSON.stringify({ available: false, warnings: ["OpenRouteService request failed."] }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
     }
     orsData = await orsRes.json();
   } catch (e) {
-    return { statusCode: 200, body: JSON.stringify({ available: false, warnings: ["OpenRouteService request failed due to timeout or network error."] }) };
+    return new Response(JSON.stringify({ available: false, warnings: ["OpenRouteService request failed due to timeout or network error."] }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   } finally {
     clearTimeout(orsTimeout);
   }
 
   if (!orsData.features || orsData.features.length === 0) {
-    return { statusCode: 200, body: JSON.stringify({ available: false, warnings: ["No route found."] }) };
+    return new Response(JSON.stringify({ available: false, warnings: ["No route found."] }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   }
 
   const segment = orsData.features[0].properties.segments[0];
@@ -205,10 +203,7 @@ exports.handler = async (event, context) => {
     warnings.push("Could not confidently identify interstate entry. Verify this manual fallback route.");
   }
 
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  return new Response(JSON.stringify({
       available: true,
       order_id: orderData.id,
       order_number: orderData.number,
@@ -223,6 +218,5 @@ exports.handler = async (event, context) => {
       steps: truncatedSteps,
       warnings: warnings,
       attribution: "Routing © openrouteservice; map data © OpenStreetMap contributors"
-    })
-  };
+    }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 };

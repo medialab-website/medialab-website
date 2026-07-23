@@ -26,11 +26,11 @@ const APPROVED_ACCOUNTS = [
  * Shared authorization policy for MediaLab Operations Console.
  * Validates the Firebase ID token and enforces the approved account list.
  * 
- * @param {Object} event - The Netlify function event object.
+ * @param {Request} request - The standard web Request object.
  * @returns {Promise<Object>} Object containing { error, statusCode } on failure, or { ok: true, decodedToken } on success.
  */
-async function verifyAuth(event) {
-  const authHeader = event.headers.authorization || event.headers.Authorization;
+async function verifyAuth(request) {
+  const authHeader = request.headers.get('authorization');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { 

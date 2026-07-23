@@ -1,36 +1,30 @@
-const { verifyAuth } = require('./_shared/auth');
+import authModule from './_shared/auth.js';
+const { verifyAuth } = authModule;
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+export default async (req, context) => {
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const authResult = await verifyAuth(event);
+  const authResult = await verifyAuth(req);
   if (!authResult.ok) {
-    return {
-      statusCode: authResult.statusCode,
-      body: JSON.stringify({ error: authResult.error })
-    };
+    return new Response(JSON.stringify({ error: authResult.error }), { status: authResult.statusCode, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const orderId = event.queryStringParameters?.order_id;
+  const orderId = new URL(req.url).searchParams.get('order_id');
   if (!orderId) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing order_id parameter' }) };
+    return new Response(JSON.stringify({ error: 'Missing order_id parameter' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   
   if (!uuidRegex.test(orderId)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid order_id format (must be UUID)' }) };
+    return new Response(JSON.stringify({ error: 'Invalid order_id format (must be UUID)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   const apiKey = process.env.ARYEO_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 503,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' })
-    };
+    return new Response(JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
   const origin = process.env.MEDIALAB_ROUTE_ORIGIN;
@@ -67,27 +61,17 @@ exports.handler = async (event, context) => {
       } catch(e) {}
       
       console.error(`[Mission Plan API Error] Aryeo Status: ${aryeoRes.status} | Msg: ${safeErrorMessage}`);
-      return {
-        statusCode: 502,
-        body: JSON.stringify({ error: 'Upstream Aryeo API request failed' })
-      };
+      return new Response(JSON.stringify({ error: 'Upstream Aryeo API request failed' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
 
     const orderData = await aryeoRes.json();
     const plan = await generateMissionPlan(orderData.data, origin, fetchToUse);
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(plan)
-    };
+    return new Response(JSON.stringify(plan), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
     console.error(`[Mission Plan Error] Fetch failed: ${error.message}`);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Upstream connection error' })
-    };
+    return new Response(JSON.stringify({ error: 'Upstream connection error' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
   }
 };
 

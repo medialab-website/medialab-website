@@ -62,7 +62,7 @@ require('module').Module._cache[require.resolve('firebase-admin/auth')] = {
 };
 
 const { verifyAuth, APPROVED_ACCOUNTS } = require('./netlify/functions/_shared/auth');
-const getExitRoute = require('./netlify/functions/get-exit-route');
+
 
 console.log('Running Mobile Launch Tests...\n');
 
@@ -73,11 +73,12 @@ console.log('Running Mobile Launch Tests...\n');
         runTest('Auth List - Sean account', () => assert.ok(APPROVED_ACCOUNTS.includes('sean@medialab.fyi')));
         runTest('Auth List - Thomasina account', () => assert.ok(APPROVED_ACCOUNTS.includes('thomasina@medialab.fyi')));
         runTest('Auth List - Random account', () => assert.ok(!APPROVED_ACCOUNTS.includes('attacker@evil.com')));
-        runTest('getExitRoute exposes a handler', () => assert.strictEqual(typeof getExitRoute.handler, 'function'));
+        const getExitRoute = await import('./netlify/functions/get-exit-route.mjs');
+        runTest('getExitRoute exposes a default handler', () => assert.strictEqual(typeof getExitRoute.default, 'function'));
 
         // --- POC.HTML LOGIC TESTS ---
         const htmlContent = fs.readFileSync(path.join(__dirname, 'operations-console', 'poc.html'), 'utf-8');
-        
+
         runTest('Malicious HTML input escaping', () => {
             const escapeMatch = htmlContent.match(/function escapeHTML\(str\) \{[\s\S]*?\n\s*\}/);
             assert.ok(escapeMatch, "Could not find escapeHTML in poc.html");
@@ -107,7 +108,7 @@ console.log('Running Mobile Launch Tests...\n');
             assert.strictEqual(manifest.start_url, './poc.html');
             assert.ok(manifest.icons.some(i => i.src === './icons/icon-192.png'));
             assert.ok(manifest.icons.some(i => i.src === './icons/icon-512.png'));
-            
+
             // Check apple-touch-icon in HTML
             assert.ok(htmlContent.includes('href="./icons/apple-touch-icon.png"'), 'Missing apple-touch-icon link in poc.html');
         });
@@ -118,9 +119,9 @@ console.log('Running Mobile Launch Tests...\n');
             let shared = false;
             let fallbackCalled = false;
             let returnedEarly = false;
-            
+
             const file = { name: "Brief_12345678.html" };
-            
+
             if (navigatorMock.share && navigatorMock.canShare && navigatorMock.canShare({ files: [file] })) {
                 try {
                     await navigatorMock.share({ files: [file] });
@@ -135,7 +136,7 @@ console.log('Running Mobile Launch Tests...\n');
             if (!shared && !returnedEarly) {
                 fallbackCalled = true;
             }
-            
+
             return { shared, fallbackCalled, returnedEarly };
         }
 
@@ -172,11 +173,85 @@ console.log('Running Mobile Launch Tests...\n');
             assert.strictEqual(res.fallbackCalled, true, "Fallback should be called when share is unsupported");
         });
 
+        // --- Q4 OFFLINE REGRESSION TESTS ---
+        runTest('Imports firebase auth correctly', () => {
+            const importMatch = htmlContent.match(/import\s*\{\s*auth,\s*provider,\s*signInWithPopup,\s*signOut,\s*onAuthStateChanged\s*\}\s*from\s*['"\`]\.\/firebase-auth\.js['"\`]/);
+            assert.ok(importMatch, "poc.html does not import the required firebase functions from ./firebase-auth.js");
+        });
+
+        runTest('Uses /.netlify/functions/verify-user endpoint', () => {
+            const verifyUserMatch = htmlContent.match(/fetch\(['"\`]\/\.netlify\/functions\/verify-user['"\`]/);
+            assert.ok(verifyUserMatch, "poc.html does not call /.netlify/functions/verify-user");
+
+            const authVerifyMatch = htmlContent.match(/auth-verify/);
+            assert.ok(!authVerifyMatch, "poc.html must NOT reference auth-verify endpoint");
+        });
+
+        runTest('Offline detection logic exists and blocks 401/403', () => {
+            assert.ok(htmlContent.includes('response.status === 401 || response.status === 403'), "poc.html must check 401/403 statuses explicitly");
+            assert.ok(htmlContent.includes("throw new Error('AUTH_FAILED')"), "poc.html must differentiate AUTH_FAILED from NETWORK_OFFLINE");
+        });
+
+        runTest('firebase-auth.js exists', () => {
+            assert.ok(fs.existsSync(path.join(__dirname, 'operations-console', 'firebase-auth.js')), "firebase-auth.js missing");
+        });
+
+        runTest('500/503 network classification', () => {
+            assert.ok(htmlContent.includes("error.message.startsWith('SERVER_ERROR')"), "poc.html must differentiate SERVER_ERROR from NETWORK_OFFLINE");
+            assert.ok(htmlContent.includes("SERVER_ERROR:${response.status}"), "poc.html must capture the server error status");
+        });
+
+        runTest('Sign out clearing failure aborts sign out', () => {
+            assert.ok(htmlContent.includes("alert(\"Failed to clear secure offline data"), "poc.html must show controlled error on sign out failure");
+        });
+
+        runTest('Local Firebase Bundle exists and is valid', () => {
+            const bundlePath = path.join(__dirname, 'operations-console', 'firebase-auth-bundle.js');
+            assert.ok(fs.existsSync(bundlePath), "firebase-auth-bundle.js missing");
+            const bundleContent = fs.readFileSync(bundlePath, 'utf-8');
+            assert.ok(bundleContent.length > 0, "Bundle is empty");
+            assert.ok(!bundleContent.includes("from 'firebase/app'"), "Bundle contains unresolved static import firebase/app");
+            assert.ok(!bundleContent.includes('from "firebase/app"'), "Bundle contains unresolved static import firebase/app");
+            assert.ok(!bundleContent.includes("from 'firebase/auth'"), "Bundle contains unresolved static import firebase/auth");
+            assert.ok(!bundleContent.includes('from "firebase/auth"'), "Bundle contains unresolved static import firebase/auth");
+            assert.ok(!bundleContent.includes("from 'https://www.gstatic.com"), "Bundle contains gstatic import");
+        });
+
+        runTest('firebase-auth.js is adapter re-exporting from bundle', () => {
+            const adapterContent = fs.readFileSync(path.join(__dirname, 'operations-console', 'firebase-auth.js'), 'utf-8');
+            assert.ok(adapterContent.includes('export { auth, provider, signInWithPopup, signOut, onAuthStateChanged } from "./firebase-auth-bundle.js";'), "Adapter must re-export from bundle");
+            assert.ok(!adapterContent.includes('gstatic'), "Adapter must not import gstatic");
+        });
+
+        runTest('Broken SDK files are removed', () => {
+            assert.ok(!fs.existsSync(path.join(__dirname, 'operations-console', 'firebase-app.js')), "firebase-app.js must be removed");
+            assert.ok(!fs.existsSync(path.join(__dirname, 'operations-console', 'firebase-auth-sdk.js')), "firebase-auth-sdk.js must be removed");
+        });
+
+        runTest('sw.js excludes Firebase traffic but caches adapter and bundle', () => {
+            const swContent = fs.readFileSync(path.join(__dirname, 'operations-console', 'sw.js'), 'utf-8');
+            assert.ok(swContent.includes("url.hostname.includes('firebase')"), "sw.js must exclude firebase domain");
+            assert.ok(swContent.includes("'./firebase-auth.js'"), "sw.js must cache local adapter");
+            assert.ok(swContent.includes("'./firebase-auth-bundle.js'"), "sw.js must cache local bundle");
+            assert.ok(!swContent.includes("'./firebase-app.js'"), "sw.js must not cache broken file");
+            assert.ok(!swContent.includes("'./firebase-auth-sdk.js'"), "sw.js must not cache broken file");
+        });
+
+        runTest('Owner isolation exists', () => {
+            assert.ok(htmlContent.includes('b.owner_uid === uid && b.owner_email === email'), "getAllBriefsFromDB must filter by owner");
+        });
+
+        runTest('XSS escaping for stored values', () => {
+            assert.ok(htmlContent.includes('escapeHTML(brief.customer_name)'), "customer_name not escaped in offline render");
+            assert.ok(htmlContent.includes('escapeHTML(brief.address)'), "address not escaped in offline render");
+            assert.ok(htmlContent.includes('escapeHTML(brief.order_number)'), "order_number not escaped in offline render");
+        });
+
         // --- FINAL RESULTS ---
         console.log(`\n==========================================`);
         console.log(`TEST RESULTS: ${testsPassed} passed, ${testsFailed} failed`);
         console.log(`==========================================`);
-        
+
         if (testsFailed > 0) {
             process.exit(1);
         } else {

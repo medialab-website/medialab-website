@@ -18,7 +18,7 @@ require('module').prototype.require = function(path) {
   return mockRequire.apply(this, arguments);
 };
 
-const missionPlanFunction = require('./netlify/functions/get-mission-plan');
+let missionPlanFunction;
 
 let passCount = 0;
 let failCount = 0;
@@ -41,6 +41,21 @@ const PAST_1H = new Date(NOW - 3600000).toISOString();
 
 async function runTests() {
   console.log("=== RUNNING MISSION PLAN TESTS ===");
+  const mod = await import('./netlify/functions/get-mission-plan.mjs');
+  missionPlanFunction = {
+    handler: async (event) => {
+      const url = new URL('http://localhost');
+      if (event.queryStringParameters) {
+        for (const [k, v] of Object.entries(event.queryStringParameters)) url.searchParams.append(k, v);
+      }
+      const req = new Request(url, {
+        method: event.httpMethod,
+        headers: event.headers || {}
+      });
+      const res = await mod.default(req, {});
+      return { statusCode: res.status, body: await res.text() };
+    }
+  };
 
   // Firebase Auth is globally mocked at the top of the file.
 

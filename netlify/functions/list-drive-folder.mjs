@@ -1,20 +1,20 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const { getAuth } = require('firebase-admin/auth');
 const { initializeApp, getApps, cert } = require('firebase-admin/app');
 const { google } = require('googleapis');
 
-const { verifyAuth } = require('./_shared/auth');
+import authModule from './_shared/auth.js';
+const { verifyAuth } = authModule;
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+export default async (req, context) => {
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const authResult = await verifyAuth(event);
+  const authResult = await verifyAuth(req);
   if (!authResult.ok) {
-    return {
-      statusCode: authResult.statusCode,
-      body: JSON.stringify({ error: authResult.error })
-    };
+    return new Response(JSON.stringify({ error: authResult.error }), { status: authResult.statusCode, headers: { 'Content-Type': 'application/json' } });
   }
 
   try {
@@ -24,7 +24,7 @@ exports.handler = async (event, context) => {
 
     if (!serviceAccountEmail || !rawPrivateKey || !folderId) {
       console.error('Missing Drive server configuration');
-      return { statusCode: 500, body: JSON.stringify({ error: 'Server configuration error' }) };
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
     const drivePrivateKey = rawPrivateKey.replace(/\\n/g, '\n');
@@ -56,21 +56,14 @@ exports.handler = async (event, context) => {
       webViewLink: file.webViewLink || null
     }));
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ok: true,
-        scope: "approved-proof-folder",
-        items: items
-      })
-    };
+    return new Response(JSON.stringify({
+      ok: true,
+      scope: "approved-proof-folder",
+      items: items
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
     console.error('Error fetching Drive data:', error);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Upstream API failure' })
-    };
+    return new Response(JSON.stringify({ error: 'Upstream API failure' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
   }
 };

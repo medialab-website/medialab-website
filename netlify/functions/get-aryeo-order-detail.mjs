@@ -1,38 +1,35 @@
-const { verifyAuth } = require('./_shared/auth');
+import authModule from './_shared/auth.js';
+const { verifyAuth } = authModule;
 
 // General UUID regex
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+export default async (req, context) => {
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const authResult = await verifyAuth(event);
+  const authResult = await verifyAuth(req);
   if (!authResult.ok) {
-    return {
-      statusCode: authResult.statusCode,
-      body: JSON.stringify({ error: authResult.error })
-    };
+    return new Response(JSON.stringify({ error: authResult.error }), { status: authResult.statusCode, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const orderId = event.queryStringParameters?.order_id;
+  const orderId = new URL(req.url).searchParams.get('order_id');
   if (!orderId) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing order_id parameter' }) };
+    return new Response(JSON.stringify({ error: 'Missing order_id parameter' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   
   if (!uuidRegex.test(orderId)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid order_id format (must be UUID)' }) };
+    return new Response(JSON.stringify({ error: 'Invalid order_id format (must be UUID)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   const apiKey = process.env.ARYEO_API_KEY;
 
   if (!apiKey) {
-    return {
-      statusCode: 503,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' })
-    };
+    return new Response(JSON.stringify({ error: 'ARYEO_NOT_CONFIGURED', message: 'Aryeo integration is currently unavailable.' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   // Real request
@@ -62,27 +59,17 @@ exports.handler = async (event, context) => {
       
       console.error(`[Aryeo API Error] Detail | Status: ${status} | StatusText: ${statusText} | Msg: ${safeErrorMessage}`);
 
-      return {
-        statusCode: 502,
-        body: JSON.stringify({ 
-          error: 'Upstream Aryeo API request failed',
-          diagnostic: { status, statusText, message: safeErrorMessage }
-        })
-      };
+      return new Response(JSON.stringify({ 
+        error: 'Upstream Aryeo API request failed',
+        diagnostic: { status, statusText, message: safeErrorMessage }
+      }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
 
     const data = await response.json();
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(normalizeDetailResponse(data))
-    };
+    return new Response(JSON.stringify(normalizeDetailResponse(data)), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error(`[Aryeo API Error] Detail | Fetch failed: ${error.message}`);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Upstream connection error' })
-    };
+    return new Response(JSON.stringify({ error: 'Upstream connection error' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
   }
 };
 

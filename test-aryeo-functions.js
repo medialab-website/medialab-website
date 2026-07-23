@@ -26,8 +26,9 @@ require('module').Module._cache[require.resolve('firebase-admin/auth')] = {
     })
   }
 };
-const ordersFunction = require('./netlify/functions/get-aryeo-orders.js');
-const detailsFunction = require('./netlify/functions/get-aryeo-order-detail.js');
+let ordersFunction;
+let detailsFunction;
+let exitRouteFunction;
 
 let passCount = 0;
 let failCount = 0;
@@ -45,6 +46,33 @@ function assert(condition, message) {
 async function runTests() {
   console.log("=== RUNNING ARYEO READ-ONLY TESTS ===");
 
+  const o = await import('./netlify/functions/get-aryeo-orders.mjs');
+  const d = await import('./netlify/functions/get-aryeo-order-detail.mjs');
+  const e = await import('./netlify/functions/get-exit-route.mjs');
+
+  const wrapper = (mod) => ({
+    handler: async (event) => {
+      const url = new URL('http://localhost');
+      if (event.queryStringParameters) {
+        for (const [k, v] of Object.entries(event.queryStringParameters)) url.searchParams.append(k, v);
+      }
+      const req = new Request(url, {
+        method: event.httpMethod,
+        headers: event.headers || {}
+      });
+      const res = await mod.default(req, {});
+      return {
+        statusCode: res.status,
+        headers: Object.fromEntries(res.headers.entries()),
+        body: await res.text()
+      };
+    }
+  });
+
+  ordersFunction = wrapper(o);
+  detailsFunction = wrapper(d);
+  exitRouteFunction = wrapper(e);
+
   const AUTHORIZED_TOKEN = "Bearer mock-valid-token-authorized";
   const UNAUTHORIZED_TOKEN = "Bearer mock-valid-token-unauthorized";
   const INVALID_TOKEN = "Bearer mock-invalid-token";
@@ -57,8 +85,8 @@ async function runTests() {
   assert(res.statusCode === 503, "Missing ARYEO_API_KEY returns 503 for lists");
   assert(JSON.parse(res.body).error === 'ARYEO_NOT_CONFIGURED', "Error is ARYEO_NOT_CONFIGURED");
 
-  let resDetail = await detailsFunction.handler({ 
-    httpMethod: 'GET', 
+  let resDetail = await detailsFunction.handler({
+    httpMethod: 'GET',
     headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
   });
@@ -85,8 +113,8 @@ async function runTests() {
   assert(res.statusCode === 405, "POST method returns 405");
 
   // Test 6: Malformed UUID returns 400
-  res = await detailsFunction.handler({ 
-    httpMethod: 'GET', 
+  res = await detailsFunction.handler({
+    httpMethod: 'GET',
     headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { order_id: 'not-a-uuid' }
   });
@@ -95,28 +123,28 @@ async function runTests() {
 
   // Test 7: Valid UUID reaches the mocked upstream adapter (Aryeo upstream failure returns sanitized 502)
   global.mockFetch = async () => ({ ok: false, status: 500, text: async () => 'Internal Server Error' });
-  res = await detailsFunction.handler({ 
-    httpMethod: 'GET', 
+  res = await detailsFunction.handler({
+    httpMethod: 'GET',
     headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
   });
   assert(res.statusCode === 502, "Upstream failure returns 502");
 
   // Test 8: Pagination parameter bounds
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { page: '0' }
   });
   assert(res.statusCode === 400, "Page 0 returns 400");
-  
-  res = await ordersFunction.handler({ 
+
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { per_page: '999' }
   });
   assert(res.statusCode === 400, "per_page > 100 returns 400");
 
   // Test 9: View allowlist
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { view: 'invalid_view' }
   });
@@ -163,7 +191,7 @@ async function runTests() {
     };
   };
 
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { view: 'all' }
   });
@@ -174,7 +202,7 @@ async function runTests() {
   assert(parsed.items[0].number === 1001, "All Orders number is separate");
   assert(parsed.items[0].timezone === "America/Los_Angeles", "Timezone respects priority (appointment fallback)");
 
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { view: 'upcoming' }
   });
@@ -190,7 +218,7 @@ async function runTests() {
     statusText: 'Unprocessable Entity',
     json: async () => ({ message: 'A safe Aryeo API error message' })
   });
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { view: 'completed' }
   });
@@ -200,7 +228,7 @@ async function runTests() {
   assert(parsed.diagnostic.message === 'A safe Aryeo API error message', "Diagnostic contains safe message");
 
   // Test 12: General UUID format accepted
-  res = await detailsFunction.handler({ 
+  res = await detailsFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { order_id: 'a23e4567-e89b-02d3-a456-426614174000' } // v0, not v1-5
   });
@@ -210,24 +238,24 @@ async function runTests() {
   let fetchCount = 0;
   let activeRequests = 0;
   let maxActiveRequests = 0;
-  
+
   global.mockFetch = async (url) => {
     activeRequests++;
     if (activeRequests > maxActiveRequests) maxActiveRequests = activeRequests;
-    
+
     // Simulate network delay to test concurrency overlap
     await new Promise(resolve => setTimeout(resolve, 10));
 
     if (url.includes('/v1/orders')) {
       assert(!url.includes('filter%5Bfulfillment_status%5D'), "Completed no longer sends filter[fulfillment_status]");
       assert(url.includes('include=customer%2Clisting'), "Completed uses reduced includes");
-      
+
       const pageStr = new URLSearchParams(url.split('?')[1]).get('page');
       fetchCount++;
       const pageNum = parseInt(pageStr);
-      
+
       activeRequests--;
-      
+
       if (pageNum === 1) {
         return {
           ok: true,
@@ -255,11 +283,11 @@ async function runTests() {
     return { ok: false, status: 500 };
   };
 
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { view: 'completed', page: '1', per_page: '10' }
   });
-  
+
   assert(res.statusCode === 200, "Completed fallback succeeds");
   parsed = JSON.parse(res.body);
   assert(fetchCount === 6, "Completed fallback loops through all 6 pages");
@@ -279,7 +307,7 @@ async function runTests() {
       })
     };
   };
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { view: 'completed' }
   });
@@ -312,13 +340,111 @@ async function runTests() {
       };
     }
   };
-  res = await ordersFunction.handler({ 
+  res = await ordersFunction.handler({
     httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
     queryStringParameters: { view: 'completed' }
   });
   assert(res.statusCode === 502, "Upstream page failure returns 502");
   parsed = JSON.parse(res.body);
   assert(parsed.diagnostic && parsed.diagnostic.message === "Failed at page 3", "Controlled JSON error with diagnostic from failed concurrent page");
+
+  console.log("=== RUNNING GET-EXIT-ROUTE TESTS ===");
+  process.env.OPENROUTESERVICE_API_KEY = "mock-ors-key";
+  process.env.MEDIALAB_ROUTE_ORIGIN = "mock-origin-address";
+  process.env.ARYEO_API_KEY = "test-key";
+
+  let requestedGeocodeUrl = "";
+  let directionsUrl = "";
+
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    if (url.includes('api.aryeo.com')) {
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            number: 9999,
+            listing: {
+              address: { latitude: null, longitude: null, state_or_province: 'VA', unparsed_address_part_one: '123 Test St' }
+            }
+          }
+        })
+      };
+    }
+    if (url.includes('api.openrouteservice.org/geocode')) {
+      requestedGeocodeUrl = url;
+      if (url.includes('bad-address')) {
+        return { ok: false, status: 500 };
+      }
+      if (url.includes('no-features')) {
+        return { ok: true, text: async () => JSON.stringify({ features: [] }) };
+      }
+      return {
+        ok: true,
+        text: async () => JSON.stringify({
+          features: [{
+            geometry: { coordinates: [-79.0, 38.0] }
+          }]
+        })
+      };
+    }
+    if (url.includes('api.openrouteservice.org/v2/directions')) {
+      directionsUrl = url;
+      return {
+        ok: true,
+        json: async () => ({
+          features: [{
+            properties: {
+              segments: [{
+                distance: 1000,
+                duration: 600,
+                steps: [{ instruction: "Turn right onto I-81 S", name: "I-81 S", distance: 100, duration: 60 }]
+              }]
+            }
+          }]
+        })
+      };
+    }
+    return { ok: false };
+  };
+
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET',
+    headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+
+  assert(res.headers && (res.headers['Content-Type'] || res.headers['content-type']) === 'application/json; charset=utf-8', "Responses use application/json content type");
+  assert(requestedGeocodeUrl.includes('api_key=mock-ors-key'), "Origin geocoder uses api_key as a query parameter");
+  assert(requestedGeocodeUrl.includes('text='), "Address is passed through text");
+  assert(requestedGeocodeUrl.includes('size=1'), "size=1 is supplied");
+  assert(res.body.indexOf('mock-ors-key') === -1, "API key is never returned in the function response");
+
+  parsed = JSON.parse(res.body);
+  assert(parsed.available === true, "Route found and available");
+  assert(parsed.steps[0].instruction === "Turn right onto I-81 S", "Directions behavior remains intact");
+  assert(directionsUrl.includes('-79%2C38'), "Longitude/latitude order is correct");
+
+  process.env.MEDIALAB_ROUTE_ORIGIN = "no-features";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET',
+    headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(parsed.available === false && parsed.warnings.length > 0, "Missing geocoder features returns available:false safely");
+
+  process.env.MEDIALAB_ROUTE_ORIGIN = "bad-address";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET',
+    headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(parsed.available === false && parsed.warnings.length > 0, "Non-2xx geocoder responses return safe diagnostics");
+
+  global.fetch = originalFetch;
 
   console.log(`\nTests Completed: ${passCount} Passed, ${failCount} Failed.`);
   if (failCount > 0) process.exit(1);

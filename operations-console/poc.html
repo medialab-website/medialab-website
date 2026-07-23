@@ -431,7 +431,7 @@
             justify-content: center;
             align-items: center;
         }
-        
+
         .mobile-contact-actions .action-btn.disabled {
             opacity: 0.5;
             pointer-events: none;
@@ -441,16 +441,16 @@
             #console-view { flex-direction: column; }
             .left-pane, .right-pane { width: 100%; flex: none; height: 100%; }
             .right-pane { display: none; }
-            
+
             /* Toggle visibility via JS classes */
             #console-view.show-detail .left-pane { display: none; }
             #console-view.show-detail .right-pane { display: flex; }
-            
+
             .btn-back-mobile { display: block; }
-            
+
             .detail-container { padding: 1rem; padding-bottom: env(safe-area-inset-bottom); }
             .grid-2 { grid-template-columns: 1fr; }
-            
+
             .tab { padding: 1.25rem 0; }
             .order-card { padding: 1.25rem; }
             .action-link, .action-btn, .btn-signout { padding: 0.75rem 1rem; min-height: 44px; }
@@ -460,6 +460,9 @@
     </style>
 </head>
 <body>
+    <div id="offline-banner" class="auth-hidden" style="background: #ffc107; color: #000; text-align: center; padding: 0.5rem; font-weight: bold; font-size: 0.85rem; z-index: 1000;">
+        OFFLINE MODE — SAVED BRIEF
+    </div>
     <div id="login-view" class="auth-visible">
         <h1 style="color: var(--color-primary); margin-bottom: 0.5rem;">MediaLab Operations Console</h1>
         <p style="color: var(--color-text-secondary);">Authentication Required</p>
@@ -482,13 +485,17 @@
         <div id="console-view">
             <!-- Left Pane -->
             <div class="left-pane">
-                <div class="tabs">
+                <div class="tabs" id="online-tabs">
                     <div class="tab active" data-view="upcoming">Upcoming</div>
                     <div class="tab" data-view="completed">Completed</div>
                     <div class="tab" data-view="all">All Orders</div>
                     <div class="tab" data-view="drive">Drive Proof</div>
                 </div>
-                
+
+                <div id="offline-tabs" class="tabs auth-hidden">
+                    <div class="tab active" style="flex:1; cursor:default; pointer-events:none; color: var(--color-primary);">Saved Briefs</div>
+                </div>
+
                 <div id="search-container" class="list-search auth-hidden">
                     <input type="text" id="search-input" placeholder="Search orders by address, customer...">
                 </div>
@@ -496,7 +503,7 @@
                 <div class="list-container" id="list-container">
                     <!-- Cards will be injected here -->
                 </div>
-                
+
                 <!-- Drive Proof Pane -->
                 <div class="list-container auth-hidden" id="drive-pane">
                     <h2>Stage 1C Google Drive API</h2>
@@ -642,9 +649,10 @@
                         <h3>Mission Plan</h3>
                         <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 16px;">
                             <p id="mission-plan-timestamp" class="mission-plan-text" style="font-size: 12px; margin: 0;"></p>
-                            <button id="btn-save-offline" class="action-btn" style="width: fit-content;">SAVE OFFLINE BRIEF</button>
+                            <button id="btn-save-offline" class="action-btn" style="width: fit-content; margin-bottom: 0.5rem;">SAVE TO THIS DEVICE</button>
+                            <button id="btn-share-download" class="action-btn" style="width: fit-content; background: var(--color-bg-surface-hover); color: var(--color-text-primary); border: 1px solid var(--color-border);">SHARE / DOWNLOAD COPY</button>
                         </div>
-                        
+
                         <div id="mission-plan-warnings" class="mission-plan-section auth-hidden">
                             <h4>Warnings</h4>
                             <div id="mission-plan-warnings-list"></div>
@@ -671,7 +679,7 @@
                             <ul id="mission-plan-checklist" class="mission-plan-checklist"></ul>
                         </div>
                     </div>
-                    
+
                     <div style="text-align: right; font-size: 0.75rem; color: var(--color-text-muted);">
                         Internal UUID: <span id="dt-uuid"></span><br>
                         Aryeo Last Updated: <span id="dt-updated-at"></span>
@@ -683,6 +691,318 @@
 
     <script type="module">
         import { auth, provider, signInWithPopup, signOut, onAuthStateChanged } from "./firebase-auth.js";
+
+        // --- INDEXEDDB SETUP ---
+        const DB_VERSION = 1;
+        const DB_NAME = 'MediaLabOpsDB';
+        let db;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = event => reject('IndexedDB error: ' + event.target.error);
+                request.onsuccess = event => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('mission_briefs')) {
+                        db.createObjectStore('mission_briefs', { keyPath: 'order_id' });
+                    }
+                    if (!db.objectStoreNames.contains('app_state')) {
+                        db.createObjectStore('app_state', { keyPath: 'key' });
+                    }
+                };
+            });
+        }
+
+        async function setOfflineAuthMarker(uid, email) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['app_state'], 'readwrite');
+                const store = transaction.objectStore('app_state');
+                const normalizedEmail = email ? email.toLowerCase() : null;
+                store.put({ key: 'offline_auth', uid, email: normalizedEmail, authorized_at: Date.now() });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function getOfflineAuthMarker() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['app_state'], 'readonly');
+                const store = transaction.objectStore('app_state');
+                const request = store.get('offline_auth');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function clearOfflineAuthMarker() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['app_state'], 'readwrite');
+                const store = transaction.objectStore('app_state');
+                store.delete('offline_auth');
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function saveBriefToDB(brief) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['mission_briefs'], 'readwrite');
+                const store = transaction.objectStore('mission_briefs');
+                store.put(brief);
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function getAllBriefsFromDB() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['mission_briefs'], 'readonly');
+                const store = transaction.objectStore('mission_briefs');
+                const request = store.getAll();
+                request.onsuccess = async () => {
+                    let briefs = request.result || [];
+                    let uid = null;
+                    let email = null;
+                    if (!navigator.onLine) {
+                        const marker = await getOfflineAuthMarker();
+                        if (marker) {
+                            uid = marker.uid;
+                            email = marker.email;
+                        }
+                    } else if (auth.currentUser) {
+                        uid = auth.currentUser.uid;
+                        email = auth.currentUser.email ? auth.currentUser.email.trim().toLowerCase() : null;
+                    }
+
+                    if (!uid || !email) {
+                        resolve([]);
+                        return;
+                    }
+
+                    const filtered = briefs.filter(b => b.owner_uid === uid && b.owner_email === email);
+                    resolve(filtered);
+                };
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function deleteBriefFromDB(orderId) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['mission_briefs'], 'readwrite');
+                const store = transaction.objectStore('mission_briefs');
+                store.delete(orderId);
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function clearAllBriefsFromDB() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['mission_briefs'], 'readwrite');
+                const store = transaction.objectStore('mission_briefs');
+                store.clear();
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (e) => reject(e.target.error);
+            });
+        }
+        // -----------------------
+
+        async function enterOfflineMode(email) {
+            views.login.classList.add('auth-hidden');
+            views.consoleWrap.classList.remove('auth-hidden');
+            document.getElementById('user-email').textContent = email;
+            document.getElementById('offline-banner').classList.remove('auth-hidden');
+
+            // Hide online elements
+            document.getElementById('online-tabs').classList.add('auth-hidden');
+            document.getElementById('offline-tabs').classList.remove('auth-hidden');
+            document.getElementById('search-container').classList.add('auth-hidden');
+            document.getElementById('btn-refresh').classList.add('auth-hidden');
+
+            views.listContainer.innerHTML = '<div class="loading-state">Loading saved briefs...</div>';
+
+            try {
+                const briefs = await getAllBriefsFromDB();
+                renderOfflineList(briefs);
+            } catch (err) {
+                views.listContainer.innerHTML = `<div class="error-state">Error loading offline briefs: ${err.message}</div>`;
+            }
+        }
+
+        function renderOfflineList(briefs) {
+            views.listContainer.innerHTML = '';
+            if (!briefs || briefs.length === 0) {
+                views.listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div style="color: #ff4444; margin-bottom:1rem; font-size: 2rem;">⚠️</div>
+                        <h2 style="margin:0 0 1rem 0; font-size: 1.25rem;">NO OFFLINE MISSION BRIEF SAVED</h2>
+                        <p>Connect to the internet and use SAVE TO THIS DEVICE before leaving service.</p>
+                    </div>`;
+                return;
+            }
+
+            briefs.sort((a, b) => {
+                if (!a.start_at) return 1;
+                if (!b.start_at) return -1;
+                return new Date(a.start_at) - new Date(b.start_at);
+            });
+
+            const now = new Date();
+            let selectedBrief = null;
+            for (const b of briefs) {
+                if (b.start_at && new Date(b.start_at) > now) {
+                    selectedBrief = b;
+                    break;
+                }
+            }
+            if (!selectedBrief) {
+                selectedBrief = briefs.reduce((prev, current) => {
+                    return (prev.saved_at > current.saved_at) ? prev : current;
+                }, briefs[0]);
+            }
+
+            briefs.forEach(brief => {
+                const card = document.createElement('div');
+                card.className = 'order-card';
+                card.dataset.id = brief.order_id;
+
+                let dateStr = "Date TBD";
+                if (brief.start_at) {
+                    const d = new Date(brief.start_at);
+                    dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+
+                card.innerHTML = `
+                    <div class="order-card-header">
+                        <span class="order-number">#${escapeHTML(brief.order_number)}</span>
+                        <span class="order-date">${escapeHTML(dateStr)}</span>
+                    </div>
+                    <div class="order-address">${escapeHTML(brief.address)}</div>
+                    <div class="order-customer">${escapeHTML(brief.customer_name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 0.5rem;">
+                        Saved: ${escapeHTML(new Date(brief.saved_at).toLocaleString())}
+                    </div>
+                    <button class="btn-delete-brief btn-signout" style="margin-top: 0.5rem; width: 100%; border-color: var(--color-border); color: var(--color-text-primary);" data-id="${escapeHTML(brief.order_id)}">DELETE FROM DEVICE</button>
+                `;
+
+                card.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('btn-delete-brief')) {
+                        e.stopPropagation();
+                        if (confirm('Delete this saved brief from your device?')) {
+                            deleteBriefFromDB(brief.order_id).then(() => {
+                                enterOfflineMode(document.getElementById('user-email').textContent);
+                                hideDetail();
+                            });
+                        }
+                        return;
+                    }
+                    document.querySelectorAll('.order-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    renderOfflineDetail(brief);
+                });
+
+                if (selectedBrief && brief.order_id === selectedBrief.order_id) {
+                    card.classList.add('selected');
+                    setTimeout(() => renderOfflineDetail(brief), 0);
+                }
+
+                views.listContainer.appendChild(card);
+            });
+        }
+
+        function renderOfflineDetail(brief) {
+            document.getElementById('console-view').classList.add('show-detail');
+            views.detailLoading.classList.add('auth-hidden');
+            views.detailContent.classList.remove('auth-hidden');
+            views.detailError.classList.add('auth-hidden');
+            views.detailEmpty.classList.add('auth-hidden');
+
+            document.getElementById('dt-number').textContent = `#${brief.order_number}`;
+            document.getElementById('dt-address').textContent = brief.address;
+            document.getElementById('dt-uuid').textContent = brief.order_id;
+
+            document.getElementById('dt-last-sync').textContent = "Generated: " + new Date(brief.generated_at).toLocaleTimeString();
+            document.getElementById('dt-status-badge').innerHTML = `<span class="badge badge-amber">OFFLINE SAVED</span>`;
+
+            if (brief.start_at) {
+                const d = new Date(brief.start_at);
+                let tz = brief.timezone || 'America/New_York';
+                try {
+                    Intl.DateTimeFormat(undefined, {timeZone: tz});
+                } catch (e) {
+                    tz = 'America/New_York';
+                }
+                const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: tz });
+                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${tz})`;
+            } else {
+                document.getElementById('dt-appointment-time').textContent = "Not scheduled";
+            }
+
+            document.getElementById('dt-appointment-status').textContent = 'OFFLINE';
+            document.getElementById('dt-crew').textContent = brief.assigned_crew || 'N/A';
+            document.getElementById('dt-delivery-status').textContent = 'OFFLINE';
+            document.getElementById('dt-payment-badge').innerHTML = `<span class="badge badge-gray">OFFLINE</span>`;
+            document.getElementById('dt-balance-group').style.display = 'none';
+
+            document.getElementById('dt-customer-name').textContent = brief.customer_name || 'N/A';
+            document.getElementById('dt-customer-contact').textContent = brief.customer_contact || "No contact info";
+
+            const btnCall = document.getElementById('btn-call-agent');
+            const btnText = document.getElementById('btn-text-agent');
+            if (brief.customer_phone) {
+                const phoneStr = brief.customer_phone.trim();
+                const hasPlus = phoneStr.startsWith('+');
+                const digits = phoneStr.replace(/[^\d]/g, '');
+                const formattedPhone = hasPlus ? '+' + digits : digits;
+                if (digits.length >= 10) {
+                    btnCall.href = `tel:${formattedPhone}`;
+                    btnCall.classList.remove('disabled');
+                    btnText.href = `sms:${formattedPhone}`;
+                    btnText.classList.remove('disabled');
+                } else {
+                    btnCall.removeAttribute('href'); btnCall.classList.add('disabled');
+                    btnText.removeAttribute('href'); btnText.classList.add('disabled');
+                }
+            } else {
+                btnCall.removeAttribute('href'); btnCall.classList.add('disabled');
+                btnText.removeAttribute('href'); btnText.classList.add('disabled');
+            }
+
+            document.getElementById('dt-services').textContent = brief.services || "None";
+            if (brief.notes) {
+                document.getElementById('dt-notes-group').style.display = 'block';
+                document.getElementById('dt-notes').textContent = brief.notes;
+            } else {
+                document.getElementById('dt-notes-group').style.display = 'none';
+            }
+
+            document.getElementById('dt-updated-at').textContent = "Saved: " + new Date(brief.saved_at).toLocaleString();
+
+            const mpContainer = document.getElementById('mission-plan-container');
+            mpContainer.style.display = 'block';
+            document.getElementById('btn-mission-plan').classList.add('auth-hidden');
+            document.getElementById('btn-save-offline').classList.add('auth-hidden');
+            document.getElementById('btn-share-download').classList.add('auth-hidden');
+
+            document.getElementById('mission-plan-timestamp').textContent = `Generated: ${new Date(brief.generated_at).toLocaleString()}`;
+
+            const warningsContainer = document.getElementById('mission-plan-warnings');
+            if (brief.warnings?.length > 0) {
+                warningsContainer.classList.remove('auth-hidden');
+                document.getElementById('mission-plan-warnings-list').innerHTML = brief.warnings.map(w => `<p class="mission-plan-text warning-text">⚠️ ${escapeHTML(w)}</p>`).join('');
+            } else {
+                warningsContainer.classList.add('auth-hidden');
+            }
+
+            document.getElementById('mission-plan-weather').innerHTML = brief.weather_html || '';
+            document.getElementById('mission-plan-directions').innerHTML = brief.route_html || '';
+            document.getElementById('mission-plan-crew-scope').textContent = `Crew: ${brief.assigned_crew} | Services: ${brief.services}`;
+            document.getElementById('mission-plan-checklist').innerHTML = (brief.checklist || []).map(item => `<li>${escapeHTML(item)}</li>`).join('');
+        }
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -734,44 +1054,93 @@
 
         async function verifyUserAndShowConsole(user) {
             try {
+                if (!navigator.onLine) {
+                    throw new Error('NETWORK_OFFLINE');
+                }
                 const idToken = await user.getIdToken();
-                const response = await fetch('/.netlify/functions/verify-user', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${idToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                let response;
+                try {
+                    response = await fetch('/.netlify/functions/verify-user', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        signal: controller.signal
+                    });
+                } catch (fetchErr) {
+                    throw new Error('NETWORK_OFFLINE');
+                } finally {
+                    clearTimeout(timeoutId);
+                }
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Server verification failed');
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('AUTH_FAILED');
+                    }
+                    throw new Error(`SERVER_ERROR:${response.status}`);
                 }
 
                 const data = await response.json();
                 if (data.authorized) {
+                    await setOfflineAuthMarker(user.uid, user.email);
                     views.login.classList.add('auth-hidden');
                     views.consoleWrap.classList.remove('auth-hidden');
                     document.getElementById('user-email').textContent = user.email;
                     currentIdToken = idToken;
                     loadList();
                 } else {
-                    throw new Error('Server returned OK but not authorized');
+                    throw new Error('AUTH_FAILED');
                 }
             } catch (error) {
-                console.error("Server Authorization Error:", error);
-                await signOut(auth);
-                currentIdToken = null;
-                showLogin(`Authorization Error: ${error.message}`);
+                if (error.message === 'AUTH_FAILED') {
+                    console.error("Server Authorization Error:", error);
+                    await signOut(auth);
+                    currentIdToken = null;
+                    showLogin(`Authorization Error: Not authorized.`);
+                    return;
+                }
+
+                if (error.message.startsWith('SERVER_ERROR')) {
+                    console.error("Server Error:", error.message);
+                    await signOut(auth);
+                    currentIdToken = null;
+                    showLogin(`Backend Unavailable: ${error.message}. Please try again later.`);
+                    return;
+                }
+
+                // Try offline fallback for NETWORK_OFFLINE
+                try {
+                    const marker = await getOfflineAuthMarker();
+                    if (marker && marker.uid === user.uid && marker.email === (user.email ? user.email.toLowerCase() : null)) {
+                        console.log("Offline mode active");
+                        enterOfflineMode(user.email);
+                    } else {
+                        throw new Error('No valid offline authorization marker.');
+                    }
+                } catch (fallbackError) {
+                    await signOut(auth);
+                    currentIdToken = null;
+                    showLogin(`Offline Startup Locked: ${fallbackError.message}`);
+                }
             }
         }
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                await verifyUserAndShowConsole(user);
-            } else {
-                showLogin();
-            }
+        initDB().then(() => {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    await verifyUserAndShowConsole(user);
+                } else {
+                    showLogin();
+                }
+            });
+        }).catch(err => {
+            console.error("DB Init error", err);
+            showLogin("Database initialization failed.");
         });
 
         document.getElementById('btn-login').addEventListener('click', async () => {
@@ -788,8 +1157,18 @@
         });
 
         document.getElementById('btn-logout').addEventListener('click', async () => {
-            await signOut(auth);
-            currentIdToken = null;
+            if (confirm("Sign out? This will remove all locally saved mission briefs from this device.")) {
+                try {
+                    await clearAllBriefsFromDB();
+                    await clearOfflineAuthMarker();
+                } catch(e) {
+                    console.error("Failed to clear offline data:", e);
+                    alert("Failed to clear secure offline data: " + e.message + ".\n\nSign out aborted to protect customer data. Please try again.");
+                    return;
+                }
+                await signOut(auth);
+                currentIdToken = null;
+            }
         });
 
         // Tabs
@@ -798,7 +1177,7 @@
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 e.target.classList.add('active');
                 currentView = e.target.dataset.view;
-                
+
                 if (currentView === 'drive') {
                     views.listContainer.classList.add('auth-hidden');
                     views.drivePane.classList.remove('auth-hidden');
@@ -809,17 +1188,17 @@
                     views.listContainer.classList.remove('auth-hidden');
                     views.drivePane.classList.add('auth-hidden');
                     views.rightPaneContainer.classList.remove('auth-hidden');
-                    
+
                     currentPage = 1;
                     searchQuery = '';
                     document.getElementById('search-input').value = '';
-                    
+
                     if (currentView === 'all') {
                         document.getElementById('search-container').classList.remove('auth-hidden');
                     } else {
                         document.getElementById('search-container').classList.add('auth-hidden');
                     }
-                    
+
                     loadList();
                     hideDetail();
                 }
@@ -851,7 +1230,7 @@
         // Data Fetching
         async function loadList() {
             if (!currentIdToken) return;
-            
+
             views.listContainer.innerHTML = '<div class="loading-state">Loading orders...</div>';
             const paginationEl = document.getElementById('list-pagination');
             paginationEl.classList.add('auth-hidden');
@@ -896,7 +1275,7 @@
                     const card = document.createElement('div');
                     card.className = 'order-card';
                     card.dataset.id = item.id;
-                    
+
                     let dateStr = "Date TBD";
                     if (item.start_at) {
                         const d = new Date(item.start_at);
@@ -1003,10 +1382,10 @@
             document.getElementById('dt-number').textContent = `#${data.number}`;
             document.getElementById('dt-address').textContent = data.address;
             document.getElementById('dt-uuid').textContent = data.id;
-            
+
             const lastUpdated = new Date();
             document.getElementById('dt-last-sync').textContent = "Synced: " + lastUpdated.toLocaleTimeString();
-            
+
             let statusBadge = `<span class="badge badge-amber">${data.status}</span>`;
             if (data.status === 'COMPLETED') statusBadge = `<span class="badge badge-green">${data.status}</span>`;
             else if (data.status === 'CANCELLED') statusBadge = `<span class="badge badge-red">${data.status}</span>`;
@@ -1054,7 +1433,7 @@
                 const hasPlus = phoneStr.startsWith('+');
                 const digits = phoneStr.replace(/[^\d]/g, '');
                 const formattedPhone = hasPlus ? '+' + digits : digits;
-                
+
                 if (digits.length >= 10) {
                     btnCall.href = `tel:${formattedPhone}`;
                     btnCall.classList.remove('disabled');
@@ -1089,7 +1468,7 @@
             const btnMP = document.getElementById('btn-mission-plan');
             const mpContainer = document.getElementById('mission-plan-container');
             const isUpcomingAppt = data.start_at && new Date(data.start_at) >= new Date();
-            
+
             if (data.status !== 'FULFILLED' && data.fulfillment_status !== 'FULFILLED' && isUpcomingAppt) {
                 btnMP.classList.remove('auth-hidden');
                 if (currentMissionPlans[data.id]) {
@@ -1137,7 +1516,7 @@
             const container = document.getElementById('mission-plan-container');
             container.style.display = 'block';
             document.getElementById('mission-plan-timestamp').textContent = `Generated: ${new Date(plan.generated_at).toLocaleString()}`;
-            
+
             const warningsContainer = document.getElementById('mission-plan-warnings');
             if (plan.warnings?.length > 0) {
                 warningsContainer.classList.remove('auth-hidden');
@@ -1145,7 +1524,7 @@
             } else {
                 warningsContainer.classList.add('auth-hidden');
             }
-            
+
             document.getElementById('mission-plan-weather').innerHTML = plan.weather.available ? `<p class="mission-plan-text">${plan.weather.temperature}°${plan.weather.temperature_unit} - ${plan.weather.short_forecast}</p>` : `<p class="mission-plan-text warning-text">${plan.weather.message}</p>`;
             document.getElementById('mission-plan-directions').innerHTML = plan.directions.available ? `<a href="${plan.directions.url}" target="_blank" class="action-btn" style="text-decoration:none;">OPEN DIRECTIONS</a>` : `<p class="mission-plan-text warning-text">${plan.directions.message}</p>`;
             document.getElementById('mission-plan-crew-scope').textContent = `Crew: ${plan.crew} | Services: ${plan.services}`;
@@ -1156,60 +1535,118 @@
             if (currentDetailOrder) loadDetail(currentDetailOrder.id);
         });
 
+        async function fetchRouteData(orderId) {
+            try {
+                const res = await fetch(`/.netlify/functions/get-exit-route?order_id=${orderId}`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                if (res.ok) {
+                    return await res.json();
+                }
+            } catch (e) {
+                console.error("Exit route fetch failed", e);
+            }
+            return null;
+        }
+
+        async function generateOfflineBriefData() {
+            if (!currentDetailOrder || !currentMissionPlans[currentDetailOrder.id]) return null;
+            const plan = currentMissionPlans[currentDetailOrder.id];
+            const order = currentDetailOrder;
+
+            const routeData = await fetchRouteData(order.id);
+
+            let routeHtml = '<p>Route unavailable</p>';
+            if (routeData && routeData.available) {
+                routeHtml = `
+                    <div style="background: #1e1e1e; padding: 15px; border-radius: 4px; border: 1px solid #333; margin-bottom: 15px;">
+                        <h4 style="margin-top:0; color:#ffc107;">${escapeHTML(routeData.target_label)}</h4>
+                        <p style="font-size: 12px; color: #8e8e8e;">Distance: ${escapeHTML((routeData.distance/1609.34).toFixed(1))} mi | Est. Time: ${escapeHTML(Math.round(routeData.duration/60))} min</p>
+                        ${routeData.warnings?.length > 0 ? `<p style="color:#f44336; font-size:12px;">⚠️ ${routeData.warnings.map(w => escapeHTML(w)).join('<br>')}</p>` : ''}
+                        <ol style="font-size: 14px; padding-left: 20px;">
+                            ${routeData.steps.map(s => `<li>${escapeHTML(s.instruction)} ${s.distance > 0 ? `(${escapeHTML((s.distance/1609.34).toFixed(1))} mi)` : ''}</li>`).join('')}
+                        </ol>
+                        <p style="font-size: 10px; color: #666; margin-top: 10px;">${escapeHTML(routeData.attribution)}</p>
+                    </div>
+                `;
+            }
+
+            let escapedWeatherHtml = '';
+            if (plan.weather.available) {
+                escapedWeatherHtml = `<p>${escapeHTML(plan.weather.temperature)}&deg;${escapeHTML(plan.weather.temperature_unit)} - ${escapeHTML(plan.weather.short_forecast)}</p>`;
+            } else {
+                escapedWeatherHtml = `<p class="warning">${escapeHTML(plan.weather.message)}</p>`;
+            }
+
+            return {
+                owner_uid: auth.currentUser ? auth.currentUser.uid : null,
+                owner_email: auth.currentUser && auth.currentUser.email ? auth.currentUser.email.trim().toLowerCase() : null,
+                order_id: order.id,
+                order_number: order.number,
+                address: order.address,
+                customer_name: order.customer_name,
+                customer_phone: order.customer_phone,
+                customer_email: order.customer_email,
+                customer_contact: [order.customer_phone, order.customer_email].filter(Boolean).join(" • "),
+                start_at: order.start_at,
+                timezone: order.timezone,
+                assigned_crew: plan.crew,
+                services: plan.services,
+                notes: order.notes,
+                checklist: plan.checklist,
+                warnings: plan.warnings,
+                weather_html: escapedWeatherHtml,
+                route_html: routeHtml,
+                generated_at: plan.generated_at,
+                saved_at: Date.now()
+            };
+        }
+
         document.getElementById('btn-save-offline').addEventListener('click', async () => {
-            if (!currentDetailOrder || !currentMissionPlans[currentDetailOrder.id]) return;
             const btn = document.getElementById('btn-save-offline');
+            const originalText = btn.textContent;
+            btn.textContent = 'SAVING...';
+            btn.disabled = true;
+            try {
+                const brief = await generateOfflineBriefData();
+                if (brief) {
+                    await saveBriefToDB(brief);
+                    if (navigator.storage && navigator.storage.persist) {
+                        await navigator.storage.persist();
+                    }
+                    btn.textContent = 'SAVED FOR OFFLINE USE';
+                    setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000);
+                } else {
+                    btn.textContent = originalText; btn.disabled = false;
+                }
+            } catch (err) {
+                alert(`Error saving brief: ${err.message}`);
+                btn.textContent = originalText; btn.disabled = false;
+            }
+        });
+
+        document.getElementById('btn-share-download').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-share-download');
             const originalText = btn.textContent;
             btn.textContent = 'GENERATING BRIEF...';
             btn.disabled = true;
 
             try {
-                // Fetch Route
-                let routeData = null;
-                try {
-                    const res = await fetch(`/.netlify/functions/get-exit-route?order_id=${currentDetailOrder.id}`, {
-                        headers: { 'Authorization': `Bearer ${currentIdToken}` }
-                    });
-                    if (res.ok) {
-                        routeData = await res.json();
-                    }
-                } catch (e) {
-                    console.error("Exit route fetch failed", e);
-                }
+                const brief = await generateOfflineBriefData();
+                if (!brief) return;
 
-                const plan = currentMissionPlans[currentDetailOrder.id];
                 const order = currentDetailOrder;
+                const plan = currentMissionPlans[currentDetailOrder.id];
+
                 const d = order.start_at ? new Date(order.start_at) : null;
                 const timeStr = d ? escapeHTML(new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: order.timezone }).format(d)) : 'Not Scheduled';
-
-                let routeHtml = '<p>Route unavailable</p>';
-                if (routeData && routeData.available) {
-                    routeHtml = `
-                        <div style="background: #1e1e1e; padding: 15px; border-radius: 4px; border: 1px solid #333; margin-bottom: 15px;">
-                            <h4 style="margin-top:0; color:#ffc107;">${escapeHTML(routeData.target_label)}</h4>
-                            <p style="font-size: 12px; color: #8e8e8e;">Distance: ${escapeHTML((routeData.distance/1609.34).toFixed(1))} mi | Est. Time: ${escapeHTML(Math.round(routeData.duration/60))} min</p>
-                            ${routeData.warnings?.length > 0 ? `<p style="color:#f44336; font-size:12px;">⚠️ ${routeData.warnings.map(w => escapeHTML(w)).join('<br>')}</p>` : ''}
-                            <ol style="font-size: 14px; padding-left: 20px;">
-                                ${routeData.steps.map(s => `<li>${escapeHTML(s.instruction)} ${s.distance > 0 ? `(${escapeHTML((s.distance/1609.34).toFixed(1))} mi)` : ''}</li>`).join('')}
-                            </ol>
-                            <p style="font-size: 10px; color: #666; margin-top: 10px;">${escapeHTML(routeData.attribution)}</p>
-                        </div>
-                    `;
-                }
 
                 const escapedAddress = escapeHTML(order.address);
                 const escapedCrew = escapeHTML(plan.crew);
                 const escapedServices = escapeHTML(plan.services);
                 const escapedCustomerName = escapeHTML(order.customer_name);
-                const escapedCustomerContact = escapeHTML([order.customer_phone, order.customer_email].filter(Boolean).join(" • "));
+                const escapedCustomerContact = escapeHTML(brief.customer_contact);
                 const escapedPlanWarnings = plan.warnings?.length > 0 ? `<p class="warning">⚠️ ${plan.warnings.map(w => escapeHTML(w)).join('<br>')}</p>` : '';
-
-                let escapedWeatherHtml = '';
-                if (plan.weather.available) {
-                    escapedWeatherHtml = `<p>${escapeHTML(plan.weather.temperature)}&deg;${escapeHTML(plan.weather.temperature_unit)} - ${escapeHTML(plan.weather.short_forecast)}</p>`;
-                } else {
-                    escapedWeatherHtml = `<p class="warning">${escapeHTML(plan.weather.message)}</p>`;
-                }
 
                 // Generate HTML Blob
                 const htmlContent = `<!DOCTYPE html>
@@ -1230,19 +1667,19 @@ h2 { color: #ffc107; margin-bottom: 5px; }
 <body>
     <h2>${escapedAddress}</h2>
     ${escapedPlanWarnings}
-    
+
     <div class="label">Date & Time</div>
     <div class="value">${timeStr}</div>
 
     <div class="label">Crew & Scope</div>
     <div class="value">${escapedCrew} | ${escapedServices}</div>
-    
+
     <div class="label">Customer Info</div>
     <div class="value">${escapedCustomerName} | ${escapedCustomerContact}</div>
-    
+
     <div class="section">
         <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Weather Forecast</h3>
-        ${escapedWeatherHtml}
+        ${brief.weather_html}
     </div>
 
     <div class="section">
@@ -1251,10 +1688,10 @@ h2 { color: #ffc107; margin-bottom: 5px; }
             ${plan.checklist.map(item => `<li>${escapeHTML(item)}</li>`).join('')}
         </ul>
     </div>
-    
+
     <div class="section">
         <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Exit Route</h3>
-        ${routeHtml}
+        ${brief.route_html}
     </div>
 </body>
 </html>`;
@@ -1267,10 +1704,9 @@ h2 { color: #ffc107; margin-bottom: 5px; }
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
                         await navigator.share({ files: [file] });
-                        shared = true; // Web Share succeeded
+                        shared = true;
                     } catch (shareErr) {
                         if (shareErr.name === 'AbortError') {
-                            // User cancelled, do not fallback
                             return;
                         }
                         console.warn("Share API failed, falling back to download", shareErr);
@@ -1278,7 +1714,6 @@ h2 { color: #ffc107; margin-bottom: 5px; }
                 }
 
                 if (!shared) {
-                    // Fallback to Blob download
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -1322,7 +1757,7 @@ h2 { color: #ffc107; margin-bottom: 5px; }
                         const li = document.createElement('li');
                         li.className = 'drive-item';
                         li.innerHTML = `<div><strong>${item.name}</strong><span class="drive-badge" style="margin-left:8px;">${item.itemType}</span></div>
-                            <div style="font-size:0.85rem; color:var(--color-text-secondary);">${item.modifiedTime ? new Date(item.modifiedTime).toLocaleDateString() : ''} 
+                            <div style="font-size:0.85rem; color:var(--color-text-secondary);">${item.modifiedTime ? new Date(item.modifiedTime).toLocaleDateString() : ''}
                             ${item.webViewLink ? `<a href="${item.webViewLink}" target="_blank" style="color:var(--color-primary); margin-left:10px;">↗</a>` : ''}</div>`;
                         driveList.appendChild(li);
                     });
