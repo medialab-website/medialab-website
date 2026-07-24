@@ -1,19 +1,26 @@
 const { initializeApp, getApps, cert } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 
-// Initialize Firebase Admin using Service Account credentials from environment variables.
-if (!getApps().length) {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY 
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-    : undefined;
+// Lazily initialize Firebase Admin
+function ensureFirebaseInitialized() {
+  if (!getApps().length) {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey,
-    })
-  });
+    if (projectId && clientEmail && rawPrivateKey) {
+      const privateKey = rawPrivateKey.replace(/\\n/g, '\n');
+      initializeApp({
+        credential: cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey,
+        })
+      });
+    } else {
+      initializeApp();
+    }
+  }
 }
 
 const APPROVED_ACCOUNTS = [
@@ -42,6 +49,8 @@ async function verifyAuth(request) {
   const idToken = authHeader.split('Bearer ')[1];
 
   try {
+    // Lazily resolve app before obtaining Auth
+    ensureFirebaseInitialized();
     // Verify the ID token and check if it has been revoked
     const decodedToken = await getAuth().verifyIdToken(idToken, true);
     
