@@ -78,7 +78,7 @@ function normalizeDetailResponse(payload) {
   
   const customer = order.customer || {};
   const addressObj = order.address || (order.listing && order.listing.address) || {};
-  let addressStr = addressObj.street_name || addressObj.unparsed_address_part_one || "Unknown Address";
+  let addressStr = addressObj.unparsed_address_part_one || addressObj.street_name || "Unknown Address";
   if (addressObj.street_number && addressObj.street_name && !addressObj.unparsed_address_part_one) {
     addressStr = `${addressObj.street_number} ${addressObj.street_name}, ${addressObj.city || ''}, ${addressObj.state_or_province || ''} ${addressObj.postal_code || ''}`.trim();
   }

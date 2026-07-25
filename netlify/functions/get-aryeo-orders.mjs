@@ -231,15 +231,18 @@ function normalizeResponse(payload, view) {
   if (view === 'upcoming') {
     // Payload contains appointments
     items = (payload.data || []).map(appt => {
-      // Exclude canceled appointments
-      if (appt.status === 'CANCELLED' || appt.status === 'canceled') return null;
+      // Exclude canceled appointments (using exact status values found in code: CANCELLED, canceled, and safe variants)
+      if (appt.status && (appt.status.toUpperCase() === 'CANCELLED' || appt.status.toUpperCase() === 'CANCELED')) return null;
       
       const order = appt.order || {};
       if (!order.id) return null; // Exclude if no order UUID is present
 
+      // Exclude canceled orders (applying the same known status values)
+      if (order.status && (order.status.toUpperCase() === 'CANCELLED' || order.status.toUpperCase() === 'CANCELED')) return null;
+
       const customer = order.customer || appt.customer || {};
       const addressObj = order.address || (order.listing && order.listing.address) || (appt.listing && appt.listing.address) || {};
-      let addressStr = addressObj.street_name || addressObj.unparsed_address_part_one || "Unknown Address";
+      let addressStr = addressObj.unparsed_address_part_one || addressObj.street_name || "Unknown Address";
       if (addressObj.street_number && addressObj.street_name && !addressObj.unparsed_address_part_one) {
         addressStr = `${addressObj.street_number} ${addressObj.street_name}`;
       }
@@ -269,7 +272,7 @@ function normalizeResponse(payload, view) {
 
       const customer = order.customer || {};
       const addressObj = order.address || (order.listing && order.listing.address) || {};
-      let addressStr = addressObj.street_name || addressObj.unparsed_address_part_one || "Unknown Address";
+      let addressStr = addressObj.unparsed_address_part_one || addressObj.street_name || "Unknown Address";
       if (addressObj.street_number && addressObj.street_name && !addressObj.unparsed_address_part_one) {
         addressStr = `${addressObj.street_number} ${addressObj.street_name}`;
       }

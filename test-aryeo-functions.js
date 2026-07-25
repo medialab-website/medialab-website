@@ -1,4 +1,6 @@
 // Simple test harness for netlify functions
+const fs = require('fs');
+
 process.env.FIREBASE_PROJECT_ID = "mock-project";
 process.env.FIREBASE_CLIENT_EMAIL = "mock@mock.com";
 process.env.FIREBASE_PRIVATE_KEY = "mock-key";
@@ -165,7 +167,17 @@ async function runTests() {
             timezone: "America/Chicago",
             order: {
               id: "111e4567-e89b-12d3-a456-426614174000",
-              number: 2002
+              number: 2002,
+              status: "SCHEDULED"
+            }
+          }, {
+            id: "appt-uuid-canceled-order",
+            status: "SCHEDULED",
+            timezone: "America/Chicago",
+            order: {
+              id: "222e4567-e89b-12d3-a456-426614174000",
+              number: 2003,
+              status: "CANCELLED"
             }
           }]
         })
@@ -207,6 +219,7 @@ async function runTests() {
     queryStringParameters: { view: 'upcoming' }
   });
   parsed = JSON.parse(res.body);
+  assert(parsed.items.length === 1, "Canceled order is absent from Upcoming");
   assert(parsed.items[0].id === "111e4567-e89b-12d3-a456-426614174000", "Upcoming ID is normalized order UUID");
   assert(parsed.items[0].number === 2002, "Upcoming number is separate");
   assert(parsed.items[0].timezone === "America/Chicago", "Upcoming timezone respects fallback");
@@ -354,7 +367,8 @@ async function runTests() {
   process.env.ARYEO_API_KEY = "test-key";
 
   let requestedGeocodeUrl = "";
-  let directionsUrl = "";
+  let directionUrls = [];
+  let routeMode = "both-success";
 
   const originalFetch = global.fetch;
   global.fetch = async (url) => {
@@ -366,7 +380,7 @@ async function runTests() {
             id: '123e4567-e89b-12d3-a456-426614174000',
             number: 9999,
             listing: {
-              address: { latitude: null, longitude: null, state_or_province: 'VA', unparsed_address_part_one: '123 Test St' }
+              address: { latitude: 36.0, longitude: -82.0, state_or_province: 'NC', unparsed_address_part_one: '123 Test St' }
             }
           }
         })
@@ -390,7 +404,17 @@ async function runTests() {
       };
     }
     if (url.includes('api.openrouteservice.org/v2/directions')) {
-      directionsUrl = url;
+      directionUrls.push(url);
+      const parsedUrl = new URL(url);
+      const start = parsedUrl.searchParams.get('start');
+      const isRouteToListing = start === '-79,38';
+      const shouldFail =
+        routeMode === "both-fail" ||
+        (routeMode === "to-listing-fails" && isRouteToListing) ||
+        (routeMode === "home-fails" && !isRouteToListing);
+      if (shouldFail) {
+        return { ok: false, status: 503 };
+      }
       return {
         ok: true,
         json: async () => ({
@@ -399,7 +423,12 @@ async function runTests() {
               segments: [{
                 distance: 1000,
                 duration: 600,
-                steps: [{ instruction: "Turn right onto I-81 S", name: "I-81 S", distance: 100, duration: 60 }]
+                steps: [{
+                  instruction: isRouteToListing ? "Continue onto Test Road" : "Turn left toward Home Base",
+                  name: isRouteToListing ? "Test Road" : "Home Road",
+                  distance: 100,
+                  duration: 60
+                }]
               }]
             }
           }]
@@ -423,9 +452,62 @@ async function runTests() {
 
   parsed = JSON.parse(res.body);
   assert(parsed.available === true, "Route found and available");
-  assert(parsed.steps[0].instruction === "Turn right onto I-81 S", "Directions behavior remains intact");
-  assert(directionsUrl.includes('-79%2C38'), "Longitude/latitude order is correct");
+  assert(parsed.route_to_listing.available === true, "Route to listing available");
+  assert(parsed.route_home.available === true, "Route home available");
+  assert(parsed.route_to_listing.steps[0].instruction.startsWith("Continue onto Test Road"), "Route to listing returns neutral complete directions");
+  assert(parsed.route_home.steps[0].instruction === "Turn left toward Home Base", "Route home returns neutral complete directions");
+  assert(directionUrls.length === 2, "Both route directions are requested");
+  assert(directionUrls.some(url => {
+    const parsedUrl = new URL(url);
+    return parsedUrl.searchParams.get('start') === '-79,38' && parsedUrl.searchParams.get('end') === '-82,36';
+  }), "Home Base to listing uses correct longitude/latitude order");
+  assert(directionUrls.some(url => {
+    const parsedUrl = new URL(url);
+    return parsedUrl.searchParams.get('start') === '-82,36' && parsedUrl.searchParams.get('end') === '-79,38';
+  }), "Listing to Home Base reverses the coordinates");
 
+  routeMode = "home-fails";
+  directionUrls = [];
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET',
+    headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(parsed.available === true, "Overall route remains available when route home fails");
+  assert(parsed.route_to_listing.available === true, "Route to listing is retained when route home fails");
+  assert(parsed.route_home.available === false && parsed.route_home.steps.length === 0, "Failed route home is normalized independently");
+
+  routeMode = "to-listing-fails";
+  directionUrls = [];
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET',
+    headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(parsed.available === true, "Overall route remains available when route to listing fails");
+  assert(parsed.route_to_listing.available === false && parsed.route_to_listing.steps.length === 0, "Failed route to listing is normalized independently");
+  assert(parsed.route_home.available === true, "Route home is retained when route to listing fails");
+
+  routeMode = "both-fail";
+  directionUrls = [];
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET',
+    headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(parsed.available === false, "Overall route is unavailable only when both routes fail");
+  assert(parsed.route_to_listing.available === false && parsed.route_home.available === false, "Both failed routes remain independently represented");
+  assert(parsed.warnings.some(w => w.includes("Neither route")), "Both-route failure returns an explicit top-level warning");
+
+  const routeSource = fs.readFileSync(require.resolve('./netlify/functions/get-exit-route.mjs'), 'utf8');
+  assert(!routeSource.includes('isVA') && !routeSource.includes('isTN'), "VA/TN route gating is removed");
+  assert(!routeSource.includes('target_entry_found') && !routeSource.includes('target_direction'), "Interstate target contract is removed");
+  assert(!routeSource.includes('target_entry_node'), "Old generic truncation logic is removed");
+
+  routeMode = "both-success";
   process.env.MEDIALAB_ROUTE_ORIGIN = "no-features";
   res = await exitRouteFunction.handler({
     httpMethod: 'GET',
@@ -443,6 +525,210 @@ async function runTests() {
   });
   parsed = JSON.parse(res.body);
   assert(parsed.available === false && parsed.warnings.length > 0, "Non-2xx geocoder responses return safe diagnostics");
+
+  // --- BOUNDARY MODE TESTS ---
+  console.log("--- RUNNING BOUNDARY MODE TESTS ---");
+  process.env.MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS = "-82.1,36.1";
+  process.env.MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS = "-82.2,36.2";
+  process.env.MEDIALAB_ROUTE_ORIGIN = "mock-origin-address"; // Restore origin
+
+  let boundaryMode = "qualifies";
+
+  global.fetch = async (url) => {
+    if (url.includes('api.aryeo.com')) {
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            number: 9999,
+            listing: { address: { latitude: 36.0, longitude: -82.0, state_or_province: 'VA', unparsed_address_part_one: '123 Richmond Ave' } }
+          }
+        })
+      };
+    }
+    if (url.includes('api.openrouteservice.org/geocode')) {
+      return {
+        ok: true,
+        text: async () => JSON.stringify({ features: [{ geometry: { coordinates: [-79.0, 38.0] } }] })
+      };
+    }
+    if (url.includes('api.openrouteservice.org/v2/directions')) {
+      const parsedUrl = new URL(url);
+      const start = parsedUrl.searchParams.get('start');
+      const end = parsedUrl.searchParams.get('end');
+
+      const isFullOutbound = start === '-79,38' && end === '-82,36';
+      const isFullReturn = start === '-82,36' && end === '-79,38';
+
+      const isBoundOutbound = start === '-82.1,36.1';
+      const isBoundReturn = start === '-82,36' && end === '-82.2,36.2';
+
+      // Mock coordinates
+      const mockOutboundGeo = [[-79, 38], [-82.1001, 36.1001], [-82, 36]]; // Passes near [-82.1, 36.1]
+      const mockReturnGeo = [[-82, 36], [-82.2001, 36.2001], [-79, 38]];   // Passes near [-82.2, 36.2]
+      const mockOutsideGeo = [[-79, 38], [-80, 37], [-82, 36]]; // Far from checkpoints
+
+      if (boundaryMode === "qualifies") {
+        if (isFullOutbound) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockOutboundGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Keep right", name: "", distance: 100 }] }] } }] }) };
+        if (isFullReturn) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockReturnGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Merge onto Highway", name: "Highway", distance: 100 }] }] } }] }) };
+        if (isBoundOutbound) return { ok: true, json: async () => ({ features: [{ properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Go straight bound out", name: "Bound Out", distance: 100 }] }] } }] }) };
+        if (isBoundReturn) return { ok: true, json: async () => ({ features: [{ properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Take Exit 1", name: "Exit 1", distance: 100 }, { instruction: "Take Exit 1", name: "Exit 1", distance: 50 }, { instruction: "Arrive", name: "", distance: 100 }] }] } }] }) };
+      }
+
+      if (boundaryMode === "no-qualify") {
+        if (isFullOutbound) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockOutsideGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [
+          { instruction: "Head west", name: "", distance: 5 }, // 10. Compass-only removed
+          { instruction: "Head south on Hwy 1", name: "Hwy 1", distance: 50 }, // 11. Compass with road
+          { instruction: "Turn right", name: "", distance: 0 }, // 12. Unnamed zero distance removed
+          { instruction: "Turn left", name: "Main St", distance: 0 }, // 13. Short named preserved
+          { instruction: "Merge onto I-81 North", name: "I-81 North", distance: 100 } // 14. Useful labels preserved
+        ] }] } }] }) };
+        if (isFullReturn) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockOutsideGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Go to Local Road", name: "Local", distance: 100 }] }] } }] }) };
+      }
+
+      if (boundaryMode === "bound-fail") {
+        if (isFullOutbound) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockOutboundGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Merge onto Highway", name: "Highway", distance: 100 }] }] } }] }) };
+        if (isFullReturn) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockReturnGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Merge onto Highway", name: "Highway", distance: 100 }] }] } }] }) };
+        if (isBoundOutbound) return { ok: false, status: 503 };
+        if (isBoundReturn) return { ok: true, json: async () => ({ features: [{ properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Arrive", name: "", distance: 100 }] }] } }] }) };
+      }
+
+      if (boundaryMode === "synthetic-display-fail") {
+        if (isFullOutbound) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockOutboundGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Keep right", name: "", distance: 100 }] }] } }] }) };
+        if (isFullReturn) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: mockReturnGeo }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Merge onto Highway", name: "Highway", distance: 100 }] }] } }] }) };
+        if (isBoundOutbound) return { ok: true, json: async () => ({ features: [{ properties: { segments: [{ distance: 100000, duration: 10, steps: [
+          { instruction: "Continue on Gate City Highway, US 421", name: "Gate City Highway, US 421", distance: 0 },
+          { type: 13, instruction: "Keep right", name: "Gate City Highway, US 421", distance: 95434 },
+          { type: 13, instruction: "Keep right", name: "", distance: 321 },
+          { type: 1, instruction: "Turn right onto Black Lick Road, VA 90", name: "Black Lick Road, VA 90", distance: 2414 },
+          { type: 1, instruction: "Turn right onto Delp Avenue", name: "Delp Avenue", distance: 160 },
+          { type: 0, instruction: "Turn left onto Church Street", name: "Church Street", distance: 10 },
+          { type: 1, instruction: "Turn right onto Richmond Avenue", name: "Richmond Avenue", distance: 160 },
+          { type: 1, instruction: "Turn right onto -", name: "-", distance: 10 },
+          { type: 0, instruction: "Turn left onto -", name: "-", distance: 5 },
+          { type: 10, instruction: "Arrive at your destination, on the left", name: "", distance: 0 }
+        ] }] } }] }) };
+        if (isBoundReturn) return { ok: true, json: async () => ({ features: [{ properties: { segments: [{ distance: 100000, duration: 10, steps: [
+          { type: 13, instruction: "Keep right", name: "Some Wrong Name", distance: 95434 },
+          { instruction: "Arrive", name: "", distance: 100 }
+        ] }] } }] }) };
+      }
+
+      if (boundaryMode === "malformed-geo") {
+        if (isFullOutbound) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: null }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Go to Local Road", name: "Local Road", distance: 100 }] }] } }] }) };
+        if (isFullReturn) return { ok: true, json: async () => ({ features: [{ geometry: { coordinates: null }, properties: { segments: [{ distance: 10, duration: 10, steps: [{ instruction: "Go to Local Road", name: "Local Road", distance: 100 }] }] } }] }) };
+      }
+
+      return { ok: false, status: 500 };
+    }
+    return { ok: false };
+  };
+
+  // Run Boundary mode Qualifies
+  boundaryMode = "qualifies";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  // Boundary messages have been removed from the application
+  // assert(parsed.route_to_listing.boundary_message && parsed.route_to_listing.boundary_message.includes('Gate City Highway checkpoint near I-81 Exit 1'), "Outbound boundary messaging identifies the Gate City Highway checkpoint.");
+  // assert(parsed.route_home.boundary_message && parsed.route_home.boundary_message.includes('Gate City Highway checkpoint;'), "Return boundary messaging identifies the Gate City Highway checkpoint.");
+  // assert(parsed.route_home.boundary_message && parsed.route_home.boundary_message.startsWith('Take Exit 1A.'), "Return messaging still begins with Take Exit 1A.");
+
+  const takeExit1ACount = parsed.route_home.steps.filter(s => s.instruction === 'Take Exit 1A').length;
+  assert(takeExit1ACount === 1, "Qualifying return steps still contain exactly one Take Exit 1A.");
+
+  const oldMessageRegex = /entrance ramp|off-ramp/i;
+  assert(!oldMessageRegex.test(parsed.route_to_listing.boundary_message) && !oldMessageRegex.test(parsed.route_home.boundary_message), "The inaccurate entrance-ramp/off-ramp boundary messages are no longer returned by current code.");
+  assert(!parsed.route_to_listing.steps.some(s => s.instruction.includes('I-81')), "Flawed full route steps not included in boundary outbound");
+
+  // Run Boundary mode fails outbound
+  boundaryMode = "bound-fail";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(!parsed.route_to_listing.available, "Outbound boundary failure isolated");
+  assert(parsed.route_home.available, "Return boundary succeeds despite outbound failure");
+  assert(parsed.route_home.steps.some(s => s.instruction === 'Take Exit 1A'), "Exit 1A inserted before arrival when missing");
+
+  // Run Boundary mode No Qualify
+  boundaryMode = "no-qualify";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(!parsed.route_to_listing.boundary_message, "Boundary mode not triggered for non-I-81 routes");
+  assert(parsed.warnings.some(w => w.includes("Interstate pattern not identified")), "Safe warning when coordinates present but route doesn't qualify");
+
+  // Verify normalization
+  const fullSteps = parsed.route_to_listing.steps;
+  assert(!fullSteps.some(s => s.instruction === 'Head west'), "A compass-only unnamed heading step is removed.");
+  assert(fullSteps.some(s => s.instruction === 'Continue on Hwy 1'), "A heading step with a provider-supplied road name retains the road name without requiring a compass.");
+  assert(!fullSteps.some(s => s.instruction === 'Turn right'), "An unnamed zero-distance turn is removed.");
+  assert(fullSteps.some(s => s.instruction.includes('Turn left onto Main St')), "A short named maneuver is preserved.");
+
+  // Run synthetic display fail mode
+  boundaryMode = "synthetic-display-fail";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+
+  const synthSteps = parsed.route_to_listing.steps;
+  assert(synthSteps.some(s => s.instruction === 'Merge onto I-81 North' && s.road_name === 'I-81 North'), "The long interstate step identifies I-81 North.");
+  assert(synthSteps.filter(s => s.instruction.includes('I-81 North')).length === 1, "The initial interstate wording matches the maneuver type and is not duplicated.");
+  assert(synthSteps.some(s => s.instruction === 'Keep right toward Black Lick Road, VA 90'), "The short generic maneuver identifies the following provider-named road.");
+  const bareManeuvers = ['Keep right', 'Keep left', 'Turn right', 'Turn left', 'Continue straight', 'Merge', 'Take the ramp'];
+  assert(!synthSteps.some(s => bareManeuvers.includes(s.instruction) && !s.instruction.match(/Arrive/i)), "No displayed actionable step consists only of a bare maneuver.");
+  assert(synthSteps.length < 10, "Unnamed turns that display as 0.0 mi are removed. Expected less than 10 steps.");
+  const richmondStep = synthSteps.find(s => s.instruction.includes('Richmond Avenue'));
+  assert(richmondStep.instruction === 'Turn right onto Richmond Avenue and watch for 123 in about 0.1 mi.', "Property cue is attached directly to the named street step");
+  assert(synthSteps.some(s => s.instruction === 'Turn right onto -' && s.distance === 10), "Retains later driveway maneuvers");
+  assert(synthSteps.some(s => s.instruction === 'Turn left onto -' && s.distance === 5), "Retains later micro-turn maneuvers");
+  assert(!synthSteps.some(s => s.instruction.includes('Arrive')), "Contains no raw arrival instruction.");
+  assert(!synthSteps.some(s => s.instruction.includes('undefined')), "No road or exit is invented.");
+
+  const retSteps = parsed.route_home.steps;
+  assert(retSteps.some(s => s.instruction.startsWith('Merge onto I-81 South')), "The equivalent return contract retains I-81 South.");
+  assert(retSteps.filter(s => s.instruction === 'Take Exit 1A').length === 1, "Exactly one Take Exit 1A is retained.");
+  assert(fullSteps.some(s => s.instruction.startsWith('Merge onto I-81 North')), "Useful I-81 North and I-81 South labels remain readable where applicable.");
+
+  // Missing or malformed route geometry degrades safely
+  boundaryMode = "malformed-geo";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(!parsed.route_to_listing.boundary_message, "Missing or malformed route geometry degrades safely without boundary mode.");
+
+  // Missing config
+  process.env.MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS = "";
+  boundaryMode = "qualifies"; // Full route would qualify, but no config
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(!parsed.route_to_listing.boundary_message, "Boundary mode not triggered when config missing");
+  assert(parsed.warnings.some(w => w.includes("missing or invalid")), "Safe warning when config missing");
+
+  // Invalid config
+  process.env.MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS = "invalid,data";
+  res = await exitRouteFunction.handler({
+    httpMethod: 'GET', headers: { authorization: AUTHORIZED_TOKEN },
+    queryStringParameters: { order_id: '123e4567-e89b-12d3-a456-426614174000' }
+  });
+  parsed = JSON.parse(res.body);
+  assert(!parsed.route_to_listing.boundary_message, "Boundary mode not triggered when config invalid");
+  assert(parsed.warnings.some(w => w.includes("missing or invalid")), "Safe warning when config invalid");
+  assert(parsed.route_to_listing.available, "Full route retained on invalid config");
 
   global.fetch = originalFetch;
 
