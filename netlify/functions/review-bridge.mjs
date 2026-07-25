@@ -40,9 +40,9 @@ export default async (req, context) => {
   }
 
   // 3. Obtain Secret
-  const secret = process.env.FIREBASE_REVIEW_BRIDGE_SECRET;
+  const secret = process.env.REVIEW_BRIDGE_SHARED_SECRET;
   if (!secret) {
-    console.error('Server configuration error: missing FIREBASE_REVIEW_BRIDGE_SECRET');
+    console.error('Server configuration error: missing REVIEW_BRIDGE_SHARED_SECRET');
     return new Response(JSON.stringify({ error: 'Server configuration error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

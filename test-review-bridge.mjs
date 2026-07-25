@@ -2,7 +2,7 @@ import assert from 'assert';
 import reviewBridgeHandler from './netlify/functions/review-bridge.mjs';
 
 // Mock process.env
-process.env.FIREBASE_REVIEW_BRIDGE_SECRET = 'TEST_SECRET_VALUE';
+process.env.REVIEW_BRIDGE_SHARED_SECRET = 'TEST_SECRET_VALUE';
 
 // Mock auth module
 import authModule from './netlify/functions/_shared/auth.js';

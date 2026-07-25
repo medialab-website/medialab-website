@@ -27,7 +27,7 @@ const MEDIALAB_ROUTE_ORIGIN = defineString("MEDIALAB_ROUTE_ORIGIN");
 const GOOGLE_DRIVE_FOLDER_ID = defineString("GOOGLE_DRIVE_FOLDER_ID");
 const MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS = defineString("MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS");
 const MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS = defineString("MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS");
-const FIREBASE_REVIEW_BRIDGE_SECRET = defineSecret("FIREBASE_REVIEW_BRIDGE_SECRET");
+const REVIEW_BRIDGE_SHARED_SECRET = defineSecret("REVIEW_BRIDGE_SHARED_SECRET");
 
 // Function options mapping defaults
 const baseOpts = { region: "us-east1" };
@@ -58,7 +58,7 @@ export const getExitRoute = onRequest(
 );
 
 export const reviewBridge = onRequest(
-  { ...baseOpts, secrets: [FIREBASE_REVIEW_BRIDGE_SECRET] },
+  { ...baseOpts, secrets: [REVIEW_BRIDGE_SHARED_SECRET] },
   createHandler(reviewBridgeHandler)
 );
 
