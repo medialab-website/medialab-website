@@ -46,6 +46,10 @@
       {
         "source": "/.netlify/functions/list-drive-folder",
         "function": "listDriveFolder"
+      },
+      {
+        "source": "/.netlify/functions/review-bridge",
+        "function": "reviewBridge"
       }
     ]
   }

@@ -12,6 +12,7 @@ import getAryeoOrdersHandler from "../netlify/functions/get-aryeo-orders.mjs";
 import getAryeoOrderDetailHandler from "../netlify/functions/get-aryeo-order-detail.mjs";
 import getMissionPlanHandler from "../netlify/functions/get-mission-plan.mjs";
 import getExitRouteHandler from "../netlify/functions/get-exit-route.mjs";
+import reviewBridgeHandler from "../netlify/functions/review-bridge.mjs";
 
 // Import Shared Drive Core for Firebase adapter
 import { executeDriveList } from "../netlify/functions/_shared/drive-core.mjs";
@@ -26,6 +27,7 @@ const MEDIALAB_ROUTE_ORIGIN = defineString("MEDIALAB_ROUTE_ORIGIN");
 const GOOGLE_DRIVE_FOLDER_ID = defineString("GOOGLE_DRIVE_FOLDER_ID");
 const MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS = defineString("MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS");
 const MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS = defineString("MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS");
+const FIREBASE_REVIEW_BRIDGE_SECRET = defineSecret("FIREBASE_REVIEW_BRIDGE_SECRET");
 
 // Function options mapping defaults
 const baseOpts = { region: "us-east1" };
@@ -53,6 +55,11 @@ export const getMissionPlan = onRequest(
 export const getExitRoute = onRequest(
   { ...baseOpts, secrets: [OPENROUTESERVICE_API_KEY, ARYEO_API_KEY] },
   createHandler(getExitRouteHandler)
+);
+
+export const reviewBridge = onRequest(
+  { ...baseOpts, secrets: [FIREBASE_REVIEW_BRIDGE_SECRET] },
+  createHandler(reviewBridgeHandler)
 );
 
 // Firebase specific adapter for listDriveFolder using ADC
