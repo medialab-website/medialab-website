@@ -509,16 +509,34 @@
             .grid-2 { grid-template-columns: 1fr; }
             .grid-2 > * { min-width: 0; }
 
-            .tab { padding: 1.25rem 0; }
+            /* Tab bar horizontal scroll */
+            .tabs {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                width: 100%;
+                max-width: 100%;
+                scrollbar-width: none;
+            }
+            .tabs::-webkit-scrollbar {
+                display: none;
+            }
+            .tab {
+                flex: 1 0 auto;
+                padding: 1.25rem 1rem;
+                white-space: nowrap;
+            }
+
             .order-card { padding: 1.25rem; max-width: 100%; min-width: 0; }
-            .order-address, .order-customer { max-width: 100%; overflow-wrap: break-word; }
+            .order-address, .order-customer { max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
             .action-link, .action-btn, .btn-signout { padding: 0.75rem 1rem; min-width: 0; min-height: 44px; max-width: 100%; white-space: normal; height: auto; line-height: 1.2; text-align: center; }
             .detail-actions { align-items: stretch; width: 100%; min-width: 0; margin-top: 1rem; }
             .detail-header { flex-direction: column; max-width: 100%; min-width: 0; }
             .detail-header > div { min-width: 0; max-width: 100%; }
             .detail-section { max-width: 100%; min-width: 0; padding: 1rem; }
-            .data-value { max-width: 100%; min-width: 0; overflow-wrap: break-word; }
-            #dt-address, #dt-notes { max-width: 100%; white-space: pre-wrap; overflow-wrap: break-word; }
+            .data-value { max-width: 100%; min-width: 0; overflow-wrap: break-word; word-break: break-word; }
+            #dt-address, #dt-notes { max-width: 100%; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
 
             .console-header {
                 flex-direction: column;
@@ -528,7 +546,17 @@
                 max-width: 100%;
                 padding: 0.75rem 1rem;
             }
+            .console-header h1 {
+                font-size: 1.1rem;
+                word-break: break-word;
+                overflow-wrap: break-word;
+                max-width: 100%;
+            }
             .console-header > div {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem;
                 width: 100%;
                 min-width: 0;
                 max-width: 100%;
@@ -539,16 +567,54 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+                min-width: 0;
             }
             #dt-uuid {
                 overflow-wrap: anywhere;
+                max-width: 100%;
+                display: inline-block;
             }
             .mobile-contact-actions {
                 min-width: 0;
                 max-width: 100%;
                 flex-wrap: wrap;
+                gap: 0.5rem;
             }
-            .mobile-contact-actions .action-btn { min-width: 0; }
+            .mobile-contact-actions .action-btn {
+                min-width: 0;
+                max-width: 100%;
+                flex: 1 1 120px;
+                white-space: normal;
+                word-break: break-word;
+            }
+
+            /* Single-column status grid on narrow mobile viewports */
+            .status-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            /* Constrain direction steps on narrow screens */
+            .mission-plan-steps li {
+                min-width: 0;
+                max-width: 100%;
+                margin-bottom: 8px;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+            .mission-plan-accordion {
+                max-width: 100%;
+                min-width: 0;
+            }
+            .mission-plan-accordion summary {
+                word-break: break-word;
+                overflow-wrap: break-word;
+            }
+            .mission-plan-accordion-content {
+                min-width: 0;
+                max-width: 100%;
+                overflow-wrap: break-word;
+            }
         }
     </style>
 </head>
