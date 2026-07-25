@@ -25,6 +25,15 @@
             --color-text-muted: #666666;
         }
 
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            width: 100%;
+            max-width: 100%;
+        }
+
         body {
             background-color: var(--color-bg-base);
             color: var(--color-text-primary);
@@ -35,6 +44,8 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            width: 100%;
+            max-width: 100%;
         }
 
         .console-header {
@@ -45,6 +56,7 @@
             background-color: var(--color-bg-surface);
             border-bottom: 1px solid var(--color-border);
             flex-shrink: 0;
+            min-width: 0;
         }
 
         .console-header h1 {
@@ -119,10 +131,12 @@
             border-bottom: 1px solid var(--color-border);
             background-color: var(--color-bg-surface);
             flex-shrink: 0;
+            min-width: 0;
         }
 
         .tab {
             flex: 1;
+            min-width: 0;
             text-align: center;
             padding: 1rem 0;
             cursor: pointer;
@@ -150,6 +164,7 @@
         }
         .list-search input {
             width: 100%;
+            max-width: 100%;
             padding: 0.75rem;
             background: var(--color-bg-base);
             border: 1px solid var(--color-border);
@@ -180,6 +195,9 @@
         .order-card-header {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 0.5rem;
             margin-bottom: 0.5rem;
         }
 
@@ -205,6 +223,7 @@
         .right-pane {
             width: 65%;
             flex: 1;
+            min-width: 0;
             background-color: var(--color-bg-base);
             display: flex;
             flex-direction: column;
@@ -216,12 +235,15 @@
             max-width: 800px;
             margin: 0 auto;
             width: 100%;
+            min-width: 0;
         }
 
         .detail-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            gap: 1rem;
+            min-width: 0;
             margin-bottom: 2rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--color-border);
@@ -238,6 +260,7 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
+            min-width: 0;
             gap: 0.5rem;
         }
 
@@ -278,9 +301,9 @@
             gap: 1rem;
         }
 
-        .data-group { margin-bottom: 1rem; }
+        .data-group { margin-bottom: 1rem; min-width: 0; }
         .data-label { font-size: 0.8rem; color: var(--color-text-secondary); text-transform: uppercase; margin-bottom: 0.25rem; }
-        .data-value { font-size: 1rem; color: var(--color-text-primary); }
+        .data-value { font-size: 1rem; color: var(--color-text-primary); min-width: 0; max-width: 100%; overflow-wrap: break-word; }
 
         .empty-state {
             display: flex;
@@ -396,6 +419,40 @@
         .warning-text { color: #ff9800; }
         .critical-warning-text { color: #f44336; }
         .action-btn { background: var(--color-primary); color: #000; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .mission-plan-accordion {
+            max-width: 100%;
+            background: var(--color-bg-base);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .mission-plan-accordion summary {
+            min-height: 48px;
+            padding: 14px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            outline: none;
+            overflow-wrap: break-word;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mission-plan-accordion-content {
+            min-width: 0;
+            max-width: 100%;
+            padding: 16px;
+            border-top: 1px solid var(--color-border);
+        }
+        .mission-plan-steps {
+            max-width: 100%;
+            padding-left: 24px;
+            color: var(--color-text-primary);
+        }
+        .mission-plan-steps li {
+            min-width: 0;
+            max-width: 100%;
+            margin-bottom: 8px;
+            overflow-wrap: anywhere;
+        }
 
         /* Mobile specific styling */
         .btn-back-mobile {
@@ -439,7 +496,7 @@
 
         @media (max-width: 768px) {
             #console-view { flex-direction: column; }
-            .left-pane, .right-pane { width: 100%; flex: none; height: 100%; }
+            .left-pane, .right-pane { width: 100%; min-width: 0; flex: none; height: 100%; }
             .right-pane { display: none; }
 
             /* Toggle visibility via JS classes */
@@ -448,14 +505,50 @@
 
             .btn-back-mobile { display: block; }
 
-            .detail-container { padding: 1rem; padding-bottom: env(safe-area-inset-bottom); }
+            .detail-container { padding: 1rem; padding-bottom: env(safe-area-inset-bottom); max-width: 100%; width: 100%; min-width: 0; }
             .grid-2 { grid-template-columns: 1fr; }
+            .grid-2 > * { min-width: 0; }
 
             .tab { padding: 1.25rem 0; }
-            .order-card { padding: 1.25rem; }
-            .action-link, .action-btn, .btn-signout { padding: 0.75rem 1rem; min-height: 44px; }
-            .detail-actions { align-items: stretch; width: 100%; margin-top: 1rem; }
-            .detail-header { flex-direction: column; }
+            .order-card { padding: 1.25rem; max-width: 100%; min-width: 0; }
+            .order-address, .order-customer { max-width: 100%; overflow-wrap: break-word; }
+            .action-link, .action-btn, .btn-signout { padding: 0.75rem 1rem; min-width: 0; min-height: 44px; max-width: 100%; white-space: normal; height: auto; line-height: 1.2; text-align: center; }
+            .detail-actions { align-items: stretch; width: 100%; min-width: 0; margin-top: 1rem; }
+            .detail-header { flex-direction: column; max-width: 100%; min-width: 0; }
+            .detail-header > div { min-width: 0; max-width: 100%; }
+            .detail-section { max-width: 100%; min-width: 0; padding: 1rem; }
+            .data-value { max-width: 100%; min-width: 0; overflow-wrap: break-word; }
+            #dt-address, #dt-notes { max-width: 100%; white-space: pre-wrap; overflow-wrap: break-word; }
+
+            .console-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+                width: 100%;
+                max-width: 100%;
+                padding: 0.75rem 1rem;
+            }
+            .console-header > div {
+                width: 100%;
+                min-width: 0;
+                max-width: 100%;
+                justify-content: space-between;
+            }
+            #user-email {
+                max-width: 60%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            #dt-uuid {
+                overflow-wrap: anywhere;
+            }
+            .mobile-contact-actions {
+                min-width: 0;
+                max-width: 100%;
+                flex-wrap: wrap;
+            }
+            .mobile-contact-actions .action-btn { min-width: 0; }
         }
     </style>
 </head>
@@ -581,37 +674,31 @@
                         </div>
                     </div>
 
-                    <div class="grid-2">
-                        <div class="detail-section">
-                            <h3>Appointment & Scheduling</h3>
-                            <div class="data-group">
-                                <div class="data-label">Date & Time</div>
-                                <div class="data-value" id="dt-appointment-time"></div>
-                            </div>
-                            <div class="data-group">
-                                <div class="data-label">Status</div>
-                                <div class="data-value" id="dt-appointment-status"></div>
-                            </div>
-                            <div class="data-group">
-                                <div class="data-label">Assigned Crew</div>
-                                <div class="data-value" id="dt-crew"></div>
-                            </div>
+                    <div class="detail-section">
+                        <h3>Appointment & Scheduling</h3>
+                        <div class="data-group">
+                            <div class="data-label">Date & Time</div>
+                            <div class="data-value" id="dt-appointment-time"></div>
                         </div>
+                        <div class="data-group">
+                            <div class="data-label">Status</div>
+                            <div class="data-value" id="dt-appointment-status"></div>
+                        </div>
+                        <div class="data-group">
+                            <div class="data-label">Assigned Crew</div>
+                            <div class="data-value" id="dt-crew"></div>
+                        </div>
+                    </div>
 
-                        <div class="detail-section">
-                            <h3>Delivery & Payment</h3>
-                            <div class="data-group">
-                                <div class="data-label">Delivery Status</div>
-                                <div class="data-value" id="dt-delivery-status"></div>
-                            </div>
-                            <div class="data-group">
-                                <div class="data-label">Payment Status</div>
-                                <div class="data-value" id="dt-payment-badge"></div>
-                            </div>
-                            <div class="data-group" id="dt-balance-group">
-                                <div class="data-label">Remaining Balance</div>
-                                <div class="data-value" id="dt-balance"></div>
-                            </div>
+                    <div class="detail-section">
+                        <h3>Order Scope</h3>
+                        <div class="data-group">
+                            <div class="data-label">Ordered Services</div>
+                            <div class="data-value" id="dt-services"></div>
+                        </div>
+                        <div class="data-group" id="dt-notes-group">
+                            <div class="data-label">Order Notes / Access</div>
+                            <div class="data-value" id="dt-notes" style="white-space: pre-wrap;"></div>
                         </div>
                     </div>
 
@@ -634,14 +721,18 @@
                     </div>
 
                     <div class="detail-section">
-                        <h3>Order Scope</h3>
+                        <h3>Delivery & Payment</h3>
                         <div class="data-group">
-                            <div class="data-label">Ordered Services</div>
-                            <div class="data-value" id="dt-services"></div>
+                            <div class="data-label">Delivery Status</div>
+                            <div class="data-value" id="dt-delivery-status"></div>
                         </div>
-                        <div class="data-group" id="dt-notes-group">
-                            <div class="data-label">Order Notes / Access</div>
-                            <div class="data-value" id="dt-notes" style="white-space: pre-wrap;"></div>
+                        <div class="data-group">
+                            <div class="data-label">Payment Status</div>
+                            <div class="data-value" id="dt-payment-badge"></div>
+                        </div>
+                        <div class="data-group" id="dt-balance-group">
+                            <div class="data-label">Remaining Balance</div>
+                            <div class="data-value" id="dt-balance"></div>
                         </div>
                     </div>
 
@@ -872,8 +963,7 @@
 
                 let dateStr = "Date TBD";
                 if (brief.start_at) {
-                    const d = new Date(brief.start_at);
-                    dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    dateStr = formatAppointmentDateTime(brief.start_at, brief.timezone);
                 }
 
                 card.innerHTML = `
@@ -929,15 +1019,7 @@
             document.getElementById('dt-status-badge').innerHTML = `<span class="badge badge-amber">OFFLINE SAVED</span>`;
 
             if (brief.start_at) {
-                const d = new Date(brief.start_at);
-                let tz = brief.timezone || 'America/New_York';
-                try {
-                    Intl.DateTimeFormat(undefined, {timeZone: tz});
-                } catch (e) {
-                    tz = 'America/New_York';
-                }
-                const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: tz });
-                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${tz})`;
+                document.getElementById('dt-appointment-time').textContent = formatAppointmentDateTime(brief.start_at, brief.timezone);
             } else {
                 document.getElementById('dt-appointment-time').textContent = "Not scheduled";
             }
@@ -999,7 +1081,7 @@
             }
 
             document.getElementById('mission-plan-weather').innerHTML = brief.weather_html || '';
-            document.getElementById('mission-plan-directions').innerHTML = brief.route_html || '';
+            document.getElementById('mission-plan-directions').innerHTML = buildSavedRouteAccordions(brief);
             document.getElementById('mission-plan-crew-scope').textContent = `Crew: ${brief.assigned_crew} | Services: ${brief.services}`;
             document.getElementById('mission-plan-checklist').innerHTML = (brief.checklist || []).map(item => `<li>${escapeHTML(item)}</li>`).join('');
         }
@@ -1018,6 +1100,108 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        function formatAppointmentDateTime(dateStr, timeZone) {
+            const d = new Date(dateStr);
+            if (Number.isNaN(d.getTime())) return "Appointment time unavailable";
+            let tz = timeZone || 'America/New_York';
+            try {
+                Intl.DateTimeFormat(undefined, { timeZone: tz });
+            } catch (e) {
+                tz = 'America/New_York';
+            }
+            try {
+                const datePart = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }).format(d);
+                let timePart = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz }).format(d);
+                timePart = timePart.replace(/AM/gi, 'a.m.').replace(/PM/gi, 'p.m.');
+                return `${datePart} · ${timePart}`;
+            } catch (e) {
+                return "Appointment time unavailable";
+            }
+        }
+
+        function formatRouteDistance(meters) {
+            const value = Number(meters);
+            return Number.isFinite(value) ? `${(value / 1609.34).toFixed(1)} mi` : "";
+        }
+
+        function formatRouteDuration(seconds) {
+            const value = Number(seconds);
+            return Number.isFinite(value) ? `${Math.round(value / 60)} min` : "";
+        }
+
+        function buildRouteAccordions(routeData, unavailableMessage = "Route could not be generated.") {
+            const hasDualRoutes = Boolean(routeData && (routeData.route_to_listing || routeData.route_home));
+            const routeToListing = hasDualRoutes ? routeData.route_to_listing : null;
+            const routeHome = hasDualRoutes ? routeData.route_home : null;
+
+            const buildAccordion = (title, route) => {
+                const steps = Array.isArray(route?.steps) ? route.steps : [];
+                const warnings = Array.isArray(route?.warnings) ? route.warnings : [];
+                const routeIsUsable = route?.available === true && steps.length > 0;
+
+                if (!routeIsUsable) {
+                    const messages = warnings.length > 0
+                        ? warnings
+                        : [route?.available === true ? "No readable turn-by-turn steps were returned." : unavailableMessage];
+                    return `
+                    <details class="mission-plan-accordion">
+                        <summary>${escapeHTML(title)}</summary>
+                        <div class="mission-plan-accordion-content">
+                            <p class="mission-plan-text critical-warning-text" style="margin:0;">⚠️ ${messages.map(w => escapeHTML(w)).join('<br>')}</p>
+                        </div>
+                    </details>`;
+                }
+
+                const metrics = [
+                    formatRouteDistance(route.distance),
+                    formatRouteDuration(route.duration)
+                ].filter(Boolean).join(' | ');
+                const warningHtml = warnings.length > 0
+                    ? `<p class="mission-plan-text critical-warning-text">⚠️ ${warnings.map(w => escapeHTML(w)).join('<br>')}</p>`
+                    : "";
+
+                const boundaryMessageHtml = route.boundary_message
+                    ? `<p class="mission-plan-text warning-text" style="margin-bottom:10px;"><b>Boundary Mode:</b> ${escapeHTML(route.boundary_message)}</p>`
+                    : "";
+
+                const stepsHtml = steps.map(step => {
+                    const stepDistance = formatRouteDistance(step?.distance);
+                    return `<li>${escapeHTML(step?.instruction).replace(/\n/g, '<br>')}${stepDistance ? ` <span style="color:var(--color-text-secondary);">(${escapeHTML(stepDistance)})</span>` : ""}</li>`;
+                }).join('');
+
+                return `
+                <details class="mission-plan-accordion">
+                    <summary>${escapeHTML(title)}</summary>
+                    <div class="mission-plan-accordion-content">
+                        ${boundaryMessageHtml}
+                        ${metrics ? `<p class="mission-plan-text" style="margin-top:0;">${escapeHTML(metrics)}</p>` : ""}
+                        ${warningHtml}
+                        <ol class="mission-plan-steps">${stepsHtml}</ol>
+                    </div>
+                </details>`;
+            };
+
+            let html = buildAccordion("Manual Directions to Listing", routeToListing);
+            html += buildAccordion("Manual Directions Home", routeHome);
+            if (hasDualRoutes && Array.isArray(routeData.warnings) && routeData.warnings.length > 0) {
+                html += `<p class="mission-plan-text warning-text">⚠️ ${routeData.warnings.map(w => escapeHTML(w)).join('<br>')}</p>`;
+            }
+            if (hasDualRoutes && routeData.attribution) {
+                html += `<p style="font-size: 10px; color: var(--color-text-secondary); margin-top: 10px;">${escapeHTML(routeData.attribution)}</p>`;
+            }
+            return html;
+        }
+
+        function buildSavedRouteAccordions(brief) {
+            if (brief?.route_data?.route_to_listing || brief?.route_data?.route_home) {
+                return buildRouteAccordions(brief.route_data);
+            }
+            const message = brief?.route_html || brief?.route_data
+                ? "This saved brief predates two-way manual directions. Reconnect, refresh the Mission Plan, and save it again."
+                : "No manual directions were saved. Reconnect, refresh the Mission Plan, and save it again.";
+            return buildRouteAccordions(null, message);
         }
 
         const views = {
@@ -1278,8 +1462,7 @@
 
                     let dateStr = "Date TBD";
                     if (item.start_at) {
-                        const d = new Date(item.start_at);
-                        dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        dateStr = formatAppointmentDateTime(item.start_at, item.timezone);
                     } else if (item.fulfilled_at) {
                         const d = new Date(item.fulfilled_at);
                         dateStr = "Fulfilled: " + d.toLocaleDateString();
@@ -1287,7 +1470,7 @@
 
                     let badgeHtml = '';
                     if (currentView === 'upcoming') {
-                        badgeHtml = `<span class="badge badge-amber">${item.status}</span>`;
+                        badgeHtml = `<span class="badge badge-amber">${escapeHTML(item.status)}</span>`;
                     } else if (currentView === 'completed') {
                         let pStatus = "Status Unavailable";
                         let bClass = "badge-gray";
@@ -1295,19 +1478,19 @@
                         else if (item.payment_status === "PARTIALLY_PAID" || item.payment_status === "UNPAID") { pStatus = "Payment Pending"; bClass = "badge-amber"; }
                         badgeHtml = `<span class="badge ${bClass}">${pStatus}</span>`;
                     } else {
-                        badgeHtml = `<span class="badge badge-gray">${item.status || 'N/A'}</span>`;
+                        badgeHtml = `<span class="badge badge-gray">${escapeHTML(item.status || 'N/A')}</span>`;
                     }
 
                     card.innerHTML = `
                         <div class="order-card-header">
-                            <span class="order-number">#${item.number}</span>
-                            <span class="order-date">${dateStr}</span>
+                            <span class="order-number">#${escapeHTML(item.number)}</span>
+                            <span class="order-date">${escapeHTML(dateStr)}</span>
                         </div>
-                        <div class="order-address">${item.address}</div>
-                        <div class="order-customer">${item.customer_name}</div>
+                        <div class="order-address">${escapeHTML(item.address)}</div>
+                        <div class="order-customer">${escapeHTML(item.customer_name)}</div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
                             <div style="font-size:0.8rem; color:var(--color-text-muted); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px;">
-                                ${item.services}
+                                ${escapeHTML(item.services)}
                             </div>
                             <div>${badgeHtml}</div>
                         </div>
@@ -1392,9 +1575,7 @@
             document.getElementById('dt-status-badge').innerHTML = statusBadge;
 
             if (data.start_at) {
-                const d = new Date(data.start_at);
-                const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: data.timezone });
-                document.getElementById('dt-appointment-time').textContent = formatter.format(d) + ` (${data.timezone})`;
+                document.getElementById('dt-appointment-time').textContent = formatAppointmentDateTime(data.start_at, data.timezone);
             } else {
                 document.getElementById('dt-appointment-time').textContent = "Not scheduled";
             }
@@ -1494,11 +1675,15 @@
             btn.textContent = 'GENERATING...';
             btn.disabled = true;
             try {
-                const response = await fetch(`/.netlify/functions/get-mission-plan?order_id=${currentDetailOrder.id}`, {
-                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
-                });
+                const [response, routeData] = await Promise.all([
+                    fetch(`/.netlify/functions/get-mission-plan?order_id=${currentDetailOrder.id}`, {
+                        headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                    }),
+                    fetchRouteData(currentDetailOrder.id)
+                ]);
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error);
+                data.route_data = routeData;
                 currentMissionPlans[currentDetailOrder.id] = data;
                 btn.textContent = 'REFRESH MISSION PLAN';
                 renderMissionPlan(data);
@@ -1520,15 +1705,20 @@
             const warningsContainer = document.getElementById('mission-plan-warnings');
             if (plan.warnings?.length > 0) {
                 warningsContainer.classList.remove('auth-hidden');
-                document.getElementById('mission-plan-warnings-list').innerHTML = plan.warnings.map(w => `<p class="mission-plan-text warning-text">⚠️ ${w}</p>`).join('');
+                document.getElementById('mission-plan-warnings-list').innerHTML = plan.warnings.map(w => `<p class="mission-plan-text warning-text">⚠️ ${escapeHTML(w)}</p>`).join('');
             } else {
                 warningsContainer.classList.add('auth-hidden');
             }
 
-            document.getElementById('mission-plan-weather').innerHTML = plan.weather.available ? `<p class="mission-plan-text">${plan.weather.temperature}°${plan.weather.temperature_unit} - ${plan.weather.short_forecast}</p>` : `<p class="mission-plan-text warning-text">${plan.weather.message}</p>`;
-            document.getElementById('mission-plan-directions').innerHTML = plan.directions.available ? `<a href="${plan.directions.url}" target="_blank" class="action-btn" style="text-decoration:none;">OPEN DIRECTIONS</a>` : `<p class="mission-plan-text warning-text">${plan.directions.message}</p>`;
+            document.getElementById('mission-plan-weather').innerHTML = plan.weather.available
+                ? `<p class="mission-plan-text">${escapeHTML(plan.weather.temperature)}°${escapeHTML(plan.weather.temperature_unit)} - ${escapeHTML(plan.weather.short_forecast)}</p>`
+                : `<p class="mission-plan-text warning-text">${escapeHTML(plan.weather.message)}</p>`;
+            const liveDirectionsHtml = plan.directions.available
+                ? `<a href="${escapeHTML(plan.directions.url)}" target="_blank" rel="noopener noreferrer" class="action-btn" style="display:inline-block; text-decoration:none; margin-bottom:12px;">OPEN DIRECTIONS</a>`
+                : `<p class="mission-plan-text warning-text">${escapeHTML(plan.directions.message)}</p>`;
+            document.getElementById('mission-plan-directions').innerHTML = liveDirectionsHtml + buildRouteAccordions(plan.route_data || null);
             document.getElementById('mission-plan-crew-scope').textContent = `Crew: ${plan.crew} | Services: ${plan.services}`;
-            document.getElementById('mission-plan-checklist').innerHTML = plan.checklist.map(item => `<li>${item}</li>`).join('');
+            document.getElementById('mission-plan-checklist').innerHTML = plan.checklist.map(item => `<li>${escapeHTML(item)}</li>`).join('');
         }
 
         document.getElementById('btn-refresh').addEventListener('click', () => {
@@ -1554,22 +1744,8 @@
             const plan = currentMissionPlans[currentDetailOrder.id];
             const order = currentDetailOrder;
 
-            const routeData = await fetchRouteData(order.id);
-
-            let routeHtml = '<p>Route unavailable</p>';
-            if (routeData && routeData.available) {
-                routeHtml = `
-                    <div style="background: #1e1e1e; padding: 15px; border-radius: 4px; border: 1px solid #333; margin-bottom: 15px;">
-                        <h4 style="margin-top:0; color:#ffc107;">${escapeHTML(routeData.target_label)}</h4>
-                        <p style="font-size: 12px; color: #8e8e8e;">Distance: ${escapeHTML((routeData.distance/1609.34).toFixed(1))} mi | Est. Time: ${escapeHTML(Math.round(routeData.duration/60))} min</p>
-                        ${routeData.warnings?.length > 0 ? `<p style="color:#f44336; font-size:12px;">⚠️ ${routeData.warnings.map(w => escapeHTML(w)).join('<br>')}</p>` : ''}
-                        <ol style="font-size: 14px; padding-left: 20px;">
-                            ${routeData.steps.map(s => `<li>${escapeHTML(s.instruction)} ${s.distance > 0 ? `(${escapeHTML((s.distance/1609.34).toFixed(1))} mi)` : ''}</li>`).join('')}
-                        </ol>
-                        <p style="font-size: 10px; color: #666; margin-top: 10px;">${escapeHTML(routeData.attribution)}</p>
-                    </div>
-                `;
-            }
+            const routeData = plan.route_data || await fetchRouteData(order.id);
+            plan.route_data = routeData;
 
             let escapedWeatherHtml = '';
             if (plan.weather.available) {
@@ -1596,7 +1772,7 @@
                 checklist: plan.checklist,
                 warnings: plan.warnings,
                 weather_html: escapedWeatherHtml,
-                route_html: routeHtml,
+                route_data: routeData,
                 generated_at: plan.generated_at,
                 saved_at: Date.now()
             };
@@ -1638,8 +1814,9 @@
                 const order = currentDetailOrder;
                 const plan = currentMissionPlans[currentDetailOrder.id];
 
-                const d = order.start_at ? new Date(order.start_at) : null;
-                const timeStr = d ? escapeHTML(new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: order.timezone }).format(d)) : 'Not Scheduled';
+                const timeStr = order.start_at
+                    ? escapeHTML(formatAppointmentDateTime(order.start_at, order.timezone))
+                    : 'Not Scheduled';
 
                 const escapedAddress = escapeHTML(order.address);
                 const escapedCrew = escapeHTML(plan.crew);
@@ -1647,6 +1824,7 @@
                 const escapedCustomerName = escapeHTML(order.customer_name);
                 const escapedCustomerContact = escapeHTML(brief.customer_contact);
                 const escapedPlanWarnings = plan.warnings?.length > 0 ? `<p class="warning">⚠️ ${plan.warnings.map(w => escapeHTML(w)).join('<br>')}</p>` : '';
+                const routeDirectionsHtml = buildSavedRouteAccordions(brief);
 
                 // Generate HTML Blob
                 const htmlContent = `<!DOCTYPE html>
@@ -1656,12 +1834,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Offline Brief: ${escapedAddress}</title>
 <style>
+:root { --color-bg-base: #121212; --color-text-primary: #f5f5f5; --color-text-secondary: #8e8e8e; }
 body { font-family: sans-serif; background: #121212; color: #f5f5f5; padding: 20px; line-height: 1.5; }
 h2 { color: #ffc107; margin-bottom: 5px; }
 .section { margin-bottom: 20px; }
 .label { font-size: 12px; color: #8e8e8e; text-transform: uppercase; margin-bottom: 2px; }
 .value { font-size: 16px; margin-bottom: 10px; }
-.warning { color: #f44336; }
+        .warning, .warning-text, .critical-warning-text { color: #f44336; }
+        details { background: #1e1e1e; border: 1px solid #333; border-radius: 4px; margin-bottom: 10px; }
+        summary { min-height: 48px; padding: 14px 16px; cursor: pointer; font-weight: bold; box-sizing: border-box; }
+        .mission-plan-accordion-content { padding: 16px; border-top: 1px solid #333; }
+        .mission-plan-text { color: #8e8e8e; font-size: 14px; }
+        .mission-plan-steps { padding-left: 24px; }
+        .mission-plan-steps li { margin-bottom: 8px; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -1690,8 +1875,8 @@ h2 { color: #ffc107; margin-bottom: 5px; }
     </div>
 
     <div class="section">
-        <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Exit Route</h3>
-        ${brief.route_html}
+        <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">Directions</h3>
+        ${routeDirectionsHtml}
     </div>
 </body>
 </html>`;

@@ -24,6 +24,8 @@ const ARYEO_API_KEY = defineSecret("ARYEO_API_KEY");
 const OPENROUTESERVICE_API_KEY = defineSecret("OPENROUTESERVICE_API_KEY");
 const MEDIALAB_ROUTE_ORIGIN = defineString("MEDIALAB_ROUTE_ORIGIN");
 const GOOGLE_DRIVE_FOLDER_ID = defineString("GOOGLE_DRIVE_FOLDER_ID");
+const MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS = defineString("MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS");
+const MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS = defineString("MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS");
 
 // Function options mapping defaults
 const baseOpts = { region: "us-east1" };
@@ -49,7 +51,7 @@ export const getMissionPlan = onRequest(
 );
 
 export const getExitRoute = onRequest(
-  { ...baseOpts, secrets: [OPENROUTESERVICE_API_KEY] },
+  { ...baseOpts, secrets: [OPENROUTESERVICE_API_KEY, ARYEO_API_KEY] },
   createHandler(getExitRouteHandler)
 );
 

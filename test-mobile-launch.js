@@ -88,6 +88,134 @@ console.log('Running Mobile Launch Tests...\n');
             assert.strictEqual(escaped, '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;&#039;&quot;');
         });
 
+        const utilityStart = htmlContent.indexOf('function escapeHTML(str)');
+        const utilityEnd = htmlContent.indexOf('const views =', utilityStart);
+        assert.ok(utilityStart >= 0 && utilityEnd > utilityStart, "Could not locate frontend utility functions");
+        const utilitySource = htmlContent.slice(utilityStart, utilityEnd);
+        const {
+            formatAppointmentDateTime,
+            buildRouteAccordions,
+            buildSavedRouteAccordions
+        } = new Function(`${utilitySource}
+            return { formatAppointmentDateTime, buildRouteAccordions, buildSavedRouteAccordions };
+        `)();
+
+        runTest('Lean timezone-aware appointment formatting', () => {
+            const formatted = formatAppointmentDateTime('2026-07-28T17:30:00Z', 'America/New_York');
+            assert.strictEqual(formatted, 'Tuesday, July 28 · 1:30 p.m.');
+            assert.ok(!formatted.includes('2026'));
+            assert.ok(!formatted.includes('America/New_York'));
+            assert.ok(!formatted.includes('GMT'));
+            assert.ok(!formatted.includes(':00'));
+        });
+
+        runTest('Invalid timezone and timestamp degrade safely', () => {
+            assert.strictEqual(
+                formatAppointmentDateTime('2026-07-28T17:30:00Z', 'Not/A_Timezone'),
+                'Tuesday, July 28 · 1:30 p.m.'
+            );
+            assert.strictEqual(
+                formatAppointmentDateTime('not-a-date', 'America/New_York'),
+                'Appointment time unavailable'
+            );
+        });
+
+        runTest('Order Details DOM follows field-essential sequence', () => {
+            const addressIndex = htmlContent.indexOf('id="dt-address"');
+            const appointmentIndex = htmlContent.indexOf('<h3>Appointment & Scheduling</h3>');
+            const scopeIndex = htmlContent.indexOf('<h3>Order Scope</h3>');
+            const customerIndex = htmlContent.indexOf('<h3>Customer Information</h3>');
+            const paymentIndex = htmlContent.indexOf('<h3>Delivery & Payment</h3>');
+            assert.ok(
+                addressIndex < appointmentIndex &&
+                appointmentIndex < scopeIndex &&
+                scopeIndex < customerIndex &&
+                customerIndex < paymentIndex
+            );
+        });
+
+        runTest('Boundary mode messages render and escape correctly', () => {
+            const routeHtml = buildRouteAccordions({
+                route_to_listing: {
+                    available: true,
+                    distance: 1000,
+                    duration: 600,
+                    steps: [{ instruction: 'Go straight', distance: 100 }],
+                    warnings: [],
+                    boundary_message: 'Offline directions <script>alert(1)</script>'
+                },
+                route_home: null
+            });
+            assert.ok(routeHtml.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), "Boundary message must be escaped");
+            assert.ok(routeHtml.includes('<b>Boundary Mode:</b>'), "Boundary Mode label must be rendered");
+        });
+
+        runTest('Dual route accordions are independent, collapsed, and escaped', () => {
+            const routeHtml = buildRouteAccordions({
+                route_to_listing: {
+                    available: true,
+                    distance: 1609.34,
+                    duration: 600,
+                    steps: [{ instruction: '<img src=x onerror=alert(1)>', distance: 100 }],
+                    warnings: []
+                },
+                route_home: {
+                    available: false,
+                    distance: null,
+                    duration: null,
+                    steps: [],
+                    warnings: ['<script>alert(2)</script>']
+                },
+                warnings: [],
+                attribution: '<b>unsafe attribution</b>'
+            });
+            assert.strictEqual((routeHtml.match(/<details class="mission-plan-accordion">/g) || []).length, 2);
+            assert.ok(routeHtml.includes('Manual Directions to Listing'));
+            assert.ok(routeHtml.includes('Manual Directions Home'));
+            assert.ok(!/<details[^>]*\sopen(?:\s|>)/i.test(routeHtml), "Accordions must be collapsed by default");
+            assert.ok(routeHtml.includes('&lt;img src=x onerror=alert(1)&gt;'));
+            assert.ok(routeHtml.includes('&lt;script&gt;alert(2)&lt;/script&gt;'));
+            assert.ok(!routeHtml.includes('<img src=x'));
+            assert.ok(!routeHtml.includes('<script>alert(2)'));
+        });
+
+        runTest('Legacy saved route HTML is never injected', () => {
+            const legacyHtml = buildSavedRouteAccordions({
+                route_html: '<img src=x onerror=alert(1)>'
+            });
+            assert.strictEqual((legacyHtml.match(/<details class="mission-plan-accordion">/g) || []).length, 2);
+            assert.ok(legacyHtml.includes('predates two-way manual directions'));
+            assert.ok(!legacyHtml.includes('<img src=x'));
+            assert.ok(!htmlContent.includes('.innerHTML = brief.route_html'));
+            assert.ok(!htmlContent.includes('${brief.route_html}'));
+        });
+
+        runTest('Structured routes persist and render online and offline', () => {
+            assert.ok(htmlContent.includes('route_data: routeData'), "Offline brief must store structured route data");
+            assert.ok(htmlContent.includes('data.route_data = routeData'), "Online Mission Plan must retain fetched route data");
+            assert.ok(htmlContent.includes('liveDirectionsHtml + buildRouteAccordions(plan.route_data || null)'), "Online Mission Plan must show live and manual directions");
+            assert.ok(htmlContent.includes('buildSavedRouteAccordions(brief)'), "Offline and downloaded briefs must use the safe route renderer");
+        });
+
+        runTest('Mission Plan static shell has no unevaluated brief placeholders', () => {
+            const shellStart = htmlContent.indexOf('<div id="mission-plan-container"');
+            const shellEnd = htmlContent.indexOf('<script type="module">', shellStart);
+            const shell = htmlContent.slice(shellStart, shellEnd);
+            assert.ok(!shell.includes('${brief.'), "Static Mission Plan markup contains a literal brief placeholder");
+        });
+
+        runTest('Mobile width rules repair producers without destructive wrapping', () => {
+            assert.ok(htmlContent.includes('*, *::before, *::after'));
+            assert.ok(htmlContent.includes('box-sizing: border-box'));
+            assert.ok(htmlContent.includes('.left-pane, .right-pane { width: 100%; min-width: 0;'));
+            assert.ok(htmlContent.includes('.detail-header > div { min-width: 0; max-width: 100%; }'));
+            assert.ok(htmlContent.includes('#dt-uuid'));
+            assert.ok(htmlContent.includes('overflow-wrap: anywhere'));
+            assert.ok(!/word-break\s*:\s*break-all/i.test(htmlContent));
+            assert.ok(!/overflow-x\s*:\s*hidden/i.test(htmlContent));
+            assert.ok(!/max-width\s*:\s*100vw/i.test(htmlContent));
+        });
+
         runTest('Icon existence and dimensions', () => {
             function checkPngDim(filepath, expectedW, expectedH) {
                 assert.ok(fs.existsSync(filepath), `File not found: ${filepath}`);
@@ -230,6 +358,8 @@ console.log('Running Mobile Launch Tests...\n');
 
         runTest('sw.js excludes Firebase traffic but caches adapter and bundle', () => {
             const swContent = fs.readFileSync(path.join(__dirname, 'operations-console', 'sw.js'), 'utf-8');
+            assert.ok(swContent.includes("CACHE_NAME = 'medialab-ops-v7'"), "sw.js cache version must be v7");
+            assert.ok(swContent.includes("url.pathname.startsWith('/.netlify/functions/')"), "sw.js must exclude Netlify function traffic");
             assert.ok(swContent.includes("url.hostname.includes('firebase')"), "sw.js must exclude firebase domain");
             assert.ok(swContent.includes("'./firebase-auth.js'"), "sw.js must cache local adapter");
             assert.ok(swContent.includes("'./firebase-auth-bundle.js'"), "sw.js must cache local bundle");

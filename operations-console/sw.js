@@ -1,4 +1,4 @@
-const CACHE_NAME = 'medialab-ops-v4';
+const CACHE_NAME = 'medialab-ops-v7';
 const ASSETS_TO_CACHE = [
   './poc.html',
   './firebase-auth.js',
