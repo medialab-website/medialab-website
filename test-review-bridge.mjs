@@ -100,6 +100,22 @@ async function runTests() {
     res = await reviewBridgeHandler(req, {});
     report('Upstream failure degrades safely (502)', res.status === 502);
 
+    // Test 9: UPLOAD_QUICK_EDIT forwards base64 safely
+    globalFetchCalls = [];
+    mockFetchResponse = new Response(JSON.stringify({ ok: true }), { status: 200 });
+    const fakeBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="; // valid 1x1 png
+    req = new Request('http://localhost/review-bridge', { method: 'POST', body: JSON.stringify({
+      command: 'UPLOAD_QUICK_EDIT',
+      Review_Item_ID: '789',
+      fileName: 'test.png',
+      mimeType: 'image/png',
+      base64: fakeBase64
+    })});
+    res = await reviewBridgeHandler(req, {});
+    report('Accepts UPLOAD_QUICK_EDIT', res.status === 200);
+    upstreamBody = JSON.parse(globalFetchCalls[0].options.body);
+    report('Forwards base64 data to Apps Script', upstreamBody.base64 === fakeBase64 && upstreamBody.mimeType === 'image/png' && upstreamBody.Corrected_Edit_Upload.startsWith('QuickEdit_789_'));
+
   } catch (err) {
     console.error(err);
     report('Test execution encountered error', false);

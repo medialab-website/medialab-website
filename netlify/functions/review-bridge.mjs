@@ -145,20 +145,6 @@ export default async (req, context) => {
 
     const fileHash = crypto.createHash('sha256').update(buffer).digest('hex').substring(0, 16);
     mockDriveFileName = `QuickEdit_${payload.Review_Item_ID}_${fileHash}.${detectedExt}`;
-
-    const folderId = process.env.GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID;
-    if (!folderId || !folderId.trim()) {
-      console.error('Server configuration error: missing GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID');
-      return new Response(JSON.stringify({ code: 'SERVER_CONFIGURATION_ERROR', message: 'Server configuration error.' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    const trimmedFolderId = folderId.trim();
-    console.log(`[MOCK] Uploading ${mockDriveFileName} to Drive Folder ${trimmedFolderId}`);
-    mockDriveFileId = `mock_file_${fileHash}`;
-
-    delete payload.base64;
   }
 
   // Upstream command might need mapping
@@ -179,7 +165,8 @@ export default async (req, context) => {
 
   if (payload.command === 'UPLOAD_QUICK_EDIT') {
      upstreamPayload.Corrected_Edit_Upload = mockDriveFileName;
-     upstreamPayload.Corrected_Edit_Upload_ID = mockDriveFileId;
+     upstreamPayload.base64 = payload.base64;
+     upstreamPayload.mimeType = payload.mimeType;
   }
 
   try {

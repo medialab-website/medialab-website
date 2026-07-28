@@ -40,11 +40,7 @@ async function runTest() {
   }
 
   console.log(`\n=== Testing UPLOAD_QUICK_EDIT for item ${targetItem.Review_Item_ID} ===`);
-  // Create 15MiB mock base64
-  console.log("Generating 15MiB base64 payload...");
-  const baseOriginalBytes = 15 * 1024 * 1024;
-  const base64Bytes = Math.ceil(baseOriginalBytes * 1.333333);
-  const payloadStr = 'A'.repeat(base64Bytes);
+  const payloadStr = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
   const uploadRes = await fetch(BRIDGE_URL, {
     method: 'POST',
@@ -52,6 +48,8 @@ async function runTest() {
     body: JSON.stringify({
         command: 'UPLOAD_QUICK_EDIT',
         Review_Item_ID: targetItem.Review_Item_ID,
+        fileName: 'test.png',
+        mimeType: 'image/png',
         base64: payloadStr
     })
   });

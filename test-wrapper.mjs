@@ -2,7 +2,9 @@ import handler from './netlify/functions/review-bridge.mjs';
 
 // Load env vars
 process.env.REVIEW_BRIDGE_SHARED_SECRET = 'TEST_SECRET_VALUE';
-process.env.GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID = 'MOCK_FOLDER_ID';
+
+import authModule from './netlify/functions/_shared/auth.js';
+authModule.verifyAuth = async (req) => ({ ok: true, decodedToken: { email: 'solutions@medialab.fyi' } });
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, options) => {
@@ -97,9 +99,7 @@ async function runLocal() {
   }
 
   console.log(`\n=== Testing UPLOAD_QUICK_EDIT locally ===`);
-  const baseOriginalBytes = 15 * 1024 * 1024;
-  const base64Bytes = Math.ceil(baseOriginalBytes * 1.333333);
-  const payloadStr = 'A'.repeat(base64Bytes);
+  const payloadStr = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
   const req3 = new Request('http://localhost/mock', {
      method: 'POST',
@@ -110,6 +110,8 @@ async function runLocal() {
      body: JSON.stringify({
          command: 'UPLOAD_QUICK_EDIT',
          Review_Item_ID: targetItem.Review_Item_ID,
+         fileName: 'test.png',
+         mimeType: 'image/png',
          base64: payloadStr
      })
   });

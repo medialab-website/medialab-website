@@ -27,7 +27,6 @@ const MEDIALAB_ROUTE_ORIGIN = defineString("MEDIALAB_ROUTE_ORIGIN");
 const GOOGLE_DRIVE_FOLDER_ID = defineString("GOOGLE_DRIVE_FOLDER_ID");
 const MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS = defineString("MEDIALAB_I81_EXIT1_NB_ENTRY_COORDS");
 const MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS = defineString("MEDIALAB_I81_EXIT1A_SB_RETURN_COORDS");
-const GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID = defineString("GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID");
 const REVIEW_BRIDGE_SHARED_SECRET = defineSecret("REVIEW_BRIDGE_SHARED_SECRET");
 
 // Function options mapping defaults
@@ -58,15 +57,9 @@ export const getExitRoute = onRequest(
   createHandler(getExitRouteHandler)
 );
 
-// Firebase specific adapter for reviewBridge using mapped environment variable
-async function firebaseReviewBridgeHandler(req, context) {
-  process.env.GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID = GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID.value();
-  return reviewBridgeHandler(req, context);
-}
-
 export const reviewBridge = onRequest(
   { ...baseOpts, secrets: [REVIEW_BRIDGE_SHARED_SECRET] },
-  createHandler(firebaseReviewBridgeHandler)
+  createHandler(reviewBridgeHandler)
 );
 
 // Firebase specific adapter for listDriveFolder using ADC

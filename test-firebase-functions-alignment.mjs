@@ -45,22 +45,10 @@ function runTests() {
       content.includes('secrets: [ARYEO_API_KEY]')
     );
 
-    // Test 4: GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID is declared
+    // Test 4: GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID is removed
     report(
-      'Declares GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID',
-      content.includes('const GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID = defineString("GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID")')
-    );
-
-    // Test 5: Bound to reviewBridge through value execution
-    report(
-      'Binds GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID via .value() inside wrapper',
-      content.includes('GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID.value()')
-    );
-
-    // Test 6: Exposed to review-bridge handler using exact environment name
-    report(
-      'Exposes folder ID under exact process.env name',
-      content.includes('process.env.GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID = GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID.value()')
+      'Does not reference GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID',
+      !content.includes('GOOGLE_DRIVE_QUICK_EDIT_UPLOAD_FOLDER_ID')
     );
 
     // Test 7: No unrelated Firebase function definition changed
