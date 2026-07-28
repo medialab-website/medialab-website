@@ -20,9 +20,10 @@ export default async (req, context) => {
     });
   }
 
-  // Ensure this is only Sean
-  if (!authResult.decodedToken || authResult.decodedToken.email !== 'solutions@medialab.fyi') {
-    return new Response(JSON.stringify({ error: 'Forbidden: Requires Sean identity' }), {
+  // Ensure this is an authorized MediaLab identity
+  const allowedEmails = ['solutions@medialab.fyi', 'sean@medialab.fyi', 'thomasina@medialab.fyi'];
+  if (!authResult.decodedToken || !allowedEmails.includes(authResult.decodedToken.email)) {
+    return new Response(JSON.stringify({ error: 'Forbidden: Requires authorized MediaLab identity' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }
     });
