@@ -58,7 +58,7 @@ export const getExitRoute = onRequest(
 );
 
 export const reviewBridge = onRequest(
-  { ...baseOpts, secrets: [REVIEW_BRIDGE_SHARED_SECRET] },
+  { ...baseOpts, secrets: [REVIEW_BRIDGE_SHARED_SECRET], memory: "1GiB" },
   createHandler(reviewBridgeHandler)
 );
 
