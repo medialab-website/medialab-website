@@ -616,6 +616,80 @@
                 overflow-wrap: break-word;
             }
         }
+
+        /* Review UI Styles */
+        .review-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 1rem;
+        }
+        .review-thumb {
+            width: 100%;
+            aspect-ratio: 3/2;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            background: #000;
+        }
+        .review-thumb.selected {
+            border-color: var(--color-primary);
+        }
+        .review-pane-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--color-border);
+        }
+        .review-large-img {
+            width: 100%;
+            max-height: 60vh;
+            object-fit: contain;
+            background: #000;
+            border-radius: 4px;
+        }
+        .review-controls {
+            background: var(--color-bg-surface);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+        }
+        .review-select {
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--color-bg-base);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-family: inherit;
+        }
+        .review-note {
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--color-bg-base);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            min-height: 80px;
+            font-family: inherit;
+            margin-bottom: 1rem;
+            resize: vertical;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-ACCEPTED { background: #00C851; }
+        .status-SEND_BACK_TO_PIXELMOB { background: #ff4444; }
+        .status-MARKED_FOR_QUICK_EDIT { background: #ffc107; }
+        .status-PENDING_REVIEW { background: #888; }
     </style>
 </head>
 <body>
@@ -648,7 +722,9 @@
                     <div class="tab active" data-view="upcoming">Upcoming</div>
                     <div class="tab" data-view="completed">Completed</div>
                     <div class="tab" data-view="all">All Orders</div>
-                    <div class="tab" data-view="drive">Drive Proof</div>
+                    <div class="tab" data-view="drive" style="display: none;">Drive Proof</div>
+                    <div class="tab" data-view="review">Review Edits</div>
+                    <div class="tab" data-view="quick_edits">Quick Edits</div>
                 </div>
 
                 <div id="offline-tabs" class="tabs auth-hidden">
@@ -724,6 +800,90 @@
 
                 <div id="detail-error" class="empty-state auth-hidden">
                     <div id="detail-error-msg" class="error-state"></div>
+                </div>
+
+                <div id="review-content" class="detail-container auth-hidden">
+                    <div class="detail-header">
+                        <div>
+                            <div class="data-label">Listing <span id="rv-listing-id"></span></div>
+                            <h2 id="rv-address"></h2>
+                            <span id="rv-status-badge" class="badge"></span>
+                        </div>
+                        <div class="detail-actions">
+                            <span class="action-link" id="btn-rv-refresh">REFRESH</span>
+                            <button id="btn-rv-submit" class="action-btn" style="margin-top: 5px;" disabled>SUBMIT REVIEW</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Review Items</h3>
+                            <button id="btn-rv-save" class="action-btn" style="background:var(--color-bg-surface-hover); color:var(--color-text-primary); border:1px solid var(--color-border);" disabled>SAVE DRAFT</button>
+                        </div>
+                        <div id="rv-error" class="error-state auth-hidden"></div>
+                        <div id="rv-success" style="color:#00C851; padding:0.5rem; margin-bottom:1rem; border:1px solid #00C851; border-radius:4px; background:rgba(0,200,81,0.1);" class="auth-hidden"></div>
+                        <div id="rv-grid" class="review-grid"></div>
+                    </div>
+
+                    <div id="rv-pane" class="review-pane-container auth-hidden">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="flex:1;">
+                                <h4 id="rv-selected-filename" style="margin:0 0 0.5rem 0;"></h4>
+                                <span id="rv-selected-status" class="badge"></span>
+                            </div>
+                            <a id="rv-drive-link" href="#" target="_blank" rel="noopener noreferrer" class="action-link">Open Original in Drive</a>
+                        </div>
+                        <img id="rv-large-img" class="review-large-img" loading="lazy" decoding="async" src="" alt="Selected Review Image" />
+                        <div class="review-controls">
+                            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--color-text-secondary);">Decision</label>
+                            <select id="rv-decision-select" class="review-select">
+                                <option value="PENDING_REVIEW">Pending Review</option>
+                                <option value="ACCEPTED">Accepted</option>
+                                <option value="SEND_BACK_TO_PIXELMOB">Send Back (Requires Note)</option>
+                                <option value="MARKED_FOR_QUICK_EDIT">Mark for Quick Edit</option>
+                            </select>
+
+                            <div id="rv-note-container" class="auth-hidden">
+                                <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--color-text-secondary);">Correction Note (Required)</label>
+                                <textarea id="rv-note-input" class="review-note" placeholder="Enter instructions for the editor..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quick-edits-content" class="detail-container auth-hidden">
+                    <div class="detail-header">
+                        <div>
+                            <h2 style="margin:0 0 0.5rem 0;">Quick Edits Needed</h2>
+                            <div style="font-size: 0.9rem; color: var(--color-text-secondary);">Select an item to download and upload the corrected image.</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div id="qe-error" class="error-state auth-hidden"></div>
+                        <div id="qe-success" style="color:#00C851; padding:0.5rem; margin-bottom:1rem; border:1px solid #00C851; border-radius:4px; background:rgba(0,200,81,0.1);" class="auth-hidden"></div>
+                        <div id="qe-list-container">
+                            <div style="padding: 1rem; color: var(--color-text-secondary);">Select a listing from the queue on the left to view Quick Edit items.</div>
+                        </div>
+                    </div>
+
+                    <div id="qe-action-pane" class="review-pane-container auth-hidden">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="flex:1;">
+                                <h4 id="qe-selected-filename" style="margin:0 0 0.5rem 0;"></h4>
+                                <div id="qe-selected-note" style="color:#ffc107; font-size:0.9rem; margin-bottom: 0.5rem;"></div>
+                            </div>
+                        </div>
+                        <img id="qe-large-img" class="review-large-img" loading="lazy" decoding="async" src="" alt="Selected Quick Edit Image" />
+
+                        <div class="review-controls" style="margin-top: 1rem;">
+                            <button id="btn-qe-download" class="action-btn" style="width: 100%; margin-bottom: 1rem;">DOWNLOAD ORIGINAL FOR EDITING</button>
+
+                            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--color-text-secondary);">Upload Corrected Image</label>
+                            <input type="file" id="qe-file-input" accept="image/jpeg, image/png" style="display:block; margin-bottom:1rem; color: var(--color-text-primary);" />
+                            <button id="btn-qe-upload" class="action-btn" style="background:#00C851; border-color:#00C851; width:100%;" disabled>UPLOAD & FINALIZE</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="detail-content" class="detail-container auth-hidden">
@@ -1434,6 +1594,22 @@
                     document.getElementById('search-container').classList.add('auth-hidden');
                     document.getElementById('list-pagination').classList.add('auth-hidden');
                     views.rightPaneContainer.classList.add('auth-hidden');
+                } else if (currentView === 'review') {
+                    views.listContainer.classList.remove('auth-hidden');
+                    views.drivePane.classList.add('auth-hidden');
+                    document.getElementById('search-container').classList.add('auth-hidden');
+                    document.getElementById('list-pagination').classList.add('auth-hidden');
+                    views.rightPaneContainer.classList.remove('auth-hidden');
+                    hideDetail();
+                    loadReviewQueue();
+                } else if (currentView === 'quick_edits') {
+                    views.listContainer.classList.remove('auth-hidden');
+                    views.drivePane.classList.add('auth-hidden');
+                    document.getElementById('search-container').classList.add('auth-hidden');
+                    document.getElementById('list-pagination').classList.add('auth-hidden');
+                    views.rightPaneContainer.classList.remove('auth-hidden');
+                    hideDetail();
+                    loadQuickEditsQueue();
                 } else {
                     views.listContainer.classList.remove('auth-hidden');
                     views.drivePane.classList.add('auth-hidden');
@@ -1586,6 +1762,8 @@
             views.detailLoading.classList.add('auth-hidden');
             views.detailContent.classList.add('auth-hidden');
             views.detailError.classList.add('auth-hidden');
+            document.getElementById('review-content').classList.add('auth-hidden');
+            document.getElementById('quick-edits-content').classList.add('auth-hidden');
             currentDetailOrder = null;
         }
 
@@ -2023,6 +2201,578 @@ h2 { color: #ffc107; margin-bottom: 5px; }
             } finally {
                 driveLoading.classList.add('auth-hidden');
                 btnLoadDrive.disabled = false;
+            }
+        });
+        // Review Queue Logic
+        let currentReviewListingId = null;
+        let currentReviewItems = [];
+        let currentReviewSelectedItem = null;
+
+        function getSizedImageUrl(url, targetSize) {
+            if (!url) return '';
+            try {
+                const urlObj = new URL(url);
+                if (urlObj.protocol !== 'https:') return '';
+
+                if (urlObj.hostname === 'drive.google.com' && urlObj.pathname.includes('/thumbnail')) {
+                    urlObj.searchParams.set('sz', `w${targetSize}`);
+                    return urlObj.toString();
+                }
+                if (urlObj.hostname.includes('googleusercontent.com')) {
+                    const sizeRegex = /=([swh]\d+)+(-[swh]\d+)*$/;
+                    if (sizeRegex.test(urlObj.pathname)) {
+                        urlObj.pathname = urlObj.pathname.replace(sizeRegex, `=s${targetSize}`);
+                        return urlObj.toString();
+                    }
+                    if (!url.includes('=')) {
+                        return url + `=s${targetSize}`;
+                    }
+                    return url.replace(/=s\d+$/, `=s${targetSize}`);
+                }
+                return url;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        async function loadReviewQueue() {
+            views.listContainer.innerHTML = '<div style="padding: 1rem; color: var(--color-text-secondary);">Loading Review Queue...</div>';
+            try {
+                const res = await fetch('/.netlify/functions/review-bridge', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'LIST_REVIEW_QUEUE' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load review queue');
+
+                views.listContainer.innerHTML = '';
+                if (!data.listings || data.listings.length === 0) {
+                    views.listContainer.innerHTML = '<div style="padding: 1rem; color: var(--color-text-secondary);">No listings in review queue.</div>';
+                    return;
+                }
+
+                data.listings.forEach(listing => {
+                    const card = document.createElement('div');
+                    card.className = 'list-card';
+                    card.innerHTML = `
+                        <div>
+                            <strong>${listing.Listing_ID}</strong>
+                            <div style="font-size: 0.9rem; color: var(--color-text-secondary); margin-top: 4px;">${listing.Full_Address}</div>
+                        </div>
+                        <div class="badge" style="font-size: 0.75rem;">${listing.Returned_Edits_Status}</div>
+                    `;
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.list-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        loadListingReview(listing.Listing_ID);
+                    });
+                    views.listContainer.appendChild(card);
+                });
+            } catch (err) {
+                views.listContainer.innerHTML = `<div class="error-state">Error: ${err.message}</div>`;
+            }
+        }
+
+        async function loadListingReview(listingId) {
+            currentReviewListingId = listingId;
+            currentReviewItems = [];
+            currentReviewSelectedItem = null;
+
+            document.getElementById('detail-empty').classList.add('auth-hidden');
+            document.getElementById('detail-content').classList.add('auth-hidden');
+            document.getElementById('review-content').classList.remove('auth-hidden');
+            document.getElementById('rv-pane').classList.add('auth-hidden');
+            document.getElementById('rv-error').classList.add('auth-hidden');
+            document.getElementById('rv-success').classList.add('auth-hidden');
+            document.getElementById('btn-rv-save').disabled = true;
+            document.getElementById('btn-rv-submit').disabled = true;
+
+            document.getElementById('rv-listing-id').textContent = listingId;
+            document.getElementById('rv-address').textContent = 'Loading...';
+            document.getElementById('rv-status-badge').textContent = '';
+            document.getElementById('rv-grid').innerHTML = '<div>Loading items...</div>';
+
+            try {
+                const res = await fetch('/.netlify/functions/review-bridge', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'GET_LISTING_REVIEW', Listing_ID: listingId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to fetch listing review');
+
+                document.getElementById('rv-address').textContent = data.listing.Full_Address;
+                document.getElementById('rv-status-badge').textContent = data.listing.Returned_Edits_Status;
+
+                currentReviewItems = data.items || [];
+                renderReviewGrid();
+                checkSubmitStatus();
+            } catch (err) {
+                document.getElementById('rv-grid').innerHTML = '';
+                document.getElementById('rv-error').textContent = err.message;
+                document.getElementById('rv-error').classList.remove('auth-hidden');
+            }
+        }
+
+        function renderReviewGrid() {
+            const grid = document.getElementById('rv-grid');
+            grid.innerHTML = '';
+
+            if (currentReviewItems.length === 0) {
+                grid.innerHTML = '<div>No review items found for this listing.</div>';
+                return;
+            }
+
+            document.getElementById('btn-rv-save').disabled = false;
+
+            currentReviewItems.forEach((item, index) => {
+                const img = document.createElement('img');
+                img.className = 'review-thumb';
+                img.loading = 'lazy';
+                img.src = getSizedImageUrl(item.Thumbnail_Link, 400);
+                img.alt = item.File_Name;
+                img.dataset.id = item.Review_Item_ID;
+
+                const container = document.createElement('div');
+                container.style.position = 'relative';
+
+                const dot = document.createElement('div');
+                dot.style.position = 'absolute';
+                dot.style.top = '5px';
+                dot.style.right = '5px';
+                dot.style.width = '12px';
+                dot.style.height = '12px';
+                dot.style.borderRadius = '50%';
+                dot.style.border = '2px solid white';
+
+                if (item.Review_Status === 'ACCEPTED') dot.style.background = '#00C851';
+                else if (item.Review_Status === 'SEND_BACK_TO_PIXELMOB') dot.style.background = '#ff4444';
+                else if (item.Review_Status === 'MARKED_FOR_QUICK_EDIT') dot.style.background = '#ffc107';
+                else dot.style.background = '#888';
+
+                container.appendChild(img);
+                container.appendChild(dot);
+
+                img.addEventListener('click', () => selectReviewItem(item.Review_Item_ID, img));
+                grid.appendChild(container);
+
+                if (index === 0 && !currentReviewSelectedItem) {
+                    selectReviewItem(item.Review_Item_ID, img);
+                }
+            });
+        }
+
+        function selectReviewItem(itemId, imgElement) {
+            document.querySelectorAll('.review-thumb').forEach(el => el.classList.remove('selected'));
+            if (imgElement) imgElement.classList.add('selected');
+
+            const item = currentReviewItems.find(i => i.Review_Item_ID === itemId);
+            if (!item) return;
+            currentReviewSelectedItem = item;
+
+            document.getElementById('rv-pane').classList.remove('auth-hidden');
+            document.getElementById('rv-selected-filename').textContent = item.File_Name;
+            document.getElementById('rv-selected-status').textContent = item.Review_Status;
+
+            const driveLink = document.getElementById('rv-drive-link');
+            try {
+                const parsedDriveLink = new URL(item.Drive_View_Link);
+                if (parsedDriveLink.protocol === 'https:') {
+                    driveLink.href = parsedDriveLink.toString();
+                    driveLink.style.display = 'inline';
+                } else {
+                    driveLink.style.display = 'none';
+                }
+            } catch (e) {
+                driveLink.style.display = 'none';
+            }
+
+            const largeImg = document.getElementById('rv-large-img');
+            largeImg.src = getSizedImageUrl(item.Thumbnail_Link, 2000);
+
+            const select = document.getElementById('rv-decision-select');
+            select.value = ['ACCEPTED', 'SEND_BACK_TO_PIXELMOB', 'MARKED_FOR_QUICK_EDIT'].includes(item.Review_Status) ? item.Review_Status : 'PENDING_REVIEW';
+
+            const noteContainer = document.getElementById('rv-note-container');
+            const noteInput = document.getElementById('rv-note-input');
+
+            noteInput.value = item.PixelMob_Revision_Note || '';
+            noteContainer.classList.toggle('auth-hidden', select.value !== 'SEND_BACK_TO_PIXELMOB');
+        }
+
+        document.getElementById('rv-decision-select').addEventListener('change', (e) => {
+            const val = e.target.value;
+            document.getElementById('rv-note-container').classList.toggle('auth-hidden', val !== 'SEND_BACK_TO_PIXELMOB');
+            if (currentReviewSelectedItem) {
+                currentReviewSelectedItem.Review_Status = val;
+                renderReviewGrid();
+                selectReviewItem(currentReviewSelectedItem.Review_Item_ID, document.querySelector(`.review-thumb[data-id="${currentReviewSelectedItem.Review_Item_ID}"]`));
+                checkSubmitStatus();
+            }
+        });
+
+        document.getElementById('rv-note-input').addEventListener('input', (e) => {
+            if (currentReviewSelectedItem) {
+                currentReviewSelectedItem.PixelMob_Revision_Note = e.target.value;
+                checkSubmitStatus();
+            }
+        });
+
+        function checkSubmitStatus() {
+            let allProcessed = true;
+            for (const item of currentReviewItems) {
+                if (item.Review_Status.startsWith('FINALIZED_')) continue;
+                if (!['ACCEPTED', 'SEND_BACK_TO_PIXELMOB', 'MARKED_FOR_QUICK_EDIT'].includes(item.Review_Status)) {
+                    allProcessed = false;
+                }
+                if (item.Review_Status === 'SEND_BACK_TO_PIXELMOB' && (!item.PixelMob_Revision_Note || !item.PixelMob_Revision_Note.trim())) {
+                    allProcessed = false;
+                }
+            }
+            document.getElementById('btn-rv-submit').disabled = !allProcessed || currentReviewItems.length === 0;
+        }
+
+        document.getElementById('btn-rv-save').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-rv-save');
+            const errEl = document.getElementById('rv-error');
+            const succEl = document.getElementById('rv-success');
+            btn.disabled = true;
+            btn.textContent = 'SAVING...';
+            errEl.classList.add('auth-hidden');
+            succEl.classList.add('auth-hidden');
+
+            try {
+                const decisions = currentReviewItems.map(i => ({
+                    Review_Item_ID: i.Review_Item_ID,
+                    decision: i.Review_Status,
+                    note: i.PixelMob_Revision_Note || ''
+                }));
+                const res = await fetch('/.netlify/functions/review-bridge', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'SAVE_REVIEW_DECISIONS', Listing_ID: currentReviewListingId, decisions })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to save');
+                succEl.textContent = 'Draft decisions saved successfully.';
+                succEl.classList.remove('auth-hidden');
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('auth-hidden');
+            } finally {
+                btn.textContent = 'SAVE DRAFT';
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('btn-rv-submit').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-rv-submit');
+            const errEl = document.getElementById('rv-error');
+            const succEl = document.getElementById('rv-success');
+
+            if (!confirm('Submit review? This will finalize decisions and update the listing status.')) return;
+
+            btn.disabled = true;
+            btn.textContent = 'SUBMITTING...';
+            errEl.classList.add('auth-hidden');
+            succEl.classList.add('auth-hidden');
+
+            try {
+                const res = await fetch('/.netlify/functions/review-bridge', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'SUBMIT_LISTING_REVIEW', Listing_ID: currentReviewListingId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to submit');
+
+                alert(`Review submitted successfully. New Listing Status: ${data.newStatus}`);
+                document.getElementById('detail-empty').classList.remove('auth-hidden');
+                document.getElementById('review-content').classList.add('auth-hidden');
+                loadReviewQueue();
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('auth-hidden');
+                btn.disabled = false;
+                btn.textContent = 'SUBMIT REVIEW';
+            }
+        });
+
+        document.getElementById('btn-rv-refresh').addEventListener('click', () => {
+            if (currentReviewListingId) loadListingReview(currentReviewListingId);
+        });
+        // --- QUICK EDITS LOGIC ---
+        let currentQuickEditsListings = [];
+        let currentQuickEditSelectedItem = null;
+
+        async function loadQuickEditsQueue() {
+            views.listContainer.innerHTML = '<div style="padding: 1rem; color: var(--color-text-secondary);">Loading Quick Edits Queue...</div>';
+            try {
+                const res = await fetch('/.netlify/functions/review-bridge', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'LIST_QUICK_EDIT_QUEUE' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load quick edits queue');
+
+                views.listContainer.innerHTML = '';
+                if (!data.listings || data.listings.length === 0) {
+                    views.listContainer.innerHTML = '<div style="padding: 1rem; color: var(--color-text-secondary);">No listings in Quick Edits queue.</div>';
+                    return;
+                }
+
+                currentQuickEditsListings = data.listings;
+
+                data.listings.forEach(listing => {
+                    const card = document.createElement('div');
+                    card.className = 'list-card';
+                    card.innerHTML = `
+                        <div>
+                            <strong>${listing.Listing_ID}</strong>
+                            <div style="font-size: 0.9rem; color: var(--color-text-secondary); margin-top: 4px;">${listing.Full_Address}</div>
+                        </div>
+                        <div class="badge" style="font-size: 0.75rem;">${listing.Items.length} Item(s)</div>
+                    `;
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.list-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        loadListingQuickEdits(listing.Listing_ID);
+                    });
+                    views.listContainer.appendChild(card);
+                });
+            } catch (err) {
+                views.listContainer.innerHTML = `<div class="error-state">Error: ${err.message}</div>`;
+            }
+        }
+
+        function loadListingQuickEdits(listingId) {
+            document.getElementById('detail-empty').classList.add('auth-hidden');
+            document.getElementById('detail-content').classList.add('auth-hidden');
+            document.getElementById('review-content').classList.add('auth-hidden');
+            document.getElementById('quick-edits-content').classList.remove('auth-hidden');
+            document.getElementById('qe-action-pane').classList.add('auth-hidden');
+
+            const listing = currentQuickEditsListings.find(l => l.Listing_ID === listingId);
+            if (!listing) return;
+
+            const grid = document.getElementById('qe-list-container');
+            grid.className = 'review-grid';
+            grid.innerHTML = '';
+
+            listing.Items.forEach(item => {
+                const img = document.createElement('img');
+                img.className = 'review-thumb';
+                img.loading = 'lazy';
+                img.src = getSizedImageUrl(item.Thumbnail_Link, 400);
+                img.alt = item.File_Name;
+                img.dataset.id = item.Review_Item_ID;
+
+                const container = document.createElement('div');
+                container.style.position = 'relative';
+
+                container.appendChild(img);
+
+                img.addEventListener('click', () => selectQuickEditItem(item, img));
+                grid.appendChild(container);
+            });
+        }
+
+        function selectQuickEditItem(item, imgEl) {
+            document.querySelectorAll('#qe-list-container .review-thumb').forEach(el => {
+                el.style.border = '1px solid var(--color-border)';
+                el.style.boxShadow = 'none';
+            });
+            imgEl.style.border = '2px solid var(--color-primary)';
+            imgEl.style.boxShadow = '0 0 0 2px var(--color-bg-base)';
+
+            currentQuickEditSelectedItem = item;
+
+            document.getElementById('qe-action-pane').classList.remove('auth-hidden');
+            document.getElementById('qe-selected-filename').textContent = item.File_Name;
+            document.getElementById('qe-selected-note').textContent = `Note: ${item.PixelMob_Revision_Note}`;
+
+            document.getElementById('qe-large-img').src = getSizedImageUrl(item.Thumbnail_Link, 1200);
+
+            document.getElementById('btn-qe-download').onclick = () => downloadQuickEdit(item);
+            document.getElementById('btn-qe-upload').disabled = true;
+            document.getElementById('qe-file-input').value = '';
+
+            document.getElementById('qe-error').classList.add('auth-hidden');
+            document.getElementById('qe-success').classList.add('auth-hidden');
+        }
+
+        document.getElementById('qe-file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const btn = document.getElementById('btn-qe-upload');
+            if (file) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        });
+
+        async function downloadQuickEdit(item) {
+            const btn = document.getElementById('btn-qe-download');
+            btn.disabled = true;
+            btn.textContent = 'DOWNLOADING...';
+            document.getElementById('qe-error').classList.add('auth-hidden');
+
+            try {
+                const res = await fetch('/.netlify/functions/review-bridge', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'DOWNLOAD_QUICK_EDIT_IMAGE', Review_Item_ID: item.Review_Item_ID })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || 'Failed to download image');
+                }
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `QuickEdit_${item.File_Name}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+            } catch (err) {
+                document.getElementById('qe-error').textContent = err.message;
+                document.getElementById('qe-error').classList.remove('auth-hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'DOWNLOAD ORIGINAL FOR EDITING';
+            }
+        }
+
+        document.getElementById('btn-qe-upload').addEventListener('click', async () => {
+            if (!currentQuickEditSelectedItem) return;
+            const fileInput = document.getElementById('qe-file-input');
+            const file = fileInput.files[0];
+            const errEl = document.getElementById('qe-error');
+            const succEl = document.getElementById('qe-success');
+
+            errEl.classList.add('auth-hidden');
+            succEl.classList.add('auth-hidden');
+
+            if (!file) {
+                errEl.textContent = 'Please select a file to upload.';
+                errEl.classList.remove('auth-hidden');
+                return;
+            }
+
+            // Client-Side File Size Validation (15 MiB max)
+            const MAX_SIZE_BYTES = 15 * 1024 * 1024;
+            if (file.size > MAX_SIZE_BYTES) {
+                errEl.textContent = `File size exceeds the 15 MiB limit.`;
+                errEl.classList.remove('auth-hidden');
+                return;
+            }
+
+            // Client-Side Extension & MIME Validation
+            const fileNameLower = file.name.toLowerCase();
+            const allowedExtensions = ['.jpg', '.jpeg', '.png'];
+            const allowedMimeTypes = ['image/jpeg', 'image/png'];
+
+            const hasValidExt = allowedExtensions.some(ext => fileNameLower.endsWith(ext));
+            if (!hasValidExt) {
+                errEl.textContent = `Invalid file extension. Allowed: .jpg, .jpeg, .png`;
+                errEl.classList.remove('auth-hidden');
+                return;
+            }
+            if (!allowedMimeTypes.includes(file.type)) {
+                errEl.textContent = `Invalid MIME type. Allowed: image/jpeg, image/png`;
+                errEl.classList.remove('auth-hidden');
+                return;
+            }
+
+            // Extension and MIME agreement
+            const isJpegExt = fileNameLower.endsWith('.jpg') || fileNameLower.endsWith('.jpeg');
+            const isPngExt = fileNameLower.endsWith('.png');
+            if ((isJpegExt && file.type !== 'image/jpeg') || (isPngExt && file.type !== 'image/png')) {
+                errEl.textContent = `File extension does not match the declared MIME type.`;
+                errEl.classList.remove('auth-hidden');
+                return;
+            }
+
+            const btn = document.getElementById('btn-qe-upload');
+            if (!confirm(`Upload corrected image for ${currentQuickEditSelectedItem.File_Name}?`)) return;
+
+            btn.disabled = true;
+            btn.textContent = 'VALIDATING...';
+
+            try {
+                // Client-Side Image Decode & Dimension Validation
+                const img = await new Promise((resolve, reject) => {
+                    const i = new Image();
+                    const url = URL.createObjectURL(file);
+                    i.onload = () => { URL.revokeObjectURL(url); resolve(i); };
+                    i.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to decode image. File may be corrupt.')); };
+                    i.src = url;
+                });
+
+                const width = img.naturalWidth || img.width;
+                const height = img.naturalHeight || img.height;
+                const totalPixels = width * height;
+                const MAX_DIMENSION = 20000;
+                const MAX_PIXELS = 100000000;
+
+                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                    throw new Error(`Image dimensions (${width}x${height}) exceed the maximum allowed 20,000 pixels on any side.`);
+                }
+                if (totalPixels > MAX_PIXELS) {
+                    throw new Error(`Total pixel count (${totalPixels}) exceeds the maximum allowed 100,000,000 pixels.`);
+                }
+
+                btn.textContent = 'UPLOADING...';
+
+                // Convert to base64
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
+
+                const res = await fetch('/.netlify/functions/review-bridge', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        command: 'UPLOAD_QUICK_EDIT',
+                        Review_Item_ID: currentQuickEditSelectedItem.Review_Item_ID,
+                        base64: base64,
+                        fileName: file.name,
+                        mimeType: file.type
+                    })
+                });
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch(e) {
+                    throw new Error('Invalid server response format.');
+                }
+
+                if (!res.ok) {
+                    const errStatus = res.status;
+                    throw new Error(data.error ? `Error ${errStatus}: ${data.error}` : `Failed to upload (Status ${errStatus})`);
+                }
+
+                succEl.textContent = `Upload successful! Item status set to: ${data.newStatus}`;
+                succEl.classList.remove('auth-hidden');
+                document.getElementById('qe-action-pane').classList.add('auth-hidden');
+
+                // Refresh queue
+                setTimeout(() => loadQuickEditsQueue(), 2000);
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('auth-hidden');
+                btn.disabled = false;
+                btn.textContent = 'UPLOAD & FINALIZE';
             }
         });
     </script>

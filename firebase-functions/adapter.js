@@ -18,8 +18,8 @@ export async function adaptResponse(netlifyResponse, expressRes) {
     expressRes.setHeader(key, value);
   });
   
-  const body = await netlifyResponse.text();
-  expressRes.status(netlifyResponse.status).send(body);
+  const buffer = await netlifyResponse.arrayBuffer();
+  expressRes.status(netlifyResponse.status).send(Buffer.from(buffer));
 }
 
 export function createHandler(netlifyHandler) {
