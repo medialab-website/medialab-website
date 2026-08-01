@@ -1,0 +1,27 @@
+{
+  "name": "@medialab/vs01-repair-p01a",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "verify:runtime": "tsx scripts/verify-runtime.ts",
+    "verify:boundary": "tsx scripts/verify-packet-boundary.ts",
+    "verify:dependencies": "tsx scripts/verify-dependencies-exact.ts",
+    "verify:placeholders": "tsx scripts/verify-no-placeholders.ts",
+    "verify:changed-files": "tsx scripts/verify-changed-files.ts",
+    "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:boundary && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files"
+  },
+  "dependencies": {
+    "pg": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.2",
+    "@types/pg": "8.20.3",
+    "tsx": "4.23.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}
