@@ -188,16 +188,29 @@ describe('Migration Engine Substantive Behavior', () => {
   it('10. canonical migration command uses db/migrations and never loads test fixtures', () => {
     const canonicalDir = path.resolve(__dirname, '../db/migrations');
     const canonicalFiles = fs.readdirSync(canonicalDir).filter((f) => f.endsWith('.sql'));
-    expect(canonicalFiles).toEqual([]);
+    expect(canonicalFiles).toEqual(['0001_identity_and_tenancy.sql']);
   });
 
-  it('11. verifies canonical development and test databases contain zero ledger rows and no domain objects', async () => {
-    const devRes = await client.query('SELECT COUNT(*)::int AS cnt FROM medialab_meta.schema_migrations;');
-    expect(devRes.rows[0].cnt).toBe(0);
+  it('11. verifies canonical test database contains one ledger row and nine domain tables', async () => {
+    const devRes = await client.query('SELECT COUNT(*)::int AS cnt, MAX(filename) AS fname FROM medialab_meta.schema_migrations;');
+    expect(devRes.rows[0].cnt).toBe(1);
+    expect(devRes.rows[0].fname).toBe('0001_identity_and_tenancy.sql');
 
     const tablesRes = await client.query(
-      "SELECT tablename FROM pg_tables WHERE schemaname NOT LIKE 'pg_%' AND schemaname != 'information_schema' AND schemaname != 'medialab_meta';"
+      "SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core' ORDER BY tablename;"
     );
-    expect(tablesRes.rows.length).toBe(0);
+    const tables = tablesRes.rows.map(r => r.tablename);
+    const expectedTables = [
+      'development_sessions',
+      'identities',
+      'membership_permission_sets',
+      'memberships',
+      'organizations',
+      'people',
+      'permission_set_permissions',
+      'permission_sets',
+      'permissions'
+    ].sort();
+    expect(tables).toEqual(expectedTables);
   });
 });

@@ -15,7 +15,8 @@
     "verify:placeholders": "tsx scripts/verify-no-placeholders.ts",
     "verify:changed-files": "tsx scripts/verify-changed-files.ts",
     "verify:migration-engine": "tsx scripts/verify-migration-engine.ts",
-    "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:boundary && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files && npm run verify:migration-engine"
+    "verify:identity-tenancy-schema": "tsx scripts/verify-identity-tenancy-schema.ts",
+    "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:boundary && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files && npm run verify:migration-engine && npm run verify:identity-tenancy-schema"
   },
   "dependencies": {
     "pg": "8.22.0"

@@ -32,8 +32,8 @@ if (fs.existsSync(canonicalDir)) {
   const files = fs.readdirSync(canonicalDir);
   const sqlFiles = files.filter((f) => f.endsWith('.sql'));
 
-  if (sqlFiles.length > 0) {
-    console.error(`ERROR: Canonical migration directory must contain ZERO .sql files during M01. Found: ${sqlFiles.join(', ')}`);
+  if (sqlFiles.length !== 1 || sqlFiles[0] !== '0001_identity_and_tenancy.sql') {
+    console.error(`ERROR: Canonical migration directory must contain exactly 0001_identity_and_tenancy.sql during M02. Found: ${sqlFiles.join(', ')}`);
     errors = true;
   }
 
@@ -86,9 +86,10 @@ function searchSqlFiles(dirPath: string): string[] {
 
 const allSqlFiles = searchSqlFiles(baseDir);
 const allowedFixturePrefix = path.join(baseDir, 'tests/fixtures/migrations');
+const allowedCanonical = path.join(baseDir, 'db/migrations/0001_identity_and_tenancy.sql');
 
 for (const sqlFile of allSqlFiles) {
-  if (!sqlFile.startsWith(allowedFixturePrefix)) {
+  if (!sqlFile.startsWith(allowedFixturePrefix) && sqlFile !== allowedCanonical) {
     console.error(`ERROR: SQL file outside isolated test-fixture directory: ${sqlFile}`);
     errors = true;
   }

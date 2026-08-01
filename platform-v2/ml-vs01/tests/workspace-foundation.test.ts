@@ -27,8 +27,11 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
       'scripts/verify-no-placeholders.ts',
       'scripts/verify-changed-files.ts',
       'scripts/verify-migration-engine.ts',
+      'scripts/verify-identity-tenancy-schema.ts',
       'db/migrate.ts',
-      'db/migrations/README.md'
+      'db/migrations/README.md',
+      'db/migrations/0001_identity_and_tenancy.sql',
+      'tests/identity-tenancy-schema.test.ts'
     ];
 
     for (const relPath of requiredFiles) {
