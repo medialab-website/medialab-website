@@ -1,13 +1,12 @@
-# PARKED_IDEAS.md — ML-PLATFORM-V2-VS01-REPAIR-P01A-WORKSPACE-R02
+# PARKED_IDEAS.md — ML-PLATFORM-V2-VS01-REPAIR-P01B-M01-MIGRATION-ENGINE-R01
 
-This file records out-of-scope items, prospective future enhancements, and features deferred to later packets (P01B, P01C, or beyond).
+This file records out-of-scope items, prospective future enhancements, and features deferred to later packets (P01B-M02, P01C, or beyond).
 
 ## Deferred Items & Boundary Holds
 
-1. **SQL Migrations & Schema Execution (Deferred to P01B)**
-   * Migration engine and migration ledger table.
-   * SQL migration scripts (`0001_*.sql`).
-   * Custom application tables (e.g. `listings`, `users`, `orders`).
+1. **Canonical Domain Migration SQL (Deferred to P01B-M02)**
+   * `0001_foundation.sql` and domain schema SQL definitions.
+   * Business tables (listings, users, orders, etc.).
 
 2. **Application Server & HTTP Frameworks (Deferred to P01C)**
    * Fastify / Express web server integration.

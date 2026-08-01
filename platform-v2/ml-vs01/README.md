@@ -1,18 +1,18 @@
-# MediaLab Platform V2 — VS01 Repair Packet P01A Workspace Foundation
+# MediaLab Platform V2 — VS01 Repair Packet P01B-M01 Migration Engine
 
-This workspace establishes the clean foundation for packet `ML-PLATFORM-V2-VS01-REPAIR-P01A-WORKSPACE-R02`.
+This workspace implements the TypeScript ordered-SQL migration engine and physical ledger for packet `ML-PLATFORM-V2-VS01-REPAIR-P01B-M01-MIGRATION-ENGINE-R01`.
 
 ## Active Boundaries
 
-* Branch: `platform-v2-vs01-repair-p01a-r01`
-* Worktree: `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-VS01-Repair-P01A`
+* Branch: `platform-v2-vs01-repair-p01b-r01`
+* Worktree: `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-VS01-Repair-P01B`
+* Base Commit: `b179722abf34a71bd07eafb8013c34df8335620f`
 * Root: `platform-v2/ml-vs01`
-* PostgreSQL Roles: `medialab_vs01_repair_p01a_app`, `medialab_vs01_repair_p01a_test`
+* Physical Ledger Table: `medialab_meta.schema_migrations`
 * PostgreSQL Databases: `medialab_vs01_repair_p01a`, `medialab_vs01_repair_p01a_test`
 
-## Machine Gates
+## Package Commands
 
-Run all verification gates:
-```bash
-npm run verify:all
-```
+* Development Migration: `npm run migrate:dev`
+* Test Migration: `npm run migrate:test`
+* Machine Verification Gates: `npm run verify:all`

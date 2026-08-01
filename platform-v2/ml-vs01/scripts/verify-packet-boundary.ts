@@ -9,7 +9,6 @@ const __dirname = path.dirname(__filename);
 const baseDir = path.resolve(__dirname, '..');
 
 const prohibitedPatterns = [
-  'db/migrations',
   'migrations',
   'src/server.ts',
   'src/app.ts',

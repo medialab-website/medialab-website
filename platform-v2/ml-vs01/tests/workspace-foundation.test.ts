@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-describe('Workspace Foundation P01A Boundaries', () => {
+describe('Workspace Foundation P01A & P01B Boundaries', () => {
   const rootDir = path.resolve(__dirname, '..');
 
   it('verifies required configuration and control files exist', () => {
@@ -25,7 +25,10 @@ describe('Workspace Foundation P01A Boundaries', () => {
       'scripts/verify-packet-boundary.ts',
       'scripts/verify-dependencies-exact.ts',
       'scripts/verify-no-placeholders.ts',
-      'scripts/verify-changed-files.ts'
+      'scripts/verify-changed-files.ts',
+      'scripts/verify-migration-engine.ts',
+      'db/migrate.ts',
+      'db/migrations/README.md'
     ];
 
     for (const relPath of requiredFiles) {
@@ -51,9 +54,8 @@ describe('Workspace Foundation P01A Boundaries', () => {
     });
   });
 
-  it('verifies prohibited P01B, P01C, migration, API, and UI artifacts are absent', () => {
+  it('verifies prohibited P01B-M02, P01C, API, and UI artifacts are absent', () => {
     const prohibitedPaths = [
-      'db/migrations',
       'migrations',
       'src/server.ts',
       'src/app.ts',

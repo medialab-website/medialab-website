@@ -1,0 +1,2 @@
+CREATE TABLE temp_fail_test_0002 (id int PRIMARY KEY);
+INVALID SQL SYNTAX HERE;
