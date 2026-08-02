@@ -21,7 +21,7 @@ import {
 } from '../db/fixtures/identity-tenancy-fixtures.js';
 
 const TEST_DB = 'medialab_vs01_repair_p01a_test';
-const TEST_ROLE = 'medialab_vs01_repair_p01a_test';
+const TEST_ROLE = 'medialab_vs01_repair_p01a_test_owner';
 const TEST_SOCKET = '/tmp/mlvs01-pg';
 const TEST_PORT = 55432;
 
@@ -196,7 +196,13 @@ describe('P01C Foundation Fixtures & Seed Tests', () => {
     expect(checkRes.rows).toHaveLength(1);
     expect(checkRes.rows[0].display_name).toBe('Non-Fixture Custom Person');
 
-    // Clean up custom person
-    await client.query('DELETE FROM medialab_core.people WHERE id = $1;', [customPersonId]);
+    // Person and contact history are permanent; clean the disposable database through its bounded reset tool.
+    await resetTestDatabase({
+      database: TEST_DB,
+      confirm: TEST_DB,
+      host: TEST_SOCKET,
+      port: TEST_PORT,
+      user: TEST_ROLE
+    });
   });
 });

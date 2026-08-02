@@ -28,6 +28,7 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
       'scripts/verify-migration-engine.ts',
       'scripts/verify-identity-tenancy-schema.ts',
       'scripts/verify-property-snapshot-schema.ts',
+      'scripts/verify-person-contacts-account-lifecycle-schema.ts',
       'scripts/verify-foundation-closeout.ts',
       'db/migrate.ts',
       'db/seed.ts',
@@ -36,8 +37,10 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
       'db/migrations/README.md',
       'db/migrations/0001_identity_and_tenancy.sql',
       'db/migrations/0002_property_identity_and_snapshots.sql',
+      'db/migrations/0003_person_contacts_and_account_lifecycle.sql',
       'tests/identity-tenancy-schema.test.ts',
       'tests/property-snapshot-schema.test.ts',
+      'tests/person-contacts-account-lifecycle-schema.test.ts',
       'tests/foundation-fixtures.test.ts',
       'tests/test-database-reset.test.ts'
     ];

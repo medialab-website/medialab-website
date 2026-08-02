@@ -8,14 +8,14 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     host: '/tmp/mlvs01-pg',
     port: 55432,
     database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test'
+    user: 'medialab_vs01_repair_p01a_test_owner'
   });
 
   const poolDev = new Pool({
     host: '/tmp/mlvs01-pg',
     port: 55432,
     database: 'medialab_vs01_repair_p01a',
-    user: 'medialab_vs01_repair_p01a_app'
+    user: 'medialab_vs01_repair_p01a_owner'
   });
 
   afterAll(async () => {
@@ -27,13 +27,16 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(2);
+        expect(res.rows).toHaveLength(3);
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
         expect(res.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
 
         expect(res.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
         expect(res.rows[1].sha256).toBe('d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83');
+
+        expect(res.rows[2].filename).toBe('0003_person_contacts_and_account_lifecycle.sql');
+        expect(res.rows[2].sha256).toBe('984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3');
       });
 
       it('Catalog Assertions: properties and property_snapshots exist with correct owners', async () => {
@@ -43,7 +46,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
           ORDER BY tablename
         `);
         expect(res.rows).toHaveLength(2);
-        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app';
+        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test_owner' : 'medialab_vs01_repair_p01a_owner';
         expect(res.rows[0].tableowner).toBe(expectedOwner);
         expect(res.rows[1].tableowner).toBe(expectedOwner);
       });

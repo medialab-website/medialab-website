@@ -1,11 +1,21 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M01-PROPERTY-SNAPSHOT-SCHEMA-R01
+# BUILD_STATE.md — ML-PLATFORM-V2-P02-M02-A-PERSON-CONTACTS-ACCOUNT-LIFECYCLE-R01
 
-- **Phase:** P02-M01 Property Identity and Immutable Snapshots
-- **Status:** P02-M01 Scope-Amended Candidate Complete / Pending Architect Reconciliation
-- **Candidate Branch:** `platform-v2-p02-m01-property-snapshot-r01`
+- **Phase:** P02-M02-A Person Contacts and Account Lifecycle
+- **Status:** Locally Verified / Uncommitted
+- **Candidate Branch:** `platform-v2-p02-m02-a-person-contacts-account-lifecycle-r01`
 - **Worktree:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M01-Property-Snapshot`
-- **Base Commit:** `a43345ff7625ca1224675d56658df513893d9182`
+- **Base Commit:** `2428984edf3838935bf6c64fd6646500a9d957a2`
 - **Canonical Migrations:**
   - `0001_identity_and_tenancy.sql` (SHA-256: `29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31`)
   - `0002_property_identity_and_snapshots.sql` (SHA-256: `d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83`)
+  - `0003_person_contacts_and_account_lifecycle.sql` (SHA-256: `984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3`)
 - **Package Lock:** `package-lock.json` (SHA-256: `11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258`)
+- **Authority Boundary:** Migrations, seed, and reset run as dedicated owner roles; application and test runtime roles own no database objects and execute only seven bearer-authenticated mutation APIs.
+- **Migration Entrypoint:** `db/migrate.ts` is the canonical supported entrypoint; canonical SQL remains environment-role-neutral, and migration SQL plus the exact runtime privilege policy commit transactionally.
+- **Session Locking:** Ordinary-session authentication retains `FOR SHARE`, which blocks concurrent session revocation until the authorized transaction ends.
+- **Definer Search Path:** Every P02-M02-A `SECURITY DEFINER` function uses exactly `pg_catalog, medialab_core, pg_temp`, with `pg_temp` last and relation references schema-qualified.
+- **Recovery Boundary:** `DEACTIVATED -> RECOVERED` requires a short-lived, single-use recovery bearer token issued outside this packet; ordinary sessions cannot recover and recovery tokens cannot perform ordinary mutations.
+- **START_FRESH Boundary:** START_FRESH records recovery intent for the same Person and Identity while preserving existing history. It does not currently delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data. Actual profile/preferences reset behavior remains deferred until those models exist.
+- **Verification:** Targeted P02-M02-A tests: 24/24 passed. Complete Vitest suite: 7 files, 79/79 passed.
+- **Deferred Integration:** Production ordinary-session and recovery-token issuance remain external authentication responsibilities.
+- **Separate Foundation Repair:** `verify-changed-files.ts` still requires first-line porcelain parsing and exact-set comparison repair; it is intentionally unchanged by this packet.

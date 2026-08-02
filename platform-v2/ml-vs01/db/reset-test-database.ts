@@ -13,6 +13,7 @@ export interface ResetTestDatabaseOptions {
   database?: string;
   confirm?: string;
   user?: string;
+  runtimeUser?: string;
   password?: string;
 }
 
@@ -21,7 +22,8 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
   const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55432);
   const database = options.database || process.env.PGDATABASE || 'medialab_vs01_repair_p01a_test';
   const confirm = options.confirm || process.env.CONFIRM_DATABASE || '';
-  const user = options.user || process.env.PGUSER || 'medialab_vs01_repair_p01a_test';
+  const user = options.user || process.env.PGUSER || 'medialab_vs01_repair_p01a_test_owner';
+  const runtimeUser = options.runtimeUser || process.env.PGRUNTIMEUSER || 'medialab_vs01_repair_p01a_test';
 
   // Guard 1: Strict target database check
   if (database !== 'medialab_vs01_repair_p01a_test') {
@@ -43,15 +45,18 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
   }
 
   // Guard 4: Role check
-  if (user !== 'medialab_vs01_repair_p01a_test') {
-    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved user '${user}'. Reset must use role 'medialab_vs01_repair_p01a_test'.`);
+  if (user !== 'medialab_vs01_repair_p01a_test_owner') {
+    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved user '${user}'. Reset must use owner role 'medialab_vs01_repair_p01a_test_owner'.`);
+  }
+  if (runtimeUser !== 'medialab_vs01_repair_p01a_test') {
+    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved runtime role '${runtimeUser}'. Expected 'medialab_vs01_repair_p01a_test'.`);
   }
 
   const client = new pg.Client({
     host,
     port,
     database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test',
+    user,
     password: options.password
   });
 
@@ -72,7 +77,8 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
   await runMigrations({
     migrationsDir,
     database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test',
+    user,
+    runtimeUser,
     host,
     port
   });
@@ -80,7 +86,7 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
   // Rerun deterministic seed
   await runSeed({
     database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test',
+    user,
     host,
     port
   });
@@ -90,7 +96,7 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
     host,
     port,
     database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test'
+    user
   });
 
   await verifyClient.connect();

@@ -4,9 +4,77 @@ import { resetTestDatabase } from '../db/reset-test-database.js';
 import { EXPECTED_ROW_COUNTS } from '../db/fixtures/identity-tenancy-fixtures.js';
 
 const TEST_DB = 'medialab_vs01_repair_p01a_test';
-const TEST_ROLE = 'medialab_vs01_repair_p01a_test';
+const TEST_ROLE = 'medialab_vs01_repair_p01a_test_owner';
 const TEST_SOCKET = '/tmp/mlvs01-pg';
 const TEST_PORT = 55432;
+
+const EXACT_ROUTINE_NAMES = [
+  'actor_can_administer_person',
+  'apply_account_lifecycle_transition',
+  'apply_contact_retirement',
+  'apply_contact_supersession',
+  'apply_primary_email_replacement',
+  'bootstrap_identity_account',
+  'bootstrap_person_contact',
+  'correct_contact_method',
+  'create_contact_method',
+  'guard_account_lifecycle_transition_insert',
+  'guard_account_state_insert',
+  'guard_account_state_update',
+  'guard_contact_method_insert',
+  'guard_contact_method_update',
+  'guard_contact_retirement_insert',
+  'guard_contact_supersession_insert',
+  'guard_contact_verification_insert',
+  'guard_people_primary_email_update',
+  'guard_primary_email_replacement_insert',
+  'guard_verification_invalidation_insert',
+  'invalidate_contact_verification',
+  'normalize_contact_value',
+  'record_contact_verification',
+  'reject_contact_history_mutation',
+  'reject_property_snapshot_mutation',
+  'replace_primary_email',
+  'require_identity_person',
+  'resolve_account_recovery_session',
+  'resolve_ordinary_session',
+  'retire_contact_method',
+  'transition_account_lifecycle'
+];
+
+const EXACT_TRIGGERS = [
+  ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
+  ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
+  ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
+  ['contact_method_retirements_apply', 'contact_method_retirements', 'apply_contact_retirement'],
+  ['contact_method_retirements_immutability_guard', 'contact_method_retirements', 'reject_contact_history_mutation'],
+  ['contact_method_retirements_insert_guard', 'contact_method_retirements', 'guard_contact_retirement_insert'],
+  ['contact_method_supersessions_apply', 'contact_method_supersessions', 'apply_contact_supersession'],
+  ['contact_method_supersessions_immutability_guard', 'contact_method_supersessions', 'reject_contact_history_mutation'],
+  ['contact_method_supersessions_insert_guard', 'contact_method_supersessions', 'guard_contact_supersession_insert'],
+  ['contact_methods_delete_guard', 'contact_methods', 'reject_contact_history_mutation'],
+  ['contact_methods_insert_guard', 'contact_methods', 'guard_contact_method_insert'],
+  ['contact_methods_update_guard', 'contact_methods', 'guard_contact_method_update'],
+  ['contact_verification_evidence_immutability_guard', 'contact_verification_evidence', 'reject_contact_history_mutation'],
+  ['contact_verification_evidence_insert_guard', 'contact_verification_evidence', 'guard_contact_verification_insert'],
+  ['contact_verification_invalidations_immutability_guard', 'contact_verification_invalidations', 'reject_contact_history_mutation'],
+  ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
+  ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
+  ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
+  ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
+  ['person_account_states_delete_guard', 'person_account_states', 'reject_contact_history_mutation'],
+  ['person_account_states_insert_guard', 'person_account_states', 'guard_account_state_insert'],
+  ['person_account_states_update_guard', 'person_account_states', 'guard_account_state_update'],
+  ['primary_email_replacements_apply', 'primary_email_replacements', 'apply_primary_email_replacement'],
+  ['primary_email_replacements_immutability_guard', 'primary_email_replacements', 'reject_contact_history_mutation'],
+  ['primary_email_replacements_insert_guard', 'primary_email_replacements', 'guard_primary_email_replacement_insert'],
+  ['property_snapshots_immutability_guard', 'property_snapshots', 'reject_property_snapshot_mutation']
+].map(([trigger_name, table_name, function_name]) => ({
+  trigger_name,
+  table_name,
+  schema_name: 'medialab_core',
+  function_name
+}));
 
 describe('P01C Test Database Reset Tooling Tests', () => {
   let client: pg.Client;
@@ -94,11 +162,13 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(2);
+    expect(ledgerRes.rows).toHaveLength(3);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
     expect(ledgerRes.rows[1].sha256).toBe('d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83');
+    expect(ledgerRes.rows[2].filename).toBe('0003_person_contacts_and_account_lifecycle.sql');
+    expect(ledgerRes.rows[2].sha256).toBe('984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3');
 
     // Verify row counts for all 9 domain tables
     for (const [table, expectedCount] of Object.entries(EXPECTED_ROW_COUNTS)) {
@@ -117,18 +187,22 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     );
     expect(seqRes.rows).toHaveLength(0);
 
-    // Verify exact non-system routine inventory (exactly medialab_core.reject_property_snapshot_mutation)
+    // Verify the exact released and additive routine inventory.
     const routRes = await client.query(
       `SELECT routine_schema, routine_name, routine_type
        FROM information_schema.routines
        WHERE routine_schema NOT IN ('pg_catalog', 'information_schema')
        ORDER BY routine_schema, routine_name;`
     );
-    expect(routRes.rows).toHaveLength(1);
-    expect(routRes.rows[0].routine_schema).toBe('medialab_core');
-    expect(routRes.rows[0].routine_name).toBe('reject_property_snapshot_mutation');
+    expect(routRes.rows).toEqual(
+      EXACT_ROUTINE_NAMES.map((routine_name) => ({
+        routine_schema: 'medialab_core',
+        routine_name,
+        routine_type: 'FUNCTION'
+      }))
+    );
 
-    // Verify exact non-system trigger object inventory (exactly property_snapshots_immutability_guard on medialab_core.property_snapshots)
+    // Verify the exact released and additive trigger inventory.
     const trigRes = await client.query(
       `SELECT 
           t.tgname AS trigger_name,
@@ -143,11 +217,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
        ORDER BY n.nspname, c.relname, t.tgname;`
     );
-    expect(trigRes.rows).toHaveLength(1);
-    expect(trigRes.rows[0].trigger_name).toBe('property_snapshots_immutability_guard');
-    expect(trigRes.rows[0].table_name).toBe('property_snapshots');
-    expect(trigRes.rows[0].schema_name).toBe('medialab_core');
-    expect(trigRes.rows[0].function_name).toBe('reject_property_snapshot_mutation');
+    expect(trigRes.rows).toEqual(EXACT_TRIGGERS);
 
     // Verify trigger timing and manipulation events
     const trigEventRes = await client.query(

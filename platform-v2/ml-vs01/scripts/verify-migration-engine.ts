@@ -32,8 +32,13 @@ if (fs.existsSync(canonicalDir)) {
   const files = fs.readdirSync(canonicalDir);
   const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort();
 
-  if (sqlFiles.length !== 2 || sqlFiles[0] !== '0001_identity_and_tenancy.sql' || sqlFiles[1] !== '0002_property_identity_and_snapshots.sql') {
-    console.error(`ERROR: Canonical migration directory must contain exactly 0001 and 0002 migrations. Found: ${sqlFiles.join(', ')}`);
+  if (
+    sqlFiles.length !== 3 ||
+    sqlFiles[0] !== '0001_identity_and_tenancy.sql' ||
+    sqlFiles[1] !== '0002_property_identity_and_snapshots.sql' ||
+    sqlFiles[2] !== '0003_person_contacts_and_account_lifecycle.sql'
+  ) {
+    console.error(`ERROR: Canonical migration directory must contain exactly 0001, 0002, and 0003 migrations. Found: ${sqlFiles.join(', ')}`);
     errors = true;
   }
 
@@ -88,9 +93,15 @@ const allSqlFiles = searchSqlFiles(baseDir);
 const allowedFixturePrefix = path.join(baseDir, 'tests/fixtures/migrations');
 const allowedCanonical1 = path.join(baseDir, 'db/migrations/0001_identity_and_tenancy.sql');
 const allowedCanonical2 = path.join(baseDir, 'db/migrations/0002_property_identity_and_snapshots.sql');
+const allowedCanonical3 = path.join(baseDir, 'db/migrations/0003_person_contacts_and_account_lifecycle.sql');
 
 for (const sqlFile of allSqlFiles) {
-  if (!sqlFile.startsWith(allowedFixturePrefix) && sqlFile !== allowedCanonical1 && sqlFile !== allowedCanonical2) {
+  if (
+    !sqlFile.startsWith(allowedFixturePrefix) &&
+    sqlFile !== allowedCanonical1 &&
+    sqlFile !== allowedCanonical2 &&
+    sqlFile !== allowedCanonical3
+  ) {
     console.error(`ERROR: SQL file outside isolated test-fixture directory: ${sqlFile}`);
     errors = true;
   }

@@ -36,7 +36,10 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   const host = options.host || process.env.PGHOST || '/tmp/mlvs01-pg';
   const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55432);
   const database = options.database || process.env.PGDATABASE || 'medialab_vs01_repair_p01a';
-  const user = options.user || process.env.PGUSER || (database === 'medialab_vs01_repair_p01a_test' ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app');
+  const user = options.user || process.env.PGUSER ||
+    (database === 'medialab_vs01_repair_p01a_test'
+      ? 'medialab_vs01_repair_p01a_test_owner'
+      : 'medialab_vs01_repair_p01a_owner');
 
   // Guard 1: Database name restriction
   if (!APPROVED_DATABASES.includes(database)) {
@@ -53,7 +56,9 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   }
 
   // Guard 3: User role validation
-  const expectedUser = database === 'medialab_vs01_repair_p01a_test' ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app';
+  const expectedUser = database === 'medialab_vs01_repair_p01a_test'
+    ? 'medialab_vs01_repair_p01a_test_owner'
+    : 'medialab_vs01_repair_p01a_owner';
   if (user !== expectedUser) {
     throw new Error(`SEED_SAFETY_FAILURE: Role mismatch for database '${database}'. Expected role '${expectedUser}', got '${user}'.`);
   }
@@ -309,8 +314,14 @@ const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 
 if (scriptPath && currentPath === scriptPath) {
   const isTestDb = process.argv.includes('--test');
-  const targetDb = isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a';
-  const targetUser = isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app';
+  const targetDb = process.env.PGDATABASE ||
+    (isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a');
+  const targetUser = process.env.PGUSER;
+
+  if (!targetUser) {
+    console.error('Seed CLI requires PGUSER as the migration owner role.');
+    process.exit(1);
+  }
 
   runSeed({
     database: targetDb,

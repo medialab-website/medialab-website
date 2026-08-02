@@ -30,7 +30,12 @@ for (const relPath of requiredFiles) {
 // 2. Canonical migration checks
 const migrationsDir = path.join(baseDir, 'db/migrations');
 const migrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
-if (migrations.length !== 2 || migrations[0] !== '0001_identity_and_tenancy.sql' || migrations[1] !== '0002_property_identity_and_snapshots.sql') {
+if (
+  migrations.length !== 3 ||
+  migrations[0] !== '0001_identity_and_tenancy.sql' ||
+  migrations[1] !== '0002_property_identity_and_snapshots.sql' ||
+  migrations[2] !== '0003_person_contacts_and_account_lifecycle.sql'
+) {
   console.error(`ERROR: Unexpected migration inventory: ${migrations.join(', ')}`);
   errors = true;
 }

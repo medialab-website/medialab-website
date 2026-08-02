@@ -6,19 +6,82 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
+const EXACT_ROUTINE_NAMES = [
+  'actor_can_administer_person',
+  'apply_account_lifecycle_transition',
+  'apply_contact_retirement',
+  'apply_contact_supersession',
+  'apply_primary_email_replacement',
+  'bootstrap_identity_account',
+  'bootstrap_person_contact',
+  'correct_contact_method',
+  'create_contact_method',
+  'guard_account_lifecycle_transition_insert',
+  'guard_account_state_insert',
+  'guard_account_state_update',
+  'guard_contact_method_insert',
+  'guard_contact_method_update',
+  'guard_contact_retirement_insert',
+  'guard_contact_supersession_insert',
+  'guard_contact_verification_insert',
+  'guard_people_primary_email_update',
+  'guard_primary_email_replacement_insert',
+  'guard_verification_invalidation_insert',
+  'invalidate_contact_verification',
+  'normalize_contact_value',
+  'record_contact_verification',
+  'reject_contact_history_mutation',
+  'reject_property_snapshot_mutation',
+  'replace_primary_email',
+  'require_identity_person',
+  'resolve_account_recovery_session',
+  'resolve_ordinary_session',
+  'retire_contact_method',
+  'transition_account_lifecycle'
+];
+
+const EXACT_TRIGGERS = [
+  ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
+  ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
+  ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
+  ['contact_method_retirements_apply', 'contact_method_retirements', 'apply_contact_retirement'],
+  ['contact_method_retirements_immutability_guard', 'contact_method_retirements', 'reject_contact_history_mutation'],
+  ['contact_method_retirements_insert_guard', 'contact_method_retirements', 'guard_contact_retirement_insert'],
+  ['contact_method_supersessions_apply', 'contact_method_supersessions', 'apply_contact_supersession'],
+  ['contact_method_supersessions_immutability_guard', 'contact_method_supersessions', 'reject_contact_history_mutation'],
+  ['contact_method_supersessions_insert_guard', 'contact_method_supersessions', 'guard_contact_supersession_insert'],
+  ['contact_methods_delete_guard', 'contact_methods', 'reject_contact_history_mutation'],
+  ['contact_methods_insert_guard', 'contact_methods', 'guard_contact_method_insert'],
+  ['contact_methods_update_guard', 'contact_methods', 'guard_contact_method_update'],
+  ['contact_verification_evidence_immutability_guard', 'contact_verification_evidence', 'reject_contact_history_mutation'],
+  ['contact_verification_evidence_insert_guard', 'contact_verification_evidence', 'guard_contact_verification_insert'],
+  ['contact_verification_invalidations_immutability_guard', 'contact_verification_invalidations', 'reject_contact_history_mutation'],
+  ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
+  ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
+  ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
+  ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
+  ['person_account_states_delete_guard', 'person_account_states', 'reject_contact_history_mutation'],
+  ['person_account_states_insert_guard', 'person_account_states', 'guard_account_state_insert'],
+  ['person_account_states_update_guard', 'person_account_states', 'guard_account_state_update'],
+  ['primary_email_replacements_apply', 'primary_email_replacements', 'apply_primary_email_replacement'],
+  ['primary_email_replacements_immutability_guard', 'primary_email_replacements', 'reject_contact_history_mutation'],
+  ['primary_email_replacements_insert_guard', 'primary_email_replacements', 'guard_primary_email_replacement_insert'],
+  ['property_snapshots_immutability_guard', 'property_snapshots', 'reject_property_snapshot_mutation']
+].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }));
+
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
     host: '/tmp/mlvs01-pg',
     port: 55432,
     database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test'
+    user: 'medialab_vs01_repair_p01a_test_owner'
   });
 
   const poolDev = new Pool({
     host: '/tmp/mlvs01-pg',
     port: 55432,
     database: 'medialab_vs01_repair_p01a',
-    user: 'medialab_vs01_repair_p01a_app'
+    user: 'medialab_vs01_repair_p01a_owner'
   });
 
   beforeAll(async () => {
@@ -42,19 +105,29 @@ describe('M02 Identity and Tenancy Schema', () => {
     const outDev = await runMigrations({
       migrationsDir,
       database: 'medialab_vs01_repair_p01a',
-      user: 'medialab_vs01_repair_p01a_app'
+      user: 'medialab_vs01_repair_p01a_owner',
+      runtimeUser: 'medialab_vs01_repair_p01a_app'
     });
     const outTest = await runMigrations({
       migrationsDir,
       database: 'medialab_vs01_repair_p01a_test',
-      user: 'medialab_vs01_repair_p01a_test'
+      user: 'medialab_vs01_repair_p01a_test_owner',
+      runtimeUser: 'medialab_vs01_repair_p01a_test'
     });
 
     expect(outDev.applied).toEqual([]);
-    expect(outDev.skipped).toEqual(['0001_identity_and_tenancy.sql', '0002_property_identity_and_snapshots.sql']);
+    expect(outDev.skipped).toEqual([
+      '0001_identity_and_tenancy.sql',
+      '0002_property_identity_and_snapshots.sql',
+      '0003_person_contacts_and_account_lifecycle.sql'
+    ]);
 
     expect(outTest.applied).toEqual([]);
-    expect(outTest.skipped).toEqual(['0001_identity_and_tenancy.sql', '0002_property_identity_and_snapshots.sql']);
+    expect(outTest.skipped).toEqual([
+      '0001_identity_and_tenancy.sql',
+      '0002_property_identity_and_snapshots.sql',
+      '0003_person_contacts_and_account_lifecycle.sql'
+    ]);
   });
 
   const exactTableNames = [
@@ -77,7 +150,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app';
+        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test_owner' : 'medialab_vs01_repair_p01a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -90,13 +163,13 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app';
+        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test_owner' : 'medialab_vs01_repair_p01a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
       });
 
-      it('4. Exact allowed non-table object inventory', async () => {
+      it('4. Exact released and additive non-table object inventory', async () => {
         const resViews = await pool.query(`SELECT viewname FROM pg_views WHERE schemaname = 'medialab_core'`);
         expect(resViews.rows).toHaveLength(0);
         
@@ -112,12 +185,9 @@ describe('M02 Identity and Tenancy Schema', () => {
           WHERE routine_schema = 'medialab_core'
           ORDER BY routine_name
         `);
-        expect(resRoutines.rows).toEqual([
-          {
-            routine_name: 'reject_property_snapshot_mutation',
-            routine_type: 'FUNCTION'
-          }
-        ]);
+        expect(resRoutines.rows).toEqual(
+          EXACT_ROUTINE_NAMES.map((routine_name) => ({ routine_name, routine_type: 'FUNCTION' }))
+        );
 
         const resTriggers = await pool.query(`
           SELECT
@@ -132,13 +202,7 @@ describe('M02 Identity and Tenancy Schema', () => {
             AND n.nspname = 'medialab_core'
           ORDER BY c.relname, t.tgname
         `);
-        expect(resTriggers.rows).toEqual([
-          {
-            trigger_name: 'property_snapshots_immutability_guard',
-            table_name: 'property_snapshots',
-            function_name: 'reject_property_snapshot_mutation'
-          }
-        ]);
+        expect(resTriggers.rows).toEqual(EXACT_TRIGGERS);
       });
 
       it('5. Exact column definitions', async () => {

@@ -20,10 +20,23 @@ export interface MigrateOptions {
   port?: number;
   database?: string;
   user?: string;
+  runtimeUser?: string;
   password?: string;
   schema?: string;
   client?: pg.Client;
 }
+
+const AUTHORITY_PACKET_MIGRATION = '0003_person_contacts_and_account_lifecycle.sql';
+
+const PUBLIC_MUTATION_FUNCTIONS = [
+  'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
+  'medialab_core.record_contact_verification(uuid, text, uuid, timestamptz, text, text)',
+  'medialab_core.invalidate_contact_verification(uuid, text, uuid, text)',
+  'medialab_core.correct_contact_method(uuid, uuid, text, uuid, text, text)',
+  'medialab_core.retire_contact_method(uuid, text, uuid, text)',
+  'medialab_core.replace_primary_email(uuid, text, uuid, uuid, text)',
+  'medialab_core.transition_account_lifecycle(uuid, text, uuid, uuid, text, text, boolean)'
+];
 
 export function validateMigrationFilenames(filenames: string[]): void {
   const filenameRegex = /^[0-9]{4}_[a-z0-9_]+\.sql$/;
@@ -49,6 +62,51 @@ function sanitizeIdentifier(ident: string): string {
   return `"${ident}"`;
 }
 
+function sanitizeRoleIdentifier(ident: string): string {
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(ident)) {
+    throw new Error(`Invalid PostgreSQL role identifier '${ident}'. Must match ^[a-z_][a-z0-9_]{0,62}$`);
+  }
+  return `"${ident}"`;
+}
+
+async function validateRuntimeRole(client: pg.Client, runtimeUser: string): Promise<string> {
+  const safeRuntimeRole = sanitizeRoleIdentifier(runtimeUser);
+  const context = await client.query<{ migration_owner: string; runtime_exists: boolean }>(
+    `SELECT current_user AS migration_owner,
+            EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1) AS runtime_exists`,
+    [runtimeUser]
+  );
+
+  if (!context.rows[0].runtime_exists) {
+    throw new Error(`Configured runtime role '${runtimeUser}' does not exist`);
+  }
+  if (context.rows[0].migration_owner === runtimeUser) {
+    throw new Error('Migration owner and restricted runtime role must be different roles');
+  }
+
+  return safeRuntimeRole;
+}
+
+async function applyRuntimePrivilegePolicy(client: pg.Client, runtimeUser: string): Promise<void> {
+  const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
+  const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
+  const safeDatabase = sanitizeIdentifier(databaseResult.rows[0].database_name);
+
+  await client.query(`
+    REVOKE ALL PRIVILEGES ON DATABASE ${safeDatabase} FROM ${safeRuntimeRole};
+    GRANT CONNECT ON DATABASE ${safeDatabase} TO ${safeRuntimeRole};
+    REVOKE ALL PRIVILEGES ON SCHEMA medialab_meta, medialab_core FROM ${safeRuntimeRole};
+    GRANT USAGE ON SCHEMA medialab_core TO ${safeRuntimeRole};
+    REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA medialab_core FROM ${safeRuntimeRole};
+    REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA medialab_core FROM ${safeRuntimeRole};
+    REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA medialab_core FROM PUBLIC;
+    REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA medialab_core FROM ${safeRuntimeRole};
+    ${PUBLIC_MUTATION_FUNCTIONS.map((signature) =>
+      `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
+    ).join('\n    ')}
+  `);
+}
+
 export async function runMigrations(options: MigrateOptions): Promise<MigrationResult> {
   const { migrationsDir } = options;
 
@@ -65,6 +123,12 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
   // 2. Sort lexicographically
   sqlFiles.sort((a, b) => a.localeCompare(b));
 
+  const requiresRuntimeRole = sqlFiles.includes(AUTHORITY_PACKET_MIGRATION);
+  const runtimeUser = options.runtimeUser || process.env.PGRUNTIMEUSER;
+  if (requiresRuntimeRole && !runtimeUser) {
+    throw new Error(`PGRUNTIMEUSER is required when applying ${AUTHORITY_PACKET_MIGRATION}`);
+  }
+
   // Validate and sanitize schema name
   const schemaName = options.schema || 'medialab_meta';
   const safeSchema = sanitizeIdentifier(schemaName);
@@ -76,20 +140,29 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
 
   if (!client) {
     ownClient = true;
+    const migrationUser = options.user || process.env.PGUSER;
+    if (!migrationUser) {
+      throw new Error('PGUSER is required as the migration owner role');
+    }
     client = new pg.Client({
       host: options.host || process.env.PGHOST || '/tmp/mlvs01-pg',
       port: options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55432),
       database: options.database || process.env.PGDATABASE || 'medialab_vs01_repair_p01a',
-      user: options.user || process.env.PGUSER || 'medialab_vs01_repair_p01a_app',
+      user: migrationUser,
       password: options.password || process.env.PGPASSWORD || undefined
     });
     await client.connect();
+  }
+
+  if (requiresRuntimeRole) {
+    await validateRuntimeRole(client, runtimeUser!);
   }
 
   const result: MigrationResult = {
     applied: [],
     skipped: []
   };
+  let authorityPolicyApplied = false;
 
   try {
     // 4. Ensure ledger table exists and set search_path
@@ -136,6 +209,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           if (sqlContent.trim().length > 0) {
             await client.query(sqlContent);
           }
+          if (file === AUTHORITY_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -153,6 +230,17 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
       }
     }
 
+    if (requiresRuntimeRole && !authorityPolicyApplied) {
+      try {
+        await client.query('BEGIN;');
+        await applyRuntimePrivilegePolicy(client, runtimeUser!);
+        await client.query('COMMIT;');
+      } catch (err) {
+        await client.query('ROLLBACK;');
+        throw err;
+      }
+    }
+
     return result;
   } finally {
     if (ownClient && client) {
@@ -167,8 +255,15 @@ const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 
 if (scriptPath && currentPath === scriptPath) {
   const isTestDb = process.argv.includes('--test');
-  const targetDb = isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a';
-  const targetUser = isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app';
+  const targetDb = process.env.PGDATABASE ||
+    (isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a');
+  const targetUser = process.env.PGUSER;
+  const runtimeUser = process.env.PGRUNTIMEUSER;
+
+  if (!targetUser || !runtimeUser) {
+    console.error('Migration CLI requires PGUSER as migration owner and PGRUNTIMEUSER as restricted runtime role.');
+    process.exit(1);
+  }
 
   const __dirname = path.dirname(currentPath);
   const migrationsDir = path.resolve(__dirname, 'migrations');
@@ -176,7 +271,8 @@ if (scriptPath && currentPath === scriptPath) {
   runMigrations({
     migrationsDir,
     database: targetDb,
-    user: targetUser
+    user: targetUser,
+    runtimeUser
   })
     .then((res) => {
       console.log(JSON.stringify(res, null, 2));
