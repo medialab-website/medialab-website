@@ -27,6 +27,7 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
       'scripts/verify-changed-files.ts',
       'scripts/verify-migration-engine.ts',
       'scripts/verify-identity-tenancy-schema.ts',
+      'scripts/verify-property-snapshot-schema.ts',
       'scripts/verify-foundation-closeout.ts',
       'db/migrate.ts',
       'db/seed.ts',
@@ -34,7 +35,9 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
       'db/fixtures/identity-tenancy-fixtures.ts',
       'db/migrations/README.md',
       'db/migrations/0001_identity_and_tenancy.sql',
+      'db/migrations/0002_property_identity_and_snapshots.sql',
       'tests/identity-tenancy-schema.test.ts',
+      'tests/property-snapshot-schema.test.ts',
       'tests/foundation-fixtures.test.ts',
       'tests/test-database-reset.test.ts'
     ];
@@ -64,7 +67,6 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
 
   it('verifies prohibited API, HTTP, and UI artifacts are absent', () => {
     const prohibitedPaths = [
-      'migrations/0002',
       'src/server.ts',
       'src/app.ts',
       'src/routes',

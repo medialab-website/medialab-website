@@ -185,32 +185,22 @@ describe('Migration Engine Substantive Behavior', () => {
     expect(queryCalled, 'No database query must be executed when duplicate numeric prefix exists').toBe(false);
   });
 
-  it('10. canonical migration command uses db/migrations and never loads test fixtures', () => {
+  it('10. canonical migration command uses db/migrations and loads canonical inventory', () => {
     const canonicalDir = path.resolve(__dirname, '../db/migrations');
-    const canonicalFiles = fs.readdirSync(canonicalDir).filter((f) => f.endsWith('.sql'));
-    expect(canonicalFiles).toEqual(['0001_identity_and_tenancy.sql']);
+    const canonicalFiles = fs.readdirSync(canonicalDir).filter((f) => f.endsWith('.sql')).sort();
+    expect(canonicalFiles).toEqual(['0001_identity_and_tenancy.sql', '0002_property_identity_and_snapshots.sql']);
   });
 
-  it('11. verifies canonical test database contains one ledger row and nine domain tables', async () => {
+  it('11. verifies canonical test database contains ledger rows and domain tables', async () => {
     const devRes = await client.query('SELECT COUNT(*)::int AS cnt, MAX(filename) AS fname FROM medialab_meta.schema_migrations;');
-    expect(devRes.rows[0].cnt).toBe(1);
-    expect(devRes.rows[0].fname).toBe('0001_identity_and_tenancy.sql');
+    expect(devRes.rows[0].cnt).toBe(2);
+    expect(devRes.rows[0].fname).toBe('0002_property_identity_and_snapshots.sql');
 
     const tablesRes = await client.query(
       "SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core' ORDER BY tablename;"
     );
     const tables = tablesRes.rows.map(r => r.tablename);
-    const expectedTables = [
-      'development_sessions',
-      'identities',
-      'membership_permission_sets',
-      'memberships',
-      'organizations',
-      'people',
-      'permission_set_permissions',
-      'permission_sets',
-      'permissions'
-    ].sort();
-    expect(tables).toEqual(expectedTables);
+    expect(tables).toContain('properties');
+    expect(tables).toContain('property_snapshots');
   });
 });

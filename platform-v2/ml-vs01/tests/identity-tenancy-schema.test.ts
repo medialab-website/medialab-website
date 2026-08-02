@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { execSync } from 'child_process';
+import { runMigrations } from '../db/migrate.js';
 import pkg from 'pg';
 const { Pool } = pkg;
 import crypto from 'crypto';
@@ -30,25 +30,31 @@ describe('M02 Identity and Tenancy Schema', () => {
     await poolDev.end();
   });
 
-  it('1. Both canonical migration commands execute and extract JSON', () => {
-    const outDevRaw = execSync('npm run migrate:dev').toString();
-    const outTestRaw = execSync('npm run migrate:test').toString();
-    
-    // We expect both to be clean no-ops since they are already applied via task-86
-    const extractJson = (output: string) => {
-      const match = output.match(/(\{.*\})/s);
-      if (!match) throw new Error('No JSON found in migration output: ' + output);
-      return JSON.parse(match[1]);
-    };
+  it('1. Canonical migration scripts are path-independent and both databases are clean no-ops', async () => {
+    const cwd = path.resolve(__dirname, '..');
+    const packageJson = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
 
-    const outDev = extractJson(outDevRaw);
-    const outTest = extractJson(outTestRaw);
+    expect(packageJson.scripts['migrate:dev']).toBe('tsx db/migrate.ts');
+    expect(packageJson.scripts['migrate:test']).toBe('tsx db/migrate.ts --test');
+
+    const migrationsDir = path.join(cwd, 'db/migrations');
+
+    const outDev = await runMigrations({
+      migrationsDir,
+      database: 'medialab_vs01_repair_p01a',
+      user: 'medialab_vs01_repair_p01a_app'
+    });
+    const outTest = await runMigrations({
+      migrationsDir,
+      database: 'medialab_vs01_repair_p01a_test',
+      user: 'medialab_vs01_repair_p01a_test'
+    });
 
     expect(outDev.applied).toEqual([]);
-    expect(outDev.skipped).toEqual(['0001_identity_and_tenancy.sql']);
+    expect(outDev.skipped).toEqual(['0001_identity_and_tenancy.sql', '0002_property_identity_and_snapshots.sql']);
 
     expect(outTest.applied).toEqual([]);
-    expect(outTest.skipped).toEqual(['0001_identity_and_tenancy.sql']);
+    expect(outTest.skipped).toEqual(['0001_identity_and_tenancy.sql', '0002_property_identity_and_snapshots.sql']);
   });
 
   const exactTableNames = [
@@ -75,20 +81,22 @@ describe('M02 Identity and Tenancy Schema', () => {
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
-      it('3. Exact nine table names and owners', async () => {
+      it('3. Original nine identity/tenancy table names and owners remain present', async () => {
         const resTables = await pool.query(`
           SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core' ORDER BY tablename
         `);
         const tables = resTables.rows.map(r => r.tablename);
-        expect(tables).toEqual(exactTableNames);
-        
+        for (const table of exactTableNames) {
+          expect(tables).toContain(table);
+        }
+
         const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a_app';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
       });
 
-      it('4. Zero additional objects', async () => {
+      it('4. Exact allowed non-table object inventory', async () => {
         const resViews = await pool.query(`SELECT viewname FROM pg_views WHERE schemaname = 'medialab_core'`);
         expect(resViews.rows).toHaveLength(0);
         
@@ -98,11 +106,39 @@ describe('M02 Identity and Tenancy Schema', () => {
         const resSeqs = await pool.query(`SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'medialab_core'`);
         expect(resSeqs.rows).toHaveLength(0);
 
-        const resRoutines = await pool.query(`SELECT routine_name, routine_type FROM information_schema.routines WHERE routine_schema = 'medialab_core'`);
-        expect(resRoutines.rows).toHaveLength(0);
+        const resRoutines = await pool.query(`
+          SELECT routine_name, routine_type
+          FROM information_schema.routines
+          WHERE routine_schema = 'medialab_core'
+          ORDER BY routine_name
+        `);
+        expect(resRoutines.rows).toEqual([
+          {
+            routine_name: 'reject_property_snapshot_mutation',
+            routine_type: 'FUNCTION'
+          }
+        ]);
 
-        const resTriggers = await pool.query(`SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema = 'medialab_core'`);
-        expect(resTriggers.rows).toHaveLength(0);
+        const resTriggers = await pool.query(`
+          SELECT
+            t.tgname AS trigger_name,
+            c.relname AS table_name,
+            p.proname AS function_name
+          FROM pg_trigger t
+          JOIN pg_class c ON c.oid = t.tgrelid
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          JOIN pg_proc p ON p.oid = t.tgfoid
+          WHERE NOT t.tgisinternal
+            AND n.nspname = 'medialab_core'
+          ORDER BY c.relname, t.tgname
+        `);
+        expect(resTriggers.rows).toEqual([
+          {
+            trigger_name: 'property_snapshots_immutability_guard',
+            table_name: 'property_snapshots',
+            function_name: 'reject_property_snapshot_mutation'
+          }
+        ]);
       });
 
       it('5. Exact column definitions', async () => {
@@ -533,7 +569,7 @@ describe('M02 Identity and Tenancy Schema', () => {
         const res = await pool.query(`SELECT count(*)::int as count FROM medialab_core.${table}`);
         const cnt = res.rows[0].count;
         const exp = expectedCounts[table] || 0;
-        expect(cnt === 0 || cnt === exp, `Table ${table} in ${env} has ${cnt} rows, expected 0 or ${exp}`).toBe(true);
+        expect(cnt, `Table ${table} in ${env} has ${cnt} rows, expected exact ${exp}`).toBe(exp);
       }
     }
   });

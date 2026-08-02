@@ -1,5 +1,7 @@
 import pg from 'pg';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { runMigrations } from './migrate.js';
 import { runSeed } from './seed.js';
@@ -94,14 +96,35 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
   await verifyClient.connect();
 
   try {
-    // 1. Ledger verification
-    const ledgerRes = await verifyClient.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations;');
-    if (
-      ledgerRes.rows.length !== 1 ||
-      ledgerRes.rows[0].filename !== '0001_identity_and_tenancy.sql' ||
-      ledgerRes.rows[0].sha256 !== '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'
-    ) {
-      throw new Error('TEST_RESET_GUARD_FAILURE: Ledger verification after reset failed.');
+    // 1. Dynamic exact canonical migration ledger verification
+    const canonicalFiles = fs
+      .readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
+
+    const expectedLedger = canonicalFiles.map((filename) => {
+      const content = fs.readFileSync(path.join(migrationsDir, filename));
+      const sha256 = crypto.createHash('sha256').update(content).digest('hex').toLowerCase();
+      return { filename, sha256 };
+    });
+
+    const ledgerRes = await verifyClient.query(
+      'SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;'
+    );
+
+    if (ledgerRes.rows.length !== expectedLedger.length) {
+      throw new Error(`TEST_RESET_GUARD_FAILURE: Migration ledger row count mismatch after reset. Expected ${expectedLedger.length}, got ${ledgerRes.rows.length}.`);
+    }
+
+    for (let i = 0; i < expectedLedger.length; i++) {
+      if (
+        ledgerRes.rows[i].filename !== expectedLedger[i].filename ||
+        ledgerRes.rows[i].sha256 !== expectedLedger[i].sha256
+      ) {
+        throw new Error(
+          `TEST_RESET_GUARD_FAILURE: Ledger mismatch for migration ${expectedLedger[i].filename}. Expected sha256 ${expectedLedger[i].sha256}, got filename=${ledgerRes.rows[i].filename} sha256=${ledgerRes.rows[i].sha256}.`
+        );
+      }
     }
 
     // 2. Row count verification

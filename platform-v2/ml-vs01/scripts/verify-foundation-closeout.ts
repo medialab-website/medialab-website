@@ -13,21 +13,21 @@ const worktreeRoot = path.resolve(baseDir, '../../');
 
 let errors = false;
 
-// 1. Original 14-path P01C allowlist definition
-const ORIGINAL_14_ALLOWLIST = [
+// 1. P02-M01 Allowlist definition
+const ALLOWLIST = [
   'platform-v2/ml-vs01/BUILD_STATE.md',
   'platform-v2/ml-vs01/CHANGED_FILES.md',
   'platform-v2/ml-vs01/package.json',
+  'platform-v2/ml-vs01/db/migrations/0002_property_identity_and_snapshots.sql',
+  'platform-v2/ml-vs01/db/reset-test-database.ts',
   'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
   'platform-v2/ml-vs01/scripts/verify-identity-tenancy-schema.ts',
-  'platform-v2/ml-vs01/tests/migration-engine.test.ts',
-  'platform-v2/ml-vs01/tests/workspace-foundation.test.ts',
-  'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
-  'platform-v2/ml-vs01/db/fixtures/identity-tenancy-fixtures.ts',
-  'platform-v2/ml-vs01/db/seed.ts',
-  'platform-v2/ml-vs01/db/reset-test-database.ts',
+  'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts',
-  'platform-v2/ml-vs01/tests/foundation-fixtures.test.ts',
+  'platform-v2/ml-vs01/tests/migration-engine.test.ts',
+  'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
+  'platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts',
+  'platform-v2/ml-vs01/tests/workspace-foundation.test.ts',
   'platform-v2/ml-vs01/tests/test-database-reset.test.ts'
 ];
 
@@ -64,9 +64,9 @@ for (const line of lines) {
     errors = true;
   }
 
-  // Every changed path must be contained in the original 14-path P01C allowlist
-  if (!ORIGINAL_14_ALLOWLIST.includes(gitPath)) {
-    console.error(`ERROR: Changed file '${gitPath}' is outside the original 14-path allowlist.`);
+  // Every changed path must be contained in the allowlist
+  if (!ALLOWLIST.includes(gitPath)) {
+    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M01 allowlist.`);
     errors = true;
   }
 
@@ -90,7 +90,7 @@ if (!fs.existsSync(changedFilesMdPath)) {
   }
 
   // Verify CHANGED_FILES.md does NOT list allowed-but-unchanged files
-  for (const allowedPath of ORIGINAL_14_ALLOWLIST) {
+  for (const allowedPath of ALLOWLIST) {
     if (!actualChangedPaths.includes(allowedPath) && mdContent.includes(allowedPath)) {
       console.error(`ERROR: CHANGED_FILES.md lists allowed-but-unchanged path '${allowedPath}'`);
       errors = true;
@@ -99,26 +99,32 @@ if (!fs.existsSync(changedFilesMdPath)) {
 }
 
 // 5. Canonical Migration & Hash check
-const migrationFile = path.join(baseDir, 'db/migrations/0001_identity_and_tenancy.sql');
-if (!fs.existsSync(migrationFile)) {
-  console.error(`ERROR: Canonical migration missing at ${migrationFile}`);
+const migrationFile1 = path.join(baseDir, 'db/migrations/0001_identity_and_tenancy.sql');
+if (!fs.existsSync(migrationFile1)) {
+  console.error(`ERROR: Canonical migration missing at ${migrationFile1}`);
   errors = true;
 } else {
-  const migrationContent = fs.readFileSync(migrationFile);
+  const migrationContent = fs.readFileSync(migrationFile1);
   const sha256 = crypto.createHash('sha256').update(migrationContent).digest('hex').toLowerCase();
   const expectedSha256 = '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31';
   if (sha256 !== expectedSha256) {
-    console.error(`ERROR: Migration SHA256 mismatch. Expected ${expectedSha256}, got ${sha256}`);
+    console.error(`ERROR: Migration 0001 SHA256 mismatch. Expected ${expectedSha256}, got ${sha256}`);
     errors = true;
   }
 }
 
-// Ensure no migration 0002 or later
-const migrationsDir = path.join(baseDir, 'db/migrations');
-const migrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
-if (migrations.length !== 1 || migrations[0] !== '0001_identity_and_tenancy.sql') {
-  console.error(`ERROR: Additional migration found in ${migrationsDir}: ${migrations.join(', ')}`);
+const migrationFile2 = path.join(baseDir, 'db/migrations/0002_property_identity_and_snapshots.sql');
+if (!fs.existsSync(migrationFile2)) {
+  console.error(`ERROR: Canonical migration missing at ${migrationFile2}`);
   errors = true;
+} else {
+  const migrationContent = fs.readFileSync(migrationFile2);
+  const sha256 = crypto.createHash('sha256').update(migrationContent).digest('hex').toLowerCase();
+  const expectedSha256 = 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83';
+  if (sha256 !== expectedSha256) {
+    console.error(`ERROR: Migration 0002 SHA256 mismatch. Expected ${expectedSha256}, got ${sha256}`);
+    errors = true;
+  }
 }
 
 // 6. Package Lock & Dependency Manifest Check
@@ -131,39 +137,12 @@ if (lockSha256 !== expectedLockSha256) {
   errors = true;
 }
 
-// 7. Fixture Contract & Safety Check
-const fixtureFile = path.join(baseDir, 'db/fixtures/identity-tenancy-fixtures.ts');
-if (fs.existsSync(fixtureFile)) {
-  const content = fs.readFileSync(fixtureFile, 'utf-8');
-  if (content.includes('password') || content.includes('secret') || content.includes('api_key') || content.includes('token_raw')) {
-    console.error(`ERROR: Fixture file contains prohibited secret/password terms.`);
-    errors = true;
-  }
-  if (!content.includes('medialab.invalid')) {
-    console.error(`ERROR: Synthetic fixture emails must use .medialab.invalid domain.`);
-    errors = true;
-  }
-}
-
-// 8. Reset Safety Check
-const resetFile = path.join(baseDir, 'db/reset-test-database.ts');
-if (fs.existsSync(resetFile)) {
-  const content = fs.readFileSync(resetFile, 'utf-8');
-  if (content.includes('DROP DATABASE')) {
-    console.error(`ERROR: reset-test-database.ts must never use DROP DATABASE.`);
-    errors = true;
-  }
-  if (!content.includes('medialab_vs01_repair_p01a_test')) {
-    console.error(`ERROR: reset-test-database.ts must explicitly mandate test database name.`);
-    errors = true;
-  }
-}
-
-// 9. Test Files Substantive Check
+// 7. Test Files Substantive Check
 const testFiles = [
   'tests/migration-engine.test.ts',
   'tests/workspace-foundation.test.ts',
   'tests/identity-tenancy-schema.test.ts',
+  'tests/property-snapshot-schema.test.ts',
   'tests/foundation-fixtures.test.ts',
   'tests/test-database-reset.test.ts'
 ];

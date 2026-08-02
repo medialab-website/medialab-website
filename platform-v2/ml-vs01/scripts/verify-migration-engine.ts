@@ -30,10 +30,10 @@ for (const relPath of requiredEngineFiles) {
 const canonicalDir = path.join(baseDir, 'db/migrations');
 if (fs.existsSync(canonicalDir)) {
   const files = fs.readdirSync(canonicalDir);
-  const sqlFiles = files.filter((f) => f.endsWith('.sql'));
+  const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort();
 
-  if (sqlFiles.length !== 1 || sqlFiles[0] !== '0001_identity_and_tenancy.sql') {
-    console.error(`ERROR: Canonical migration directory must contain exactly 0001_identity_and_tenancy.sql during M02. Found: ${sqlFiles.join(', ')}`);
+  if (sqlFiles.length !== 2 || sqlFiles[0] !== '0001_identity_and_tenancy.sql' || sqlFiles[1] !== '0002_property_identity_and_snapshots.sql') {
+    console.error(`ERROR: Canonical migration directory must contain exactly 0001 and 0002 migrations. Found: ${sqlFiles.join(', ')}`);
     errors = true;
   }
 
@@ -67,7 +67,7 @@ if (fs.existsSync(lockPath)) {
   errors = true;
 }
 
-// 4. Check that migration fixtures are isolated under tests/fixtures/migrations
+// 4. Check that migration fixtures are isolated under tests/fixtures/migrations or db/migrations
 function searchSqlFiles(dirPath: string): string[] {
   let results: string[] = [];
   if (!fs.existsSync(dirPath)) return results;
@@ -86,10 +86,11 @@ function searchSqlFiles(dirPath: string): string[] {
 
 const allSqlFiles = searchSqlFiles(baseDir);
 const allowedFixturePrefix = path.join(baseDir, 'tests/fixtures/migrations');
-const allowedCanonical = path.join(baseDir, 'db/migrations/0001_identity_and_tenancy.sql');
+const allowedCanonical1 = path.join(baseDir, 'db/migrations/0001_identity_and_tenancy.sql');
+const allowedCanonical2 = path.join(baseDir, 'db/migrations/0002_property_identity_and_snapshots.sql');
 
 for (const sqlFile of allSqlFiles) {
-  if (!sqlFile.startsWith(allowedFixturePrefix) && sqlFile !== allowedCanonical) {
+  if (!sqlFile.startsWith(allowedFixturePrefix) && sqlFile !== allowedCanonical1 && sqlFile !== allowedCanonical2) {
     console.error(`ERROR: SQL file outside isolated test-fixture directory: ${sqlFile}`);
     errors = true;
   }
