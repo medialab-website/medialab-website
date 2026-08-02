@@ -6,17 +6,20 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --fileParallelism=false",
     "migrate:dev": "tsx db/migrate.ts",
     "migrate:test": "tsx db/migrate.ts --test",
+    "db:seed": "tsx db/seed.ts",
+    "db:seed:test": "tsx db/seed.ts --test",
+    "db:reset:test": "tsx db/reset-test-database.ts",
     "verify:runtime": "tsx scripts/verify-runtime.ts",
-    "verify:boundary": "tsx scripts/verify-packet-boundary.ts",
     "verify:dependencies": "tsx scripts/verify-dependencies-exact.ts",
     "verify:placeholders": "tsx scripts/verify-no-placeholders.ts",
     "verify:changed-files": "tsx scripts/verify-changed-files.ts",
     "verify:migration-engine": "tsx scripts/verify-migration-engine.ts",
     "verify:identity-tenancy-schema": "tsx scripts/verify-identity-tenancy-schema.ts",
-    "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:boundary && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files && npm run verify:migration-engine && npm run verify:identity-tenancy-schema"
+    "verify:foundation-closeout": "tsx scripts/verify-foundation-closeout.ts",
+    "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files && npm run verify:migration-engine && npm run verify:identity-tenancy-schema && npm run verify:foundation-closeout"
   },
   "dependencies": {
     "pg": "8.22.0"

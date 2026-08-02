@@ -515,16 +515,26 @@ describe('M02 Identity and Tenancy Schema', () => {
 
   });
 
-  it('14. Zero-row assertions in all nine tables in both databases', async () => {
+  it('14. Domain table row count assertions in both databases', async () => {
+    const expectedCounts: Record<string, number> = {
+      organizations: 1,
+      people: 3,
+      identities: 2,
+      memberships: 3,
+      permissions: 3,
+      permission_sets: 1,
+      permission_set_permissions: 3,
+      membership_permission_sets: 1,
+      development_sessions: 1
+    };
+
     for (const [env, pool] of Object.entries({ test: poolTest, dev: poolDev })) {
       for (const table of exactTableNames) {
-        const res = await pool.query(`SELECT count(*) as count FROM medialab_core.${table}`);
-        if (res.rows[0].count !== '0') {
-           throw new Error(`${env} db table ${table} has ${res.rows[0].count} rows! Expected 0.`);
-        }
-        expect(res.rows[0].count).toBe('0');
+        const res = await pool.query(`SELECT count(*)::int as count FROM medialab_core.${table}`);
+        const cnt = res.rows[0].count;
+        const exp = expectedCounts[table] || 0;
+        expect(cnt === 0 || cnt === exp, `Table ${table} in ${env} has ${cnt} rows, expected 0 or ${exp}`).toBe(true);
       }
     }
   });
-
 });

@@ -22,16 +22,21 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
       'README.md',
       'vitest.config.ts',
       'scripts/verify-runtime.ts',
-      'scripts/verify-packet-boundary.ts',
       'scripts/verify-dependencies-exact.ts',
       'scripts/verify-no-placeholders.ts',
       'scripts/verify-changed-files.ts',
       'scripts/verify-migration-engine.ts',
       'scripts/verify-identity-tenancy-schema.ts',
+      'scripts/verify-foundation-closeout.ts',
       'db/migrate.ts',
+      'db/seed.ts',
+      'db/reset-test-database.ts',
+      'db/fixtures/identity-tenancy-fixtures.ts',
       'db/migrations/README.md',
       'db/migrations/0001_identity_and_tenancy.sql',
-      'tests/identity-tenancy-schema.test.ts'
+      'tests/identity-tenancy-schema.test.ts',
+      'tests/foundation-fixtures.test.ts',
+      'tests/test-database-reset.test.ts'
     ];
 
     for (const relPath of requiredFiles) {
@@ -57,17 +62,14 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
     });
   });
 
-  it('verifies prohibited P01B-M02, P01C, API, and UI artifacts are absent', () => {
+  it('verifies prohibited API, HTTP, and UI artifacts are absent', () => {
     const prohibitedPaths = [
-      'migrations',
+      'migrations/0002',
       'src/server.ts',
       'src/app.ts',
       'src/routes',
       'fastify',
       'openapi',
-      'db/fixtures',
-      'db/seeds',
-      'reseed',
       'ui',
       'components'
     ];

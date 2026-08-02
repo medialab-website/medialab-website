@@ -16,13 +16,16 @@ let errors = false;
 const requiredFiles = [
   'db/migrations/0001_identity_and_tenancy.sql',
   'scripts/verify-identity-tenancy-schema.ts',
-  'tests/identity-tenancy-schema.test.ts'
+  'tests/identity-tenancy-schema.test.ts',
+  'db/fixtures/identity-tenancy-fixtures.ts',
+  'db/seed.ts',
+  'db/reset-test-database.ts'
 ];
 
 for (const relPath of requiredFiles) {
   const fullPath = path.join(baseDir, relPath);
   if (!fs.existsSync(fullPath)) {
-    console.error(`ERROR: Required M02 file missing: ${relPath}`);
+    console.error(`ERROR: Required foundation file missing: ${relPath}`);
     errors = true;
   }
 }
@@ -43,12 +46,8 @@ if (sha256 !== expectedSha256) {
   errors = true;
 }
 
-// 3. Reject prohibited patterns (seeds, fastify, etc.) and migrations >= 0002
+// 3. Reject prohibited patterns (Fastify, UI, HTTP, migrations >= 0002)
 const prohibitedPatterns = [
-  'db/fixtures',
-  'db/seeds',
-  'db/reset-test-database.ts',
-  'reseed',
   'migrations/0002',
   'src/api',
   'src/auth',
