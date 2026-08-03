@@ -12,6 +12,8 @@ import {
   MEMBERSHIP_PERMISSION_SET_FIXTURES,
   DEVELOPMENT_SESSION_FIXTURE
 } from './fixtures/identity-tenancy-fixtures.js';
+import { CATALOG_FIXTURE_TABLES } from './fixtures/current-catalog-price-fixtures.js';
+import { CURRENT_REAL_ESTATE_CATALOG_TABLES } from './fixtures/current-real-estate-catalog-seed.js';
 
 export interface SeedOptions {
   host?: string;
@@ -28,27 +30,27 @@ export interface SeedResult {
 }
 
 const APPROVED_DATABASES = [
-  'medialab_vs01_repair_p01a',
-  'medialab_vs01_repair_p01a_test'
+  'medialab_p02m03a',
+  'medialab_p02m03a_test'
 ];
 
 export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
-  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-pg';
+  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m03a-pg';
   const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55432);
-  const database = options.database || process.env.PGDATABASE || 'medialab_vs01_repair_p01a';
+  const database = options.database || process.env.PGDATABASE || 'medialab_p02m03a';
   const user = options.user || process.env.PGUSER ||
-    (database === 'medialab_vs01_repair_p01a_test'
-      ? 'medialab_vs01_repair_p01a_test_owner'
-      : 'medialab_vs01_repair_p01a_owner');
+    (database === 'medialab_p02m03a_test'
+      ? 'medialab_p02m03a_test_owner'
+      : 'medialab_p02m03a_owner');
 
   // Guard 1: Database name restriction
   if (!APPROVED_DATABASES.includes(database)) {
     throw new Error(`SEED_SAFETY_FAILURE: Unapproved database target '${database}'. Allowed: ${APPROVED_DATABASES.join(', ')}`);
   }
 
-  // Guard 2: Host restriction (must be Unix socket /tmp/mlvs01-pg, no TCP/external)
-  if (!host.startsWith('/tmp/mlvs01-pg')) {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-pg'.`);
+  // Guard 2: Exact packet socket restriction, with no TCP or predecessor-cluster fallback
+  if (host !== '/tmp/mlvs01-p02m03a-pg') {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m03a-pg'.`);
   }
 
   if (port !== 55432) {
@@ -56,9 +58,9 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   }
 
   // Guard 3: User role validation
-  const expectedUser = database === 'medialab_vs01_repair_p01a_test'
-    ? 'medialab_vs01_repair_p01a_test_owner'
-    : 'medialab_vs01_repair_p01a_owner';
+  const expectedUser = database === 'medialab_p02m03a_test'
+    ? 'medialab_p02m03a_test_owner'
+    : 'medialab_p02m03a_owner';
   if (user !== expectedUser) {
     throw new Error(`SEED_SAFETY_FAILURE: Role mismatch for database '${database}'. Expected role '${expectedUser}', got '${user}'.`);
   }
@@ -91,12 +93,54 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
         return actual === null || actual === undefined;
       }
       if (actual instanceof Date) {
+        if (typeof expected === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(expected)) {
+          return actual.toISOString().slice(0, 10) === expected;
+        }
         return actual.toISOString() === new Date(expected).toISOString();
       }
       if (typeof actual === 'boolean') {
         return Boolean(actual) === Boolean(expected);
       }
       return String(actual) === String(expected);
+    };
+
+    const ensureFixtureRow = async (
+      table: string,
+      keys: readonly string[],
+      row: Record<string, unknown>
+    ): Promise<void> => {
+      const identifiers = [table, ...keys, ...Object.keys(row)];
+      if (identifiers.some((identifier) => !/^[a-z_][a-z0-9_]*$/.test(identifier))) {
+        throw new Error(`FIXTURE_CONFIGURATION_FAILURE: Unsafe fixture identifier for table '${table}'.`);
+      }
+
+      const where = keys.map((key, index) => `"${key}" = $${index + 1}`).join(' AND ');
+      const keyValues = keys.map((key) => row[key]);
+      const existing = await client!.query(
+        `SELECT * FROM medialab_core."${table}" WHERE ${where};`,
+        keyValues
+      );
+
+      if (existing.rows.length === 0) {
+        const columns = Object.keys(row);
+        const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
+        await client!.query(
+          `INSERT INTO medialab_core."${table}" (${columns.map((column) => `"${column}"`).join(', ')}) VALUES (${placeholders});`,
+          columns.map((column) => row[column])
+        );
+        inserted++;
+        return;
+      }
+
+      const actual = existing.rows[0];
+      for (const [column, expected] of Object.entries(row)) {
+        if (!isValueEqual(actual[column], expected)) {
+          throw new Error(
+            `FIXTURE_DIVERGENCE: Table '${table}' column '${column}' differs for key ${JSON.stringify(keyValues)}.`
+          );
+        }
+      }
+      verified++;
     };
 
     // 1. Organizations
@@ -296,6 +340,28 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
       }
     }
 
+    // 10. Synthetic P02-M03-A catalog, immutable price evidence, and custom evidence
+    for (const fixtureTable of CATALOG_FIXTURE_TABLES) {
+      for (const fixtureRow of fixtureTable.rows) {
+        await ensureFixtureRow(
+          fixtureTable.table,
+          fixtureTable.keys,
+          fixtureRow as unknown as Record<string, unknown>
+        );
+      }
+    }
+
+    // 11. Canonical current MediaLab real-estate catalog from approved public website evidence
+    for (const fixtureTable of CURRENT_REAL_ESTATE_CATALOG_TABLES) {
+      for (const fixtureRow of fixtureTable.rows) {
+        await ensureFixtureRow(
+          fixtureTable.table,
+          fixtureTable.keys,
+          fixtureRow as unknown as Record<string, unknown>
+        );
+      }
+    }
+
     await client.query('COMMIT;');
     return { inserted, verified };
   } catch (err) {
@@ -315,7 +381,7 @@ const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 if (scriptPath && currentPath === scriptPath) {
   const isTestDb = process.argv.includes('--test');
   const targetDb = process.env.PGDATABASE ||
-    (isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a');
+    (isTestDb ? 'medialab_p02m03a_test' : 'medialab_p02m03a');
   const targetUser = process.env.PGUSER;
 
   if (!targetUser) {

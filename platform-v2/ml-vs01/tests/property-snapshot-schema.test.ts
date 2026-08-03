@@ -5,17 +5,17 @@ import crypto from 'crypto';
 
 describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-pg',
+    host: '/tmp/mlvs01-p02m03a-pg',
     port: 55432,
-    database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test_owner'
+    database: 'medialab_p02m03a_test',
+    user: 'medialab_p02m03a_test_owner'
   });
 
   const poolDev = new Pool({
-    host: '/tmp/mlvs01-pg',
+    host: '/tmp/mlvs01-p02m03a-pg',
     port: 55432,
-    database: 'medialab_vs01_repair_p01a',
-    user: 'medialab_vs01_repair_p01a_owner'
+    database: 'medialab_p02m03a',
+    user: 'medialab_p02m03a_owner'
   });
 
   afterAll(async () => {
@@ -27,7 +27,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(3);
+        expect(res.rows).toHaveLength(5);
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
         expect(res.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -37,6 +37,11 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
 
         expect(res.rows[2].filename).toBe('0003_person_contacts_and_account_lifecycle.sql');
         expect(res.rows[2].sha256).toBe('984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3');
+
+        expect(res.rows[3].filename).toBe('0004_current_catalog_and_price_snapshots.sql');
+        expect(res.rows[3].sha256).toBe('e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876');
+        expect(res.rows[4].filename).toBe('0005_catalog_administration_lifecycle.sql');
+        expect(res.rows[4].sha256).toBe('928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40');
       });
 
       it('Catalog Assertions: properties and property_snapshots exist with correct owners', async () => {
@@ -46,7 +51,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
           ORDER BY tablename
         `);
         expect(res.rows).toHaveLength(2);
-        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test_owner' : 'medialab_vs01_repair_p01a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m03a_test_owner' : 'medialab_p02m03a_owner';
         expect(res.rows[0].tableowner).toBe(expectedOwner);
         expect(res.rows[1].tableowner).toBe(expectedOwner);
       });
@@ -367,9 +372,9 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         people: 3,
         identities: 2,
         memberships: 3,
-        permissions: 3,
+        permissions: 5,
         permission_sets: 1,
-        permission_set_permissions: 3,
+        permission_set_permissions: 5,
         membership_permission_sets: 1,
         development_sessions: 1
       };

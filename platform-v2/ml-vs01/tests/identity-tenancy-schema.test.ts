@@ -9,16 +9,26 @@ import path from 'path';
 const EXACT_ROUTINE_NAMES = [
   'actor_can_administer_person',
   'apply_account_lifecycle_transition',
+  'apply_catalog_product_administration_defaults',
   'apply_contact_retirement',
   'apply_contact_supersession',
   'apply_primary_email_replacement',
   'bootstrap_identity_account',
   'bootstrap_person_contact',
   'correct_contact_method',
+  'create_catalog_commercial_snapshot',
+  'create_catalog_draft_product',
+  'create_catalog_product',
   'create_contact_method',
+  'create_custom_commercial_snapshot',
+  'delete_catalog_draft_product',
+  'get_catalog_administration_products',
+  'get_current_catalog_package_inclusions',
+  'get_current_selectable_catalog',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
+  'guard_catalog_draft_product_delete',
   'guard_contact_method_insert',
   'guard_contact_method_update',
   'guard_contact_retirement_insert',
@@ -29,14 +39,26 @@ const EXACT_ROUTINE_NAMES = [
   'guard_verification_invalidation_insert',
   'invalidate_contact_verification',
   'normalize_contact_value',
+  'publish_catalog_draft_product',
+  'record_catalog_external_mapping',
+  'record_catalog_price',
   'record_contact_verification',
+  'reject_catalog_evidence_mutation',
+  'reject_catalog_product_delete',
   'reject_contact_history_mutation',
   'reject_property_snapshot_mutation',
+  'replace_catalog_bracket_set',
+  'replace_catalog_package_composition',
   'replace_primary_email',
+  'require_catalog_permission',
   'require_identity_person',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
+  'revise_catalog_draft_product',
+  'revise_catalog_product',
+  'revise_published_catalog_product_definition',
+  'set_catalog_product_archived',
   'transition_account_lifecycle'
 ];
 
@@ -44,6 +66,18 @@ const EXACT_TRIGGERS = [
   ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
   ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
   ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
+  ['catalog_administration_events_immutability_guard', 'catalog_administration_events', 'reject_catalog_evidence_mutation'],
+  ['catalog_bracket_sets_immutability_guard', 'catalog_bracket_sets', 'reject_catalog_evidence_mutation'],
+  ['catalog_external_mappings_immutability_guard', 'catalog_external_mappings', 'reject_catalog_evidence_mutation'],
+  ['catalog_package_version_items_immutability_guard', 'catalog_package_version_items', 'reject_catalog_evidence_mutation'],
+  ['catalog_package_versions_immutability_guard', 'catalog_package_versions', 'reject_catalog_evidence_mutation'],
+  ['catalog_price_brackets_immutability_guard', 'catalog_price_brackets', 'reject_catalog_evidence_mutation'],
+  ['catalog_prices_immutability_guard', 'catalog_prices', 'reject_catalog_evidence_mutation'],
+  ['catalog_product_change_events_immutability_guard', 'catalog_product_change_events', 'reject_catalog_evidence_mutation'],
+  ['catalog_products_administration_defaults', 'catalog_products', 'apply_catalog_product_administration_defaults'],
+  ['catalog_products_delete_guard', 'catalog_products', 'guard_catalog_draft_product_delete'],
+  ['commercial_snapshot_package_items_immutability_guard', 'commercial_snapshot_package_items', 'reject_catalog_evidence_mutation'],
+  ['commercial_snapshots_immutability_guard', 'commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['contact_method_retirements_apply', 'contact_method_retirements', 'apply_contact_retirement'],
   ['contact_method_retirements_immutability_guard', 'contact_method_retirements', 'reject_contact_history_mutation'],
   ['contact_method_retirements_insert_guard', 'contact_method_retirements', 'guard_contact_retirement_insert'],
@@ -57,6 +91,7 @@ const EXACT_TRIGGERS = [
   ['contact_verification_evidence_insert_guard', 'contact_verification_evidence', 'guard_contact_verification_insert'],
   ['contact_verification_invalidations_immutability_guard', 'contact_verification_invalidations', 'reject_contact_history_mutation'],
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
+  ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
   ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
   ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
@@ -71,17 +106,17 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-pg',
+    host: '/tmp/mlvs01-p02m03a-pg',
     port: 55432,
-    database: 'medialab_vs01_repair_p01a_test',
-    user: 'medialab_vs01_repair_p01a_test_owner'
+    database: 'medialab_p02m03a_test',
+    user: 'medialab_p02m03a_test_owner'
   });
 
   const poolDev = new Pool({
-    host: '/tmp/mlvs01-pg',
+    host: '/tmp/mlvs01-p02m03a-pg',
     port: 55432,
-    database: 'medialab_vs01_repair_p01a',
-    user: 'medialab_vs01_repair_p01a_owner'
+    database: 'medialab_p02m03a',
+    user: 'medialab_p02m03a_owner'
   });
 
   beforeAll(async () => {
@@ -104,29 +139,33 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outDev = await runMigrations({
       migrationsDir,
-      database: 'medialab_vs01_repair_p01a',
-      user: 'medialab_vs01_repair_p01a_owner',
-      runtimeUser: 'medialab_vs01_repair_p01a_app'
+      database: 'medialab_p02m03a',
+      user: 'medialab_p02m03a_owner',
+      runtimeUser: 'medialab_p02m03a_app'
     });
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_vs01_repair_p01a_test',
-      user: 'medialab_vs01_repair_p01a_test_owner',
-      runtimeUser: 'medialab_vs01_repair_p01a_test'
+      database: 'medialab_p02m03a_test',
+      user: 'medialab_p02m03a_test_owner',
+      runtimeUser: 'medialab_p02m03a_test_app'
     });
 
     expect(outDev.applied).toEqual([]);
     expect(outDev.skipped).toEqual([
       '0001_identity_and_tenancy.sql',
       '0002_property_identity_and_snapshots.sql',
-      '0003_person_contacts_and_account_lifecycle.sql'
+      '0003_person_contacts_and_account_lifecycle.sql',
+      '0004_current_catalog_and_price_snapshots.sql',
+      '0005_catalog_administration_lifecycle.sql'
     ]);
 
     expect(outTest.applied).toEqual([]);
     expect(outTest.skipped).toEqual([
       '0001_identity_and_tenancy.sql',
       '0002_property_identity_and_snapshots.sql',
-      '0003_person_contacts_and_account_lifecycle.sql'
+      '0003_person_contacts_and_account_lifecycle.sql',
+      '0004_current_catalog_and_price_snapshots.sql',
+      '0005_catalog_administration_lifecycle.sql'
     ]);
   });
 
@@ -150,7 +189,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test_owner' : 'medialab_vs01_repair_p01a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m03a_test_owner' : 'medialab_p02m03a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -163,7 +202,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_vs01_repair_p01a_test_owner' : 'medialab_vs01_repair_p01a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m03a_test_owner' : 'medialab_p02m03a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
@@ -621,9 +660,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 3,
+      permissions: 5,
       permission_sets: 1,
-      permission_set_permissions: 3,
+      permission_set_permissions: 5,
       membership_permission_sets: 1,
       development_sessions: 1
     };

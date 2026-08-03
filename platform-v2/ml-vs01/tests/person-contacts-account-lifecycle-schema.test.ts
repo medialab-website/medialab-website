@@ -6,10 +6,10 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_vs01_repair_p01a_test';
-const TEST_OWNER_ROLE = 'medialab_vs01_repair_p01a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_vs01_repair_p01a_test';
-const TEST_SOCKET = '/tmp/mlvs01-pg';
+const TEST_DB = 'medialab_p02m03a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m03a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m03a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
 const TEST_PORT = 55432;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
@@ -26,6 +26,31 @@ const PUBLIC_APIS = [
   'retire_contact_method',
   'transition_account_lifecycle'
 ];
+
+const CATALOG_APIS = [
+  'create_catalog_commercial_snapshot',
+  'create_catalog_product',
+  'create_custom_commercial_snapshot',
+  'get_current_catalog_package_inclusions',
+  'get_current_selectable_catalog',
+  'record_catalog_external_mapping',
+  'record_catalog_price',
+  'replace_catalog_bracket_set',
+  'replace_catalog_package_composition',
+  'revise_catalog_product'
+];
+
+const CATALOG_ADMIN_APIS = [
+  'create_catalog_draft_product',
+  'delete_catalog_draft_product',
+  'get_catalog_administration_products',
+  'publish_catalog_draft_product',
+  'revise_catalog_draft_product',
+  'revise_published_catalog_product_definition',
+  'set_catalog_product_archived'
+];
+
+const ALL_RUNTIME_APIS = [...PUBLIC_APIS, ...CATALOG_APIS, ...CATALOG_ADMIN_APIS].sort();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -217,12 +242,14 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
     );
   }
 
-  it('1 & 2. fresh reset applies 0001 through 0003 and an identical rerun skips all three', async () => {
+  it('1 & 2. fresh reset applies 0001 through 0005 and an identical rerun skips all five', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
     expect(ledger.rows.map((row) => row.filename)).toEqual([
       '0001_identity_and_tenancy.sql',
       '0002_property_identity_and_snapshots.sql',
-      '0003_person_contacts_and_account_lifecycle.sql'
+      '0003_person_contacts_and_account_lifecycle.sql',
+      '0004_current_catalog_and_price_snapshots.sql',
+      '0005_catalog_administration_lifecycle.sql'
     ]);
 
     const result = await runMigrations({
@@ -234,7 +261,9 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
     expect(result.skipped).toEqual([
       '0001_identity_and_tenancy.sql',
       '0002_property_identity_and_snapshots.sql',
-      '0003_person_contacts_and_account_lifecycle.sql'
+      '0003_person_contacts_and_account_lifecycle.sql',
+      '0004_current_catalog_and_price_snapshots.sql',
+      '0005_catalog_administration_lifecycle.sql'
     ]);
   });
 
@@ -634,7 +663,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(29);
+      expect(searchPaths.rows).toHaveLength(51);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }
@@ -1106,7 +1135,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
         ORDER BY p.proname`,
       [TEST_RUNTIME_ROLE]
     );
-    expect(executable.rows.map((row) => row.proname)).toEqual(PUBLIC_APIS);
+    expect(executable.rows.map((row) => row.proname)).toEqual(ALL_RUNTIME_APIS);
     const publicExecutable = await owner.query(
       `SELECT count(*)::int AS count
          FROM pg_proc p

@@ -2,25 +2,37 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { EXPECTED_ROW_COUNTS } from '../db/fixtures/identity-tenancy-fixtures.js';
+import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-price-fixtures.js';
+import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
 
-const TEST_DB = 'medialab_vs01_repair_p01a_test';
-const TEST_ROLE = 'medialab_vs01_repair_p01a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-pg';
+const TEST_DB = 'medialab_p02m03a_test';
+const TEST_ROLE = 'medialab_p02m03a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
 const TEST_PORT = 55432;
 
 const EXACT_ROUTINE_NAMES = [
   'actor_can_administer_person',
   'apply_account_lifecycle_transition',
+  'apply_catalog_product_administration_defaults',
   'apply_contact_retirement',
   'apply_contact_supersession',
   'apply_primary_email_replacement',
   'bootstrap_identity_account',
   'bootstrap_person_contact',
   'correct_contact_method',
+  'create_catalog_commercial_snapshot',
+  'create_catalog_draft_product',
+  'create_catalog_product',
   'create_contact_method',
+  'create_custom_commercial_snapshot',
+  'delete_catalog_draft_product',
+  'get_catalog_administration_products',
+  'get_current_catalog_package_inclusions',
+  'get_current_selectable_catalog',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
+  'guard_catalog_draft_product_delete',
   'guard_contact_method_insert',
   'guard_contact_method_update',
   'guard_contact_retirement_insert',
@@ -31,14 +43,26 @@ const EXACT_ROUTINE_NAMES = [
   'guard_verification_invalidation_insert',
   'invalidate_contact_verification',
   'normalize_contact_value',
+  'publish_catalog_draft_product',
+  'record_catalog_external_mapping',
+  'record_catalog_price',
   'record_contact_verification',
+  'reject_catalog_evidence_mutation',
+  'reject_catalog_product_delete',
   'reject_contact_history_mutation',
   'reject_property_snapshot_mutation',
+  'replace_catalog_bracket_set',
+  'replace_catalog_package_composition',
   'replace_primary_email',
+  'require_catalog_permission',
   'require_identity_person',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
+  'revise_catalog_draft_product',
+  'revise_catalog_product',
+  'revise_published_catalog_product_definition',
+  'set_catalog_product_archived',
   'transition_account_lifecycle'
 ];
 
@@ -46,6 +70,18 @@ const EXACT_TRIGGERS = [
   ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
   ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
   ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
+  ['catalog_administration_events_immutability_guard', 'catalog_administration_events', 'reject_catalog_evidence_mutation'],
+  ['catalog_bracket_sets_immutability_guard', 'catalog_bracket_sets', 'reject_catalog_evidence_mutation'],
+  ['catalog_external_mappings_immutability_guard', 'catalog_external_mappings', 'reject_catalog_evidence_mutation'],
+  ['catalog_package_version_items_immutability_guard', 'catalog_package_version_items', 'reject_catalog_evidence_mutation'],
+  ['catalog_package_versions_immutability_guard', 'catalog_package_versions', 'reject_catalog_evidence_mutation'],
+  ['catalog_price_brackets_immutability_guard', 'catalog_price_brackets', 'reject_catalog_evidence_mutation'],
+  ['catalog_prices_immutability_guard', 'catalog_prices', 'reject_catalog_evidence_mutation'],
+  ['catalog_product_change_events_immutability_guard', 'catalog_product_change_events', 'reject_catalog_evidence_mutation'],
+  ['catalog_products_administration_defaults', 'catalog_products', 'apply_catalog_product_administration_defaults'],
+  ['catalog_products_delete_guard', 'catalog_products', 'guard_catalog_draft_product_delete'],
+  ['commercial_snapshot_package_items_immutability_guard', 'commercial_snapshot_package_items', 'reject_catalog_evidence_mutation'],
+  ['commercial_snapshots_immutability_guard', 'commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['contact_method_retirements_apply', 'contact_method_retirements', 'apply_contact_retirement'],
   ['contact_method_retirements_immutability_guard', 'contact_method_retirements', 'reject_contact_history_mutation'],
   ['contact_method_retirements_insert_guard', 'contact_method_retirements', 'guard_contact_retirement_insert'],
@@ -59,6 +95,7 @@ const EXACT_TRIGGERS = [
   ['contact_verification_evidence_insert_guard', 'contact_verification_evidence', 'guard_contact_verification_insert'],
   ['contact_verification_invalidations_immutability_guard', 'contact_verification_invalidations', 'reject_contact_history_mutation'],
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
+  ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
   ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
   ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
@@ -98,8 +135,8 @@ describe('P01C Test Database Reset Tooling Tests', () => {
   it('1. reset refuses development database targets under any flag/alias', async () => {
     await expect(
       resetTestDatabase({
-        database: 'medialab_vs01_repair_p01a',
-        confirm: 'medialab_vs01_repair_p01a',
+        database: 'medialab_p02m03a',
+        confirm: 'medialab_p02m03a',
         host: TEST_SOCKET,
         port: TEST_PORT
       })
@@ -162,16 +199,24 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(3);
+    expect(ledgerRes.rows).toHaveLength(5);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
     expect(ledgerRes.rows[1].sha256).toBe('d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83');
     expect(ledgerRes.rows[2].filename).toBe('0003_person_contacts_and_account_lifecycle.sql');
     expect(ledgerRes.rows[2].sha256).toBe('984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3');
+    expect(ledgerRes.rows[3].filename).toBe('0004_current_catalog_and_price_snapshots.sql');
+    expect(ledgerRes.rows[3].sha256).toBe('e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876');
+    expect(ledgerRes.rows[4].filename).toBe('0005_catalog_administration_lifecycle.sql');
+    expect(ledgerRes.rows[4].sha256).toBe('928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40');
 
-    // Verify row counts for all 9 domain tables
-    for (const [table, expectedCount] of Object.entries(EXPECTED_ROW_COUNTS)) {
+    // Verify row counts across the predecessor and packet fixture inventories.
+    const expectedCounts: Record<string, number> = { ...EXPECTED_ROW_COUNTS, ...CATALOG_EXPECTED_ROW_COUNTS };
+    for (const [table, count] of Object.entries(CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, expectedCount] of Object.entries(expectedCounts)) {
       const countRes = await client.query(`SELECT COUNT(*)::int AS cnt FROM medialab_core.${table};`);
       expect(countRes.rows[0].cnt).toBe(expectedCount);
     }

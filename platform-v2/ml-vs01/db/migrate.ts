@@ -27,8 +27,10 @@ export interface MigrateOptions {
 }
 
 const AUTHORITY_PACKET_MIGRATION = '0003_person_contacts_and_account_lifecycle.sql';
+const CATALOG_PACKET_MIGRATION = '0004_current_catalog_and_price_snapshots.sql';
+const CATALOG_ADMIN_PACKET_MIGRATION = '0005_catalog_administration_lifecycle.sql';
 
-const PUBLIC_MUTATION_FUNCTIONS = [
+const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
   'medialab_core.record_contact_verification(uuid, text, uuid, timestamptz, text, text)',
   'medialab_core.invalidate_contact_verification(uuid, text, uuid, text)',
@@ -36,6 +38,29 @@ const PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.retire_contact_method(uuid, text, uuid, text)',
   'medialab_core.replace_primary_email(uuid, text, uuid, uuid, text)',
   'medialab_core.transition_account_lifecycle(uuid, text, uuid, uuid, text, text, boolean)'
+];
+
+const CATALOG_PUBLIC_FUNCTIONS = [
+  'medialab_core.get_current_selectable_catalog(timestamptz)',
+  'medialab_core.get_current_catalog_package_inclusions(timestamptz)',
+  'medialab_core.create_catalog_product(text, uuid, text, text, text, text, text, text)',
+  'medialab_core.revise_catalog_product(text, uuid, text, text, text, text)',
+  'medialab_core.record_catalog_price(text, uuid, uuid, bigint, text, timestamptz, text, text)',
+  'medialab_core.replace_catalog_package_composition(text, uuid, uuid, timestamptz, text, jsonb)',
+  'medialab_core.replace_catalog_bracket_set(text, uuid, uuid, text, timestamptz, text, jsonb)',
+  'medialab_core.record_catalog_external_mapping(text, uuid, text, text, text, uuid, text, timestamptz)',
+  'medialab_core.create_catalog_commercial_snapshot(text, uuid, uuid, numeric, bigint, bigint, text, bigint, text, timestamptz, text, text, text, bigint, timestamptz)',
+  'medialab_core.create_custom_commercial_snapshot(text, uuid, text, bigint, text, numeric, text, bigint, text, bigint, text, text, timestamptz, bigint, timestamptz)'
+];
+
+const CATALOG_ADMIN_PUBLIC_FUNCTIONS = [
+  'medialab_core.get_catalog_administration_products(text, boolean)',
+  'medialab_core.create_catalog_draft_product(text, uuid, text, text, text, text, text, text, text, text, text, text, date, uuid)',
+  'medialab_core.revise_catalog_draft_product(text, uuid, text, text, text, text, text, text, text, text, text, date, text)',
+  'medialab_core.revise_published_catalog_product_definition(text, uuid, text, text, text, text, text, text)',
+  'medialab_core.publish_catalog_draft_product(text, uuid, text, text)',
+  'medialab_core.set_catalog_product_archived(text, uuid, boolean, text, text)',
+  'medialab_core.delete_catalog_draft_product(text, uuid, text, text)'
 ];
 
 export function validateMigrationFilenames(filenames: string[]): void {
@@ -87,7 +112,12 @@ async function validateRuntimeRole(client: pg.Client, runtimeUser: string): Prom
   return safeRuntimeRole;
 }
 
-async function applyRuntimePrivilegePolicy(client: pg.Client, runtimeUser: string): Promise<void> {
+async function applyRuntimePrivilegePolicy(
+  client: pg.Client,
+  runtimeUser: string,
+  includeCatalogFunctions: boolean,
+  includeCatalogAdminFunctions = false
+): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
   const safeDatabase = sanitizeIdentifier(databaseResult.rows[0].database_name);
@@ -101,7 +131,11 @@ async function applyRuntimePrivilegePolicy(client: pg.Client, runtimeUser: strin
     REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA medialab_core FROM ${safeRuntimeRole};
     REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA medialab_core FROM PUBLIC;
     REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA medialab_core FROM ${safeRuntimeRole};
-    ${PUBLIC_MUTATION_FUNCTIONS.map((signature) =>
+    ${[
+      ...CONTACT_PUBLIC_MUTATION_FUNCTIONS,
+      ...(includeCatalogFunctions ? CATALOG_PUBLIC_FUNCTIONS : []),
+      ...(includeCatalogAdminFunctions ? CATALOG_ADMIN_PUBLIC_FUNCTIONS : [])
+    ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
   `);
@@ -145,9 +179,9 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
       throw new Error('PGUSER is required as the migration owner role');
     }
     client = new pg.Client({
-      host: options.host || process.env.PGHOST || '/tmp/mlvs01-pg',
+      host: options.host || process.env.PGHOST || '/tmp/mlvs01-p02m03a-pg',
       port: options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55432),
-      database: options.database || process.env.PGDATABASE || 'medialab_vs01_repair_p01a',
+      database: options.database || process.env.PGDATABASE || 'medialab_p02m03a',
       user: migrationUser,
       password: options.password || process.env.PGPASSWORD || undefined
     });
@@ -210,7 +244,15 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await client.query(sqlContent);
           }
           if (file === AUTHORITY_PACKET_MIGRATION) {
-            await applyRuntimePrivilegePolicy(client, runtimeUser!);
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, false);
+            authorityPolicyApplied = true;
+          }
+          if (file === CATALOG_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true);
+            authorityPolicyApplied = true;
+          }
+          if (file === CATALOG_ADMIN_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true);
             authorityPolicyApplied = true;
           }
           await client.query(
@@ -233,7 +275,12 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
     if (requiresRuntimeRole && !authorityPolicyApplied) {
       try {
         await client.query('BEGIN;');
-        await applyRuntimePrivilegePolicy(client, runtimeUser!);
+        await applyRuntimePrivilegePolicy(
+          client,
+          runtimeUser!,
+          sqlFiles.includes(CATALOG_PACKET_MIGRATION),
+          sqlFiles.includes(CATALOG_ADMIN_PACKET_MIGRATION)
+        );
         await client.query('COMMIT;');
       } catch (err) {
         await client.query('ROLLBACK;');
@@ -256,7 +303,7 @@ const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 if (scriptPath && currentPath === scriptPath) {
   const isTestDb = process.argv.includes('--test');
   const targetDb = process.env.PGDATABASE ||
-    (isTestDb ? 'medialab_vs01_repair_p01a_test' : 'medialab_vs01_repair_p01a');
+    (isTestDb ? 'medialab_p02m03a_test' : 'medialab_p02m03a');
   const targetUser = process.env.PGUSER;
   const runtimeUser = process.env.PGRUNTIMEUSER;
 

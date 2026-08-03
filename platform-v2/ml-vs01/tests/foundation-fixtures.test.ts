@@ -20,9 +20,9 @@ import {
   SESSION_EXPIRES_AT
 } from '../db/fixtures/identity-tenancy-fixtures.js';
 
-const TEST_DB = 'medialab_vs01_repair_p01a_test';
-const TEST_ROLE = 'medialab_vs01_repair_p01a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-pg';
+const TEST_DB = 'medialab_p02m03a_test';
+const TEST_ROLE = 'medialab_p02m03a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
 const TEST_PORT = 55432;
 
 describe('P01C Foundation Fixtures & Seed Tests', () => {
@@ -129,7 +129,7 @@ describe('P01C Foundation Fixtures & Seed Tests', () => {
     });
 
     expect(secondRes.inserted).toBe(0);
-    expect(secondRes.verified).toBe(18); // Total fixture records across all tables
+    expect(secondRes.verified).toBe(207); // Foundation, synthetic packet evidence, and canonical current catalog.
   });
 
   it('3. seed rejects unapproved databases and unapproved hosts', async () => {

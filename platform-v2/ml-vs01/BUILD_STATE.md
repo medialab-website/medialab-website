@@ -1,21 +1,26 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M02-A-PERSON-CONTACTS-ACCOUNT-LIFECYCLE-R01
+# BUILD_STATE.md — ML-PLATFORM-V2-P02-M03-B-CATALOG-ADMINISTRATION-LIFECYCLE-R01
 
-- **Phase:** P02-M02-A Person Contacts and Account Lifecycle
-- **Status:** Locally Verified / Uncommitted
-- **Candidate Branch:** `platform-v2-p02-m02-a-person-contacts-account-lifecycle-r01`
-- **Worktree:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M01-Property-Snapshot`
-- **Base Commit:** `2428984edf3838935bf6c64fd6646500a9d957a2`
+- **Current Milestone:** P02-M03-B — Catalog Administration Lifecycle and Real Current MediaLab Catalog
+- **Status:** Candidate / Locally Verified / Unstaged / Uncommitted / Unpushed
+- **Actual Git Branch:** `platform-v2-p02-m03-a-catalog-price-reconstruction-r01`
+- **Branch History:** The branch retains its original P02-M03-A construction name because P02-M03-B was implemented as an additive continuation in the same unstaged and uncommitted candidate workspace. The branch was not renamed to avoid false or misleading Git evidence; no separate P02-M03-B branch exists.
+- **Worktree:** `/tmp/TCML_Website-P02-M03-A-Catalog-Price`
+- **Base Commit:** `e654d7df1e5b031762ab6bd0f0d5c8e6d7ca02c1`
 - **Canonical Migrations:**
   - `0001_identity_and_tenancy.sql` (SHA-256: `29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31`)
   - `0002_property_identity_and_snapshots.sql` (SHA-256: `d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83`)
   - `0003_person_contacts_and_account_lifecycle.sql` (SHA-256: `984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3`)
+  - `0004_current_catalog_and_price_snapshots.sql` (SHA-256: `e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876`)
+  - `0005_catalog_administration_lifecycle.sql` (SHA-256: `928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40`)
 - **Package Lock:** `package-lock.json` (SHA-256: `11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258`)
-- **Authority Boundary:** Migrations, seed, and reset run as dedicated owner roles; application and test runtime roles own no database objects and execute only seven bearer-authenticated mutation APIs.
-- **Migration Entrypoint:** `db/migrate.ts` is the canonical supported entrypoint; canonical SQL remains environment-role-neutral, and migration SQL plus the exact runtime privilege policy commit transactionally.
-- **Session Locking:** Ordinary-session authentication retains `FOR SHARE`, which blocks concurrent session revocation until the authorized transaction ends.
-- **Definer Search Path:** Every P02-M02-A `SECURITY DEFINER` function uses exactly `pg_catalog, medialab_core, pg_temp`, with `pg_temp` last and relation references schema-qualified.
-- **Recovery Boundary:** `DEACTIVATED -> RECOVERED` requires a short-lived, single-use recovery bearer token issued outside this packet; ordinary sessions cannot recover and recovery tokens cannot perform ordinary mutations.
+- **Catalog Boundary:** Catalog identity and prices are global and MediaLab-owned. No organization-specific catalog, tenant price override, order, job, payment, delivery, UI, or production integration was added.
+- **Commercial Evidence:** Current selectable catalog, mutable effective catalog definitions, immutable commercial snapshots, legacy evidence, order-specific custom snapshots, and provider mappings remain physically distinct.
+- **Catalog Administration:** Authoring, commercial lifecycle, and archive visibility are independent. Internal operators can create, duplicate, revise, publish, activate/deactivate, retire/restore, archive/unarchive, and delete only an unreferenced never-published draft through controlled database functions.
+- **Draft Deletion Boundary:** An archived, never-published draft remains eligible for permanent deletion only while it remains in `DRAFT` authoring state, remains commercially `NONSELECTABLE`, and has no protected price, package, bracket, mapping, snapshot, duplicate-provenance, or other protected reference. Archiving alone does not establish commercial use or historical-protection status. The restricted deletion API preserves an immutable deletion tombstone and rejects every protected reference. Published, commercially used, referenced, active, retired, and otherwise protected records remain ineligible for deletion.
+- **Canonical Catalog:** The deterministic `PUBLIC_WEBSITE` seed contains 30 real current catalog identities: six standard packages, four nonselectable included deliverables, four photo add-ons, seven video products, two Zillow options, four manual-selection Matterport products, and three floor-plan add-ons. The client-safe projection exposes 26 selectable canonical rows.
+- **Fixture Boundary:** Canonical records use only the approved public catalog. Security and edge-case fixtures remain labeled synthetic and nonselectable. No raw Aryeo records, private listing cohort, customer data, or secrets were accessed or imported.
+- **Authority Boundary:** Owner roles own packet objects. Runtime roles own none and receive zero direct table or sequence DML. P02-M03-B adds seven separately inventoried runtime APIs and two owner-only protected helpers without changing the seven P02-M02-A or ten P02-M03-A API semantics.
+- **Snapshot Boundary:** Product rename, repricing, retirement, and package restructuring cannot rewrite prior snapshot meaning. Direct snapshot update and deletion are rejected.
+- **Verification:** P02-M03-B targeted tests: 2 files, 29/29 passed. P02-M03-A regression: 25/25 passed. Complete Vitest suite: 10 files, 133/133 passed. No failures, skips, or retries.
 - **START_FRESH Boundary:** START_FRESH records recovery intent for the same Person and Identity while preserving existing history. It does not currently delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data. Actual profile/preferences reset behavior remains deferred until those models exist.
-- **Verification:** Targeted P02-M02-A tests: 24/24 passed. Complete Vitest suite: 7 files, 79/79 passed.
-- **Deferred Integration:** Production ordinary-session and recovery-token issuance remain external authentication responsibilities.
 - **Separate Foundation Repair:** `verify-changed-files.ts` still requires first-line porcelain parsing and exact-set comparison repair; it is intentionally unchanged by this packet.

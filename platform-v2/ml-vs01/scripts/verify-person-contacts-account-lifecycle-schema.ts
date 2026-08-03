@@ -22,6 +22,14 @@ const expectedMigrations = [
   {
     filename: '0003_person_contacts_and_account_lifecycle.sql',
     sha256: '984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3'
+  },
+  {
+    filename: '0004_current_catalog_and_price_snapshots.sql',
+    sha256: 'e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876'
+  },
+  {
+    filename: '0005_catalog_administration_lifecycle.sql',
+    sha256: '928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40'
   }
 ];
 
@@ -303,7 +311,9 @@ const grantContractFragments = [
 for (const fragment of grantContractFragments) {
   if (!migrateText.includes(fragment)) fail(`Controlled runtime-role grant contract missing: ${fragment}`);
 }
-const configuredRuntimeSignatures = [...migrateText.matchAll(/'(medialab_core\.[a-z_]+\([^']+\))'/g)].map(
+const contactSignatureBlock = migrateText.match(/const CONTACT_PUBLIC_MUTATION_FUNCTIONS = \[([\s\S]*?)\];/);
+if (!contactSignatureBlock) fail('Migration runner contact API signature block is missing');
+const configuredRuntimeSignatures = [...(contactSignatureBlock?.[1] ?? '').matchAll(/'(medialab_core\.[a-z_]+\([^']+\))'/g)].map(
   (match) => match[1]
 );
 exactNames('Runtime EXECUTE signature allowlist', configuredRuntimeSignatures, publicApiSignatures);
@@ -319,7 +329,7 @@ if (/GRANT\s+(?:SELECT|INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER)\b/i.tes
 const applyLoopStart = migrateText.indexOf('// Apply migration in transaction');
 const transactionBegin = migrateText.indexOf("await client.query('BEGIN;');", applyLoopStart);
 const migrationSql = migrateText.indexOf('await client.query(sqlContent);', transactionBegin);
-const runtimePolicy = migrateText.indexOf('await applyRuntimePrivilegePolicy(client, runtimeUser!);', migrationSql);
+const runtimePolicy = migrateText.indexOf('await applyRuntimePrivilegePolicy(', migrationSql);
 const ledgerInsert = migrateText.indexOf('INSERT INTO ${safeTable}', runtimePolicy);
 const transactionCommit = migrateText.indexOf("await client.query('COMMIT;');", ledgerInsert);
 if (
