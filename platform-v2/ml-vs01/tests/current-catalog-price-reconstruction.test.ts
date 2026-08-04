@@ -17,11 +17,15 @@ import {
   SYNTHETIC_SOURCE_SYSTEM
 } from '../db/fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
+import {
+  ORDER_FOUNDATION_ROW_COUNT_INCREMENTS,
+  ORDER_FOUNDATION_SOURCE
+} from '../db/fixtures/order-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m03a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m03a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m03a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
+const TEST_DB = 'medialab_p02m04a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
@@ -137,11 +141,11 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     await reset();
   });
 
-  it('1. preserves the exact five-row migration ledger and predecessor checksums', async () => {
+  it('1. preserves the exact six-row migration ledger and predecessor checksums', async () => {
     const ledger = await owner.query(
       'SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename'
     );
-    expect(ledger.rows).toHaveLength(5);
+    expect(ledger.rows).toHaveLength(6);
     expect(ledger.rows.slice(0, 3)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },
@@ -151,13 +155,17 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     expect(ledger.rows[3].sha256).toBe('e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876');
     expect(ledger.rows[4].filename).toBe('0005_catalog_administration_lifecycle.sql');
     expect(ledger.rows[4].sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(ledger.rows[5].filename).toBe('0006_orders_and_immutable_commercial_evidence.sql');
+    expect(ledger.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('2. preserves the exact synthetic packet evidence alongside the canonical catalog', async () => {
     for (const [table, expected] of Object.entries(CATALOG_EXPECTED_ROW_COUNTS)) {
       const count = await owner.query(`SELECT count(*)::int AS count FROM medialab_core.${table}`);
       expect(count.rows[0].count, table).toBe(
-        expected + (CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS[table as keyof typeof CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS] ?? 0)
+        expected +
+        (CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS[table as keyof typeof CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS] ?? 0) +
+        (ORDER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof ORDER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0)
       );
     }
     const sources = await owner.query(
@@ -169,7 +177,8 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     );
     expect(sources.rows).toEqual([
       { source_system: 'PUBLIC_WEBSITE' },
-      { source_system: SYNTHETIC_SOURCE_SYSTEM }
+      { source_system: SYNTHETIC_SOURCE_SYSTEM },
+      { source_system: ORDER_FOUNDATION_SOURCE }
     ]);
   });
 
@@ -535,11 +544,11 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     expect(role.rows[0]).toEqual({ rolsuper: false, rolcreaterole: false, rolcreatedb: false, rolbypassrls: false });
   });
 
-  it('23. creates no order objects and no tenant-owned catalog columns', async () => {
-    const orderObjects = await owner.query(
+  it('23. creates no deferred job or appointment objects and no tenant-owned catalog columns', async () => {
+    const deferredObjects = await owner.query(
       `SELECT table_name FROM information_schema.tables
         WHERE table_schema = 'medialab_core'
-          AND (table_name LIKE 'order%' OR table_name LIKE 'job%' OR table_name LIKE 'appointment%')`
+          AND (table_name LIKE 'job%' OR table_name LIKE 'appointment%')`
     );
     const tenantColumns = await owner.query(
       `SELECT table_name, column_name FROM information_schema.columns
@@ -547,7 +556,7 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
           AND table_name LIKE 'catalog_%'
           AND column_name IN ('organization_id', 'tenant_id', 'customer_id')`
     );
-    expect(orderObjects.rows).toEqual([]);
+    expect(deferredObjects.rows).toEqual([]);
     expect(tenantColumns.rows).toEqual([]);
   });
 

@@ -14,6 +14,7 @@ import {
 } from './fixtures/identity-tenancy-fixtures.js';
 import { CATALOG_FIXTURE_TABLES } from './fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_CATALOG_TABLES } from './fixtures/current-real-estate-catalog-seed.js';
+import { ORDER_FOUNDATION_FIXTURE_TABLES } from './fixtures/order-foundation-fixtures.js';
 
 export interface SeedOptions {
   host?: string;
@@ -30,18 +31,18 @@ export interface SeedResult {
 }
 
 const APPROVED_DATABASES = [
-  'medialab_p02m03a',
-  'medialab_p02m03a_test'
+  'medialab_p02m04a',
+  'medialab_p02m04a_test'
 ];
 
 export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
-  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m03a-pg';
+  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m04a-pg';
   const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55432);
-  const database = options.database || process.env.PGDATABASE || 'medialab_p02m03a';
+  const database = options.database || process.env.PGDATABASE || 'medialab_p02m04a';
   const user = options.user || process.env.PGUSER ||
-    (database === 'medialab_p02m03a_test'
-      ? 'medialab_p02m03a_test_owner'
-      : 'medialab_p02m03a_owner');
+    (database === 'medialab_p02m04a_test'
+      ? 'medialab_p02m04a_test_owner'
+      : 'medialab_p02m04a_owner');
 
   // Guard 1: Database name restriction
   if (!APPROVED_DATABASES.includes(database)) {
@@ -49,8 +50,8 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   }
 
   // Guard 2: Exact packet socket restriction, with no TCP or predecessor-cluster fallback
-  if (host !== '/tmp/mlvs01-p02m03a-pg') {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m03a-pg'.`);
+  if (host !== '/tmp/mlvs01-p02m04a-pg') {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m04a-pg'.`);
   }
 
   if (port !== 55432) {
@@ -58,9 +59,9 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   }
 
   // Guard 3: User role validation
-  const expectedUser = database === 'medialab_p02m03a_test'
-    ? 'medialab_p02m03a_test_owner'
-    : 'medialab_p02m03a_owner';
+  const expectedUser = database === 'medialab_p02m04a_test'
+    ? 'medialab_p02m04a_test_owner'
+    : 'medialab_p02m04a_owner';
   if (user !== expectedUser) {
     throw new Error(`SEED_SAFETY_FAILURE: Role mismatch for database '${database}'. Expected role '${expectedUser}', got '${user}'.`);
   }
@@ -107,7 +108,8 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
     const ensureFixtureRow = async (
       table: string,
       keys: readonly string[],
-      row: Record<string, unknown>
+      row: Record<string, unknown>,
+      countVerified = true
     ): Promise<void> => {
       const identifiers = [table, ...keys, ...Object.keys(row)];
       if (identifiers.some((identifier) => !/^[a-z_][a-z0-9_]*$/.test(identifier))) {
@@ -140,7 +142,7 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
           );
         }
       }
-      verified++;
+      if (countVerified) verified++;
     };
 
     // 1. Organizations
@@ -362,6 +364,18 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
       }
     }
 
+    // 12. Synthetic provider-neutral Order and immutable commercial evidence foundation
+    for (const fixtureTable of ORDER_FOUNDATION_FIXTURE_TABLES) {
+      for (const fixtureRow of fixtureTable.rows) {
+        await ensureFixtureRow(
+          fixtureTable.table,
+          fixtureTable.keys,
+          fixtureRow as unknown as Record<string, unknown>,
+          false
+        );
+      }
+    }
+
     await client.query('COMMIT;');
     return { inserted, verified };
   } catch (err) {
@@ -381,7 +395,7 @@ const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 if (scriptPath && currentPath === scriptPath) {
   const isTestDb = process.argv.includes('--test');
   const targetDb = process.env.PGDATABASE ||
-    (isTestDb ? 'medialab_p02m03a_test' : 'medialab_p02m03a');
+    (isTestDb ? 'medialab_p02m04a_test' : 'medialab_p02m04a');
   const targetUser = process.env.PGUSER;
 
   if (!targetUser) {

@@ -33,14 +33,15 @@ if (fs.existsSync(canonicalDir)) {
   const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort();
 
   if (
-    sqlFiles.length !== 5 ||
+    sqlFiles.length !== 6 ||
     sqlFiles[0] !== '0001_identity_and_tenancy.sql' ||
     sqlFiles[1] !== '0002_property_identity_and_snapshots.sql' ||
     sqlFiles[2] !== '0003_person_contacts_and_account_lifecycle.sql' ||
     sqlFiles[3] !== '0004_current_catalog_and_price_snapshots.sql' ||
-    sqlFiles[4] !== '0005_catalog_administration_lifecycle.sql'
+    sqlFiles[4] !== '0005_catalog_administration_lifecycle.sql' ||
+    sqlFiles[5] !== '0006_orders_and_immutable_commercial_evidence.sql'
   ) {
-    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0005. Found: ${sqlFiles.join(', ')}`);
+    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0006. Found: ${sqlFiles.join(', ')}`);
     errors = true;
   }
 
@@ -98,6 +99,7 @@ const allowedCanonical2 = path.join(baseDir, 'db/migrations/0002_property_identi
 const allowedCanonical3 = path.join(baseDir, 'db/migrations/0003_person_contacts_and_account_lifecycle.sql');
 const allowedCanonical4 = path.join(baseDir, 'db/migrations/0004_current_catalog_and_price_snapshots.sql');
 const allowedCanonical5 = path.join(baseDir, 'db/migrations/0005_catalog_administration_lifecycle.sql');
+const allowedCanonical6 = path.join(baseDir, 'db/migrations/0006_orders_and_immutable_commercial_evidence.sql');
 
 for (const sqlFile of allSqlFiles) {
   if (
@@ -106,7 +108,8 @@ for (const sqlFile of allSqlFiles) {
     sqlFile !== allowedCanonical2 &&
     sqlFile !== allowedCanonical3 &&
     sqlFile !== allowedCanonical4 &&
-    sqlFile !== allowedCanonical5
+    sqlFile !== allowedCanonical5 &&
+    sqlFile !== allowedCanonical6
   ) {
     console.error(`ERROR: SQL file outside isolated test-fixture directory: ${sqlFile}`);
     errors = true;

@@ -25,18 +25,20 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * `0003_person_contacts_and_account_lifecycle.sql` is the bounded P02-M02-A additive migration for contact and account-lifecycle evidence.
    * `0004_current_catalog_and_price_snapshots.sql` is the bounded P02-M03-A additive migration for global catalog identity, effective prices, deterministic package brackets, immutable commercial snapshots, custom evidence, and provider mappings.
    * `0005_catalog_administration_lifecycle.sql` is the bounded P02-M03-B additive migration for draft/published authoring, independent archive visibility, attributable definition revision, and protected unused-draft deletion.
-   * Migrations `0001` through `0004` remain immutable predecessor inputs.
+   * `0006_orders_and_immutable_commercial_evidence.sql` is the bounded P02-M04-A additive migration for canonical Orders, frozen parties and items, provider-neutral source references, command idempotency, append-only events, and related-Order evidence.
+   * Migrations `0001` through `0005` remain immutable predecessor inputs.
 
 6. **Owner and Runtime Role Separation**
    * `PGUSER` identifies the dedicated migration owner used for migrations, seed, and reset.
    * `PGRUNTIMEUSER` identifies an existing restricted runtime role and must differ from the migration owner.
-   * Migration SQL is deliberately environment-role-neutral; migrations `0003`, `0004`, and `0005` contain no environment-specific role names or grants.
+   * Migration SQL is deliberately environment-role-neutral; migrations `0003` through `0006` contain no environment-specific role names or grants.
    * `db/migrate.ts` is the canonical supported migration entrypoint. It validates that the owner and runtime roles both exist and differ.
    * Migration SQL, the runtime privilege policy, and the migration-ledger insert execute within the same database transaction without substituting environment-specific values into canonical migration bytes.
    * Raw manual execution of migration `0003` alone is safe but incomplete and is not a supported deployment path.
    * `db/migrate.ts` applies the exact runtime end-state: zero direct packet-table privileges, no credential-table reads, zero internal-helper execution, exactly seven public mutation APIs executable, and zero PUBLIC function execution.
    * Raw manual execution of migration `0004` alone is likewise incomplete. The canonical runner separately inventories ten P02-M03-A functions, reapplies zero direct table or sequence privileges, and grants the restricted runtime role only those ten functions plus the unchanged seven P02-M02-A APIs.
    * Raw manual execution of migration `0005` alone is likewise incomplete. The canonical runner separately inventories seven P02-M03-B runtime functions, keeps two new trigger helpers owner-only, and preserves all predecessor grants without changing predecessor API semantics.
+   * Raw manual execution of migration `0006` alone is likewise incomplete. The canonical runner grants only `create_order` and `get_order_record` to the restricted runtime role, keeps all Order helpers owner-only, and preserves the preceding 24 runtime APIs unchanged.
 
 7. **Global Catalog and Commercial-Evidence Boundary**
    * Catalog products, package definitions, brackets, prices, and external mappings are global MediaLab-owned records and contain no organization ownership field.
@@ -59,12 +61,20 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * Enhanced Floor Plan and 3D Floor Plan group labels do not become invented base-price products.
    * Synthetic verification records remain labeled `SYNTHETIC_FIXTURE`, nonselectable, and separate from real current offerings.
 
-10. **Bearer Authority Boundary**
+10. **Order and Immutable Commercial-Evidence Boundary**
+   * A canonical Order records one accepted commercial agreement with an immutable organization context, optional lane-appropriate Property snapshot, settlement declaration, currency, server-derived totals, source attribution, and accepted time.
+   * Ordering person, customer, billing party, commercial owner, organization, and authorized actor are separate frozen role records. Active tenant membership and permission are validated server-side at creation and are not inferred from browser-supplied role claims.
+   * Order items reference accepted catalog or custom commercial snapshots and deep-copy description, quantity, commercial unit, integer-cent amount, currency, source identity, and custom attribution. Catalog mutation cannot rewrite Order meaning.
+   * External source identity is provider-neutral and globally unique. Actor-scoped idempotency keys use a server-computed request fingerprint and a transaction advisory lock so exact replay returns one Order while conflicting or failed requests leave no partial canonical evidence.
+   * Orders, parties, items, source references, idempotency records, events, and relationships are immutable. Critical lifecycle evidence is append-only, and related Orders preserve correction, supplemental, replacement, customer-added-scope, or MediaLab-responsible-return work without reopening the original agreement.
+   * `create_order` and `get_order_record` are the complete P02-M04-A runtime API inventory. Neither function trusts caller-supplied actor identity, and neither grants table DML or execution authority to `PUBLIC`.
+
+11. **Bearer Authority Boundary**
    * Ordinary mutation APIs derive their actor from an unexpired, unrevoked bearer session digest in `development_sessions`.
    * Account recovery uses a separate short-lived, single-use digest in `account_recovery_sessions`.
    * Raw bearer tokens are never stored in canonical tables or immutable evidence.
 
-11. **Recovery Intent Boundary**
+12. **Recovery Intent Boundary**
    * `START_FRESH` records recovery intent for the same Person and Identity while preserving existing history.
    * It does not currently delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
    * Actual profile/preferences reset behavior remains deferred until those models exist.

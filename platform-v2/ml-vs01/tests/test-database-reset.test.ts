@@ -4,10 +4,11 @@ import { resetTestDatabase } from '../db/reset-test-database.js';
 import { EXPECTED_ROW_COUNTS } from '../db/fixtures/identity-tenancy-fixtures.js';
 import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
+import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m03a_test';
-const TEST_ROLE = 'medialab_p02m03a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
+const TEST_DB = 'medialab_p02m04a_test';
+const TEST_ROLE = 'medialab_p02m04a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
 
 const EXACT_ROUTINE_NAMES = [
@@ -25,10 +26,12 @@ const EXACT_ROUTINE_NAMES = [
   'create_catalog_product',
   'create_contact_method',
   'create_custom_commercial_snapshot',
+  'create_order',
   'delete_catalog_draft_product',
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
+  'get_order_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -38,6 +41,7 @@ const EXACT_ROUTINE_NAMES = [
   'guard_contact_retirement_insert',
   'guard_contact_supersession_insert',
   'guard_contact_verification_insert',
+  'guard_order_relationship_insert',
   'guard_people_primary_email_update',
   'guard_primary_email_replacement_insert',
   'guard_verification_invalidation_insert',
@@ -50,12 +54,14 @@ const EXACT_ROUTINE_NAMES = [
   'reject_catalog_evidence_mutation',
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
+  'reject_order_evidence_mutation',
   'reject_property_snapshot_mutation',
   'replace_catalog_bracket_set',
   'replace_catalog_package_composition',
   'replace_primary_email',
   'require_catalog_permission',
   'require_identity_person',
+  'require_order_permission',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
@@ -97,6 +103,14 @@ const EXACT_TRIGGERS = [
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
   ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
+  ['order_events_immutability_guard', 'order_events', 'reject_order_evidence_mutation'],
+  ['order_external_references_immutability_guard', 'order_external_references', 'reject_order_evidence_mutation'],
+  ['order_idempotency_records_immutability_guard', 'order_idempotency_records', 'reject_order_evidence_mutation'],
+  ['order_items_immutability_guard', 'order_items', 'reject_order_evidence_mutation'],
+  ['order_parties_immutability_guard', 'order_parties', 'reject_order_evidence_mutation'],
+  ['order_relationships_immutability_guard', 'order_relationships', 'reject_order_evidence_mutation'],
+  ['order_relationships_insert_guard', 'order_relationships', 'guard_order_relationship_insert'],
+  ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation'],
   ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
   ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
   ['person_account_states_delete_guard', 'person_account_states', 'reject_contact_history_mutation'],
@@ -135,8 +149,8 @@ describe('P01C Test Database Reset Tooling Tests', () => {
   it('1. reset refuses development database targets under any flag/alias', async () => {
     await expect(
       resetTestDatabase({
-        database: 'medialab_p02m03a',
-        confirm: 'medialab_p02m03a',
+        database: 'medialab_p02m04a',
+        confirm: 'medialab_p02m04a',
         host: TEST_SOCKET,
         port: TEST_PORT
       })
@@ -199,7 +213,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(5);
+    expect(ledgerRes.rows).toHaveLength(6);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -210,10 +224,15 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[3].sha256).toBe('e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876');
     expect(ledgerRes.rows[4].filename).toBe('0005_catalog_administration_lifecycle.sql');
     expect(ledgerRes.rows[4].sha256).toBe('928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40');
+    expect(ledgerRes.rows[5].filename).toBe('0006_orders_and_immutable_commercial_evidence.sql');
+    expect(ledgerRes.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
     const expectedCounts: Record<string, number> = { ...EXPECTED_ROW_COUNTS, ...CATALOG_EXPECTED_ROW_COUNTS };
     for (const [table, count] of Object.entries(CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(ORDER_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

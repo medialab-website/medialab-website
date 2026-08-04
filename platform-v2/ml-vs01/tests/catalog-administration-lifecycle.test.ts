@@ -6,10 +6,10 @@ import {
   CURRENT_REAL_ESTATE_PRODUCTS_BY_CODE
 } from '../db/fixtures/current-real-estate-catalog-seed.js';
 
-const TEST_DB = 'medialab_p02m03a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m03a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m03a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
+const TEST_DB = 'medialab_p02m04a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
 const TEST_SOURCE = 'SYNTHETIC_P02_M03_B_TEST';
 
@@ -120,15 +120,17 @@ describe('P02-M03-B catalog administration lifecycle', () => {
     await reset();
   });
 
-  it('1. applies the exact five-migration ledger while preserving the accepted 0004 hash', async () => {
+  it('1. applies the exact six-migration ledger while preserving the accepted 0004 hash', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(5);
+    expect(ledger.rows).toHaveLength(6);
     expect(ledger.rows[3]).toEqual({
       filename: '0004_current_catalog_and_price_snapshots.sql',
       sha256: 'e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876'
     });
     expect(ledger.rows[4].filename).toBe('0005_catalog_administration_lifecycle.sql');
     expect(ledger.rows[4].sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(ledger.rows[5].filename).toBe('0006_orders_and_immutable_commercial_evidence.sql');
+    expect(ledger.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('2. keeps authoring, commercial lifecycle, and administrative visibility independent', async () => {

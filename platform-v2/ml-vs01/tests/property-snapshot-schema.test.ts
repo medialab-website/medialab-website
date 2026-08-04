@@ -5,17 +5,17 @@ import crypto from 'crypto';
 
 describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m03a-pg',
+    host: '/tmp/mlvs01-p02m04a-pg',
     port: 55432,
-    database: 'medialab_p02m03a_test',
-    user: 'medialab_p02m03a_test_owner'
+    database: 'medialab_p02m04a_test',
+    user: 'medialab_p02m04a_test_owner'
   });
 
   const poolDev = new Pool({
-    host: '/tmp/mlvs01-p02m03a-pg',
+    host: '/tmp/mlvs01-p02m04a-pg',
     port: 55432,
-    database: 'medialab_p02m03a',
-    user: 'medialab_p02m03a_owner'
+    database: 'medialab_p02m04a',
+    user: 'medialab_p02m04a_owner'
   });
 
   afterAll(async () => {
@@ -27,7 +27,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(5);
+        expect(res.rows).toHaveLength(6);
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
         expect(res.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -42,6 +42,8 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         expect(res.rows[3].sha256).toBe('e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876');
         expect(res.rows[4].filename).toBe('0005_catalog_administration_lifecycle.sql');
         expect(res.rows[4].sha256).toBe('928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40');
+        expect(res.rows[5].filename).toBe('0006_orders_and_immutable_commercial_evidence.sql');
+        expect(res.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
       });
 
       it('Catalog Assertions: properties and property_snapshots exist with correct owners', async () => {
@@ -51,7 +53,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
           ORDER BY tablename
         `);
         expect(res.rows).toHaveLength(2);
-        const expectedOwner = env === 'test' ? 'medialab_p02m03a_test_owner' : 'medialab_p02m03a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m04a_test_owner' : 'medialab_p02m04a_owner';
         expect(res.rows[0].tableowner).toBe(expectedOwner);
         expect(res.rows[1].tableowner).toBe(expectedOwner);
       });
@@ -359,22 +361,22 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     });
   });
 
-  it('16 & 20. Verify zero persistent property/snapshot rows and exact P01C fixture rows', async () => {
+  it('16 & 20. Verify exact synthetic Order property evidence and foundation fixture rows', async () => {
     for (const [env, pool] of Object.entries({ test: poolTest, dev: poolDev })) {
       const resProps = await pool.query(`SELECT count(*)::int as count FROM medialab_core.properties`);
-      expect(resProps.rows[0].count, `Properties table in ${env} must have zero persistent rows`).toBe(0);
+      expect(resProps.rows[0].count, `Properties table in ${env} must have one synthetic Order fixture`).toBe(1);
 
       const resSnaps = await pool.query(`SELECT count(*)::int as count FROM medialab_core.property_snapshots`);
-      expect(resSnaps.rows[0].count, `Property snapshots table in ${env} must have zero persistent rows`).toBe(0);
+      expect(resSnaps.rows[0].count, `Property snapshots table in ${env} must have one synthetic Order fixture`).toBe(1);
 
       const expectedCounts: Record<string, number> = {
         organizations: 1,
         people: 3,
         identities: 2,
         memberships: 3,
-        permissions: 5,
+        permissions: 7,
         permission_sets: 1,
-        permission_set_permissions: 5,
+        permission_set_permissions: 7,
         membership_permission_sets: 1,
         development_sessions: 1
       };

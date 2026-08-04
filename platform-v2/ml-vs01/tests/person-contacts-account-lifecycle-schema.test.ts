@@ -6,10 +6,10 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_p02m03a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m03a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m03a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
+const TEST_DB = 'medialab_p02m04a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
@@ -50,7 +50,9 @@ const CATALOG_ADMIN_APIS = [
   'set_catalog_product_archived'
 ];
 
-const ALL_RUNTIME_APIS = [...PUBLIC_APIS, ...CATALOG_APIS, ...CATALOG_ADMIN_APIS].sort();
+const ORDER_APIS = ['create_order', 'get_order_record'];
+
+const ALL_RUNTIME_APIS = [...PUBLIC_APIS, ...CATALOG_APIS, ...CATALOG_ADMIN_APIS, ...ORDER_APIS].sort();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -242,14 +244,15 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
     );
   }
 
-  it('1 & 2. fresh reset applies 0001 through 0005 and an identical rerun skips all five', async () => {
+  it('1 & 2. fresh reset applies 0001 through 0006 and an identical rerun skips all six', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
     expect(ledger.rows.map((row) => row.filename)).toEqual([
       '0001_identity_and_tenancy.sql',
       '0002_property_identity_and_snapshots.sql',
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
-      '0005_catalog_administration_lifecycle.sql'
+      '0005_catalog_administration_lifecycle.sql',
+      '0006_orders_and_immutable_commercial_evidence.sql'
     ]);
 
     const result = await runMigrations({
@@ -263,7 +266,8 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0002_property_identity_and_snapshots.sql',
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
-      '0005_catalog_administration_lifecycle.sql'
+      '0005_catalog_administration_lifecycle.sql',
+      '0006_orders_and_immutable_commercial_evidence.sql'
     ]);
   });
 
@@ -663,7 +667,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(51);
+      expect(searchPaths.rows).toHaveLength(54);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }
@@ -1108,7 +1112,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
     expect(after.rows[0].count).toBe(before.rows[0].count);
   });
 
-  it('restricted runtime owns nothing and can execute exactly the seven public APIs', async () => {
+  it('restricted runtime owns nothing and can execute exactly the seven public APIs plus separately inventoried additive APIs', async () => {
     const ownership = await owner.query(
       `SELECT
          (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = current_database()) AS database_owner,

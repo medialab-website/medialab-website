@@ -29,6 +29,7 @@ export interface MigrateOptions {
 const AUTHORITY_PACKET_MIGRATION = '0003_person_contacts_and_account_lifecycle.sql';
 const CATALOG_PACKET_MIGRATION = '0004_current_catalog_and_price_snapshots.sql';
 const CATALOG_ADMIN_PACKET_MIGRATION = '0005_catalog_administration_lifecycle.sql';
+const ORDER_FOUNDATION_PACKET_MIGRATION = '0006_orders_and_immutable_commercial_evidence.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -61,6 +62,11 @@ const CATALOG_ADMIN_PUBLIC_FUNCTIONS = [
   'medialab_core.publish_catalog_draft_product(text, uuid, text, text)',
   'medialab_core.set_catalog_product_archived(text, uuid, boolean, text, text)',
   'medialab_core.delete_catalog_draft_product(text, uuid, text, text)'
+];
+
+const ORDER_FOUNDATION_PUBLIC_FUNCTIONS = [
+  'medialab_core.create_order(text, text, text, uuid, uuid, uuid, text, text, text, text, text, jsonb, jsonb, bigint, text, uuid, text, text)',
+  'medialab_core.get_order_record(text, uuid)'
 ];
 
 export function validateMigrationFilenames(filenames: string[]): void {
@@ -116,7 +122,8 @@ async function applyRuntimePrivilegePolicy(
   client: pg.Client,
   runtimeUser: string,
   includeCatalogFunctions: boolean,
-  includeCatalogAdminFunctions = false
+  includeCatalogAdminFunctions = false,
+  includeOrderFoundationFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -134,7 +141,8 @@ async function applyRuntimePrivilegePolicy(
     ${[
       ...CONTACT_PUBLIC_MUTATION_FUNCTIONS,
       ...(includeCatalogFunctions ? CATALOG_PUBLIC_FUNCTIONS : []),
-      ...(includeCatalogAdminFunctions ? CATALOG_ADMIN_PUBLIC_FUNCTIONS : [])
+      ...(includeCatalogAdminFunctions ? CATALOG_ADMIN_PUBLIC_FUNCTIONS : []),
+      ...(includeOrderFoundationFunctions ? ORDER_FOUNDATION_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -179,9 +187,9 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
       throw new Error('PGUSER is required as the migration owner role');
     }
     client = new pg.Client({
-      host: options.host || process.env.PGHOST || '/tmp/mlvs01-p02m03a-pg',
+      host: options.host || process.env.PGHOST || '/tmp/mlvs01-p02m04a-pg',
       port: options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55432),
-      database: options.database || process.env.PGDATABASE || 'medialab_p02m03a',
+      database: options.database || process.env.PGDATABASE || 'medialab_p02m04a',
       user: migrationUser,
       password: options.password || process.env.PGPASSWORD || undefined
     });
@@ -255,6 +263,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === ORDER_FOUNDATION_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -279,7 +291,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           client,
           runtimeUser!,
           sqlFiles.includes(CATALOG_PACKET_MIGRATION),
-          sqlFiles.includes(CATALOG_ADMIN_PACKET_MIGRATION)
+          sqlFiles.includes(CATALOG_ADMIN_PACKET_MIGRATION),
+          sqlFiles.includes(ORDER_FOUNDATION_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {
@@ -303,7 +316,7 @@ const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 if (scriptPath && currentPath === scriptPath) {
   const isTestDb = process.argv.includes('--test');
   const targetDb = process.env.PGDATABASE ||
-    (isTestDb ? 'medialab_p02m03a_test' : 'medialab_p02m03a');
+    (isTestDb ? 'medialab_p02m04a_test' : 'medialab_p02m04a');
   const targetUser = process.env.PGUSER;
   const runtimeUser = process.env.PGRUNTIMEUSER;
 

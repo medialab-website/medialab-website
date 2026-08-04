@@ -19,18 +19,19 @@ const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
+const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
-const TEST_DB = 'medialab_p02m03a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m03a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m03a_test_app';
+const TEST_DB = 'medialab_p02m04a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
   ['0002_property_identity_and_snapshots.sql', 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83'],
   ['0003_person_contacts_and_account_lifecycle.sql', '984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3'],
   ['0004_current_catalog_and_price_snapshots.sql', 'e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876'],
-  ['0005_catalog_administration_lifecycle.sql', '928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40']
+  ['0005_catalog_administration_lifecycle.sql', '928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40'],
+  ['0006_orders_and_immutable_commercial_evidence.sql', '5d2c2e785c2a9a8fb9b77a83a5e072c0231b43afb48ca322babec20e914e279f']
 ] as const;
 
 const packetFunctions = [
@@ -131,25 +132,26 @@ const packetIndexes = [
 const allowedPaths = [
   'platform-v2/ml-vs01/BUILD_STATE.md',
   'platform-v2/ml-vs01/CHANGED_FILES.md',
-  'platform-v2/ml-vs01/db/fixtures/current-catalog-price-fixtures.ts',
-  'platform-v2/ml-vs01/db/fixtures/current-real-estate-catalog-seed.ts',
+  'platform-v2/ml-vs01/db/fixtures/order-foundation-fixtures.ts',
   'platform-v2/ml-vs01/db/migrate.ts',
-  'platform-v2/ml-vs01/db/migrations/0004_current_catalog_and_price_snapshots.sql',
-  'platform-v2/ml-vs01/db/migrations/0005_catalog_administration_lifecycle.sql',
+  'platform-v2/ml-vs01/db/migrations/0006_orders_and_immutable_commercial_evidence.sql',
   'platform-v2/ml-vs01/db/migrations/README.md',
   'platform-v2/ml-vs01/db/reset-test-database.ts',
   'platform-v2/ml-vs01/db/seed.ts',
   'platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-current-catalog-price-reconstruction-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
+  'platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
+  'platform-v2/ml-vs01/scripts/verify-runtime.ts',
   'platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts',
   'platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts',
   'platform-v2/ml-vs01/tests/current-real-estate-catalog.test.ts',
   'platform-v2/ml-vs01/tests/foundation-fixtures.test.ts',
   'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
   'platform-v2/ml-vs01/tests/migration-engine.test.ts',
+  'platform-v2/ml-vs01/tests/order-foundation.test.ts',
   'platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts',
   'platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts',
   'platform-v2/ml-vs01/tests/test-database-reset.test.ts'
@@ -210,7 +212,7 @@ for (const required of [
 ]) {
   if (!migrationText.includes(required)) fail(`Migration evidence missing: ${required}`);
 }
-for (const prohibited of ['CREATE TABLE medialab_core.orders', 'CREATE TABLE medialab_core.order_lines', 'ON DELETE CASCADE', 'current_setting(', 'session_user']) {
+for (const prohibited of ['CREATE TABLE medialab_core.order_lines', 'ON DELETE CASCADE', 'current_setting(', 'session_user']) {
   if (migrationText.includes(prohibited)) fail(`Prohibited migration construct found: ${prohibited}`);
 }
 
@@ -255,7 +257,7 @@ async function verifyDatabase(): Promise<void> {
   try {
     const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
     const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Five-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
+    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Six-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
 
     const owner = await client.query(`SELECT tableowner FROM pg_tables WHERE schemaname = 'medialab_core' AND tablename = 'catalog_administration_events'`);
     if (owner.rows[0]?.tableowner !== TEST_OWNER_ROLE) fail(`Catalog administration event owner mismatch: ${owner.rows[0]?.tableowner}`);

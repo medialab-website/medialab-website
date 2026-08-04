@@ -21,10 +21,12 @@ const EXACT_ROUTINE_NAMES = [
   'create_catalog_product',
   'create_contact_method',
   'create_custom_commercial_snapshot',
+  'create_order',
   'delete_catalog_draft_product',
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
+  'get_order_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -34,6 +36,7 @@ const EXACT_ROUTINE_NAMES = [
   'guard_contact_retirement_insert',
   'guard_contact_supersession_insert',
   'guard_contact_verification_insert',
+  'guard_order_relationship_insert',
   'guard_people_primary_email_update',
   'guard_primary_email_replacement_insert',
   'guard_verification_invalidation_insert',
@@ -46,12 +49,14 @@ const EXACT_ROUTINE_NAMES = [
   'reject_catalog_evidence_mutation',
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
+  'reject_order_evidence_mutation',
   'reject_property_snapshot_mutation',
   'replace_catalog_bracket_set',
   'replace_catalog_package_composition',
   'replace_primary_email',
   'require_catalog_permission',
   'require_identity_person',
+  'require_order_permission',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
@@ -93,6 +98,14 @@ const EXACT_TRIGGERS = [
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
   ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
+  ['order_events_immutability_guard', 'order_events', 'reject_order_evidence_mutation'],
+  ['order_external_references_immutability_guard', 'order_external_references', 'reject_order_evidence_mutation'],
+  ['order_idempotency_records_immutability_guard', 'order_idempotency_records', 'reject_order_evidence_mutation'],
+  ['order_items_immutability_guard', 'order_items', 'reject_order_evidence_mutation'],
+  ['order_parties_immutability_guard', 'order_parties', 'reject_order_evidence_mutation'],
+  ['order_relationships_immutability_guard', 'order_relationships', 'reject_order_evidence_mutation'],
+  ['order_relationships_insert_guard', 'order_relationships', 'guard_order_relationship_insert'],
+  ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation'],
   ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
   ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
   ['person_account_states_delete_guard', 'person_account_states', 'reject_contact_history_mutation'],
@@ -106,17 +119,17 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m03a-pg',
+    host: '/tmp/mlvs01-p02m04a-pg',
     port: 55432,
-    database: 'medialab_p02m03a_test',
-    user: 'medialab_p02m03a_test_owner'
+    database: 'medialab_p02m04a_test',
+    user: 'medialab_p02m04a_test_owner'
   });
 
   const poolDev = new Pool({
-    host: '/tmp/mlvs01-p02m03a-pg',
+    host: '/tmp/mlvs01-p02m04a-pg',
     port: 55432,
-    database: 'medialab_p02m03a',
-    user: 'medialab_p02m03a_owner'
+    database: 'medialab_p02m04a',
+    user: 'medialab_p02m04a_owner'
   });
 
   beforeAll(async () => {
@@ -139,15 +152,15 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outDev = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m03a',
-      user: 'medialab_p02m03a_owner',
-      runtimeUser: 'medialab_p02m03a_app'
+      database: 'medialab_p02m04a',
+      user: 'medialab_p02m04a_owner',
+      runtimeUser: 'medialab_p02m04a_app'
     });
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m03a_test',
-      user: 'medialab_p02m03a_test_owner',
-      runtimeUser: 'medialab_p02m03a_test_app'
+      database: 'medialab_p02m04a_test',
+      user: 'medialab_p02m04a_test_owner',
+      runtimeUser: 'medialab_p02m04a_test_app'
     });
 
     expect(outDev.applied).toEqual([]);
@@ -156,7 +169,8 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0002_property_identity_and_snapshots.sql',
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
-      '0005_catalog_administration_lifecycle.sql'
+      '0005_catalog_administration_lifecycle.sql',
+      '0006_orders_and_immutable_commercial_evidence.sql'
     ]);
 
     expect(outTest.applied).toEqual([]);
@@ -165,7 +179,8 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0002_property_identity_and_snapshots.sql',
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
-      '0005_catalog_administration_lifecycle.sql'
+      '0005_catalog_administration_lifecycle.sql',
+      '0006_orders_and_immutable_commercial_evidence.sql'
     ]);
   });
 
@@ -189,7 +204,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m03a_test_owner' : 'medialab_p02m03a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m04a_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -202,7 +217,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m03a_test_owner' : 'medialab_p02m03a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m04a_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
@@ -660,9 +675,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 5,
+      permissions: 7,
       permission_sets: 1,
-      permission_set_permissions: 5,
+      permission_set_permissions: 7,
       membership_permission_sets: 1,
       development_sessions: 1
     };

@@ -20,7 +20,7 @@ if (!fs.existsSync(pgBinary)) {
 console.log(`PostgreSQL binary verified: ${pgBinary}`);
 
 // 3. Verify PostgreSQL cluster directory
-const pgDataDir = '/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/runtime/postgres-vs01/data';
+const pgDataDir = '/tmp/mlvs01-p02m04a-pg-data';
 if (!fs.existsSync(pgDataDir)) {
   console.error(`ERROR: PostgreSQL cluster data directory not found at ${pgDataDir}`);
   process.exit(1);
@@ -28,7 +28,7 @@ if (!fs.existsSync(pgDataDir)) {
 console.log(`PostgreSQL cluster data dir verified: ${pgDataDir}`);
 
 // 4. Verify socket directory
-const socketDir = '/tmp/mlvs01-pg';
+const socketDir = '/tmp/mlvs01-p02m04a-pg';
 if (!fs.existsSync(socketDir)) {
   console.error(`ERROR: Approved socket directory not found at ${socketDir}`);
   process.exit(1);

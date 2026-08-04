@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import pg from 'pg';
 import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
+import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
 
 console.log('Running verify-current-catalog-price-reconstruction-schema.ts...');
 
@@ -14,18 +15,19 @@ const baseDir = path.resolve(__dirname, '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m03a-pg';
+const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
-const TEST_DB = 'medialab_p02m03a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m03a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m03a_test_app';
+const TEST_DB = 'medialab_p02m04a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
   ['0002_property_identity_and_snapshots.sql', 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83'],
   ['0003_person_contacts_and_account_lifecycle.sql', '984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3'],
   ['0004_current_catalog_and_price_snapshots.sql', 'e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876'],
-  ['0005_catalog_administration_lifecycle.sql', '928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40']
+  ['0005_catalog_administration_lifecycle.sql', '928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40'],
+  ['0006_orders_and_immutable_commercial_evidence.sql', '5d2c2e785c2a9a8fb9b77a83a5e072c0231b43afb48ca322babec20e914e279f']
 ] as const;
 
 const packetTables = [
@@ -67,25 +69,26 @@ const runtimeFunctions = packetFunctions.filter((name) => ![
 const allowedPaths = [
   'platform-v2/ml-vs01/BUILD_STATE.md',
   'platform-v2/ml-vs01/CHANGED_FILES.md',
-  'platform-v2/ml-vs01/db/fixtures/current-catalog-price-fixtures.ts',
-  'platform-v2/ml-vs01/db/fixtures/current-real-estate-catalog-seed.ts',
+  'platform-v2/ml-vs01/db/fixtures/order-foundation-fixtures.ts',
   'platform-v2/ml-vs01/db/migrate.ts',
-  'platform-v2/ml-vs01/db/migrations/0004_current_catalog_and_price_snapshots.sql',
-  'platform-v2/ml-vs01/db/migrations/0005_catalog_administration_lifecycle.sql',
+  'platform-v2/ml-vs01/db/migrations/0006_orders_and_immutable_commercial_evidence.sql',
   'platform-v2/ml-vs01/db/migrations/README.md',
   'platform-v2/ml-vs01/db/reset-test-database.ts',
   'platform-v2/ml-vs01/db/seed.ts',
   'platform-v2/ml-vs01/scripts/verify-current-catalog-price-reconstruction-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
+  'platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
+  'platform-v2/ml-vs01/scripts/verify-runtime.ts',
   'platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts',
   'platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts',
   'platform-v2/ml-vs01/tests/current-real-estate-catalog.test.ts',
   'platform-v2/ml-vs01/tests/foundation-fixtures.test.ts',
   'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
   'platform-v2/ml-vs01/tests/migration-engine.test.ts',
+  'platform-v2/ml-vs01/tests/order-foundation.test.ts',
   'platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts',
   'platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts',
   'platform-v2/ml-vs01/tests/test-database-reset.test.ts'
@@ -95,10 +98,10 @@ const metadataDigests = {
   columns: ['157', '7d702e90254f03aeb86b34ac0df51761e70a1c8ec9b488b21e0289702676d4cc'],
   constraints: ['140', 'dd481681b65ad91f55a825d9f0b1e15bcc27c34da7a9c43d44d2752ba55dce8f'],
   indexes: ['36', '4d3eaadeb44e18f3a159a7f6857d0cb906ff07dd5c2b7d4a6133d66cc47e8295'],
-  functions: ['13', 'e3cf1a3385843ecb9d3922da42e9098f1bb79e26c42e7fa7c4041cd9bcdfcab7'],
+  functions: ['13', 'cbe1713720b3b8f70cfb45296aaa61067588109c178e6d068591233479ff194c'],
   triggers: ['12', '65c47cb994d63be2d00dc247e985e200e9ed49d80449a09d2347b29787c90585'],
-  tableGrants: ['77', 'eb95397a8329db3848aa053916f278a6eca645f5c2a31f3164274351241ab7bf'],
-  routineGrants: ['23', '96df28cebee0f20306cd29695f93a93fd71c71dbede2f159246dabd5fd1626dd']
+  tableGrants: ['77', '24bfe2ff8fca61bd34ff12325bec707434e45e181f32aa1147ae7b81b34d9702'],
+  routineGrants: ['23', '76334ebba6c99221e3c53b584f791472ee3db4c61882d9f58496f45bc166019f']
 } as const;
 
 function fail(message: string): void {
@@ -179,7 +182,7 @@ const fixedPathCount = migrationText.match(/SECURITY DEFINER\s+SET search_path =
 if (securityDefinerCount !== 13 || fixedPathCount !== 13) {
   fail(`Expected 13 fixed-path SECURITY DEFINER functions, got ${securityDefinerCount}/${fixedPathCount}`);
 }
-for (const prohibited of ['CREATE TABLE medialab_core.orders', 'CREATE TABLE medialab_core.order_lines', 'organization_id uuid', 'ON DELETE CASCADE', 'current_setting(', 'session_user']) {
+for (const prohibited of ['CREATE TABLE medialab_core.order_lines', 'organization_id uuid', 'ON DELETE CASCADE', 'current_setting(', 'session_user']) {
   if (migrationText.includes(prohibited)) fail(`Prohibited migration construct found: ${prohibited}`);
 }
 
@@ -233,7 +236,7 @@ async function verifyDatabase(): Promise<void> {
   try {
     const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
     const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Database migration ledger does not match the exact five-file inventory');
+    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Database migration ledger does not match the exact six-file inventory');
 
     const tables = await client.query(
       `SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core' AND tablename IN ${tableListSql} ORDER BY tablename`
@@ -286,7 +289,8 @@ async function verifyDatabase(): Promise<void> {
     for (const [table, expectedCount] of Object.entries(CATALOG_EXPECTED_ROW_COUNTS)) {
       const result = await client.query(`SELECT count(*)::int AS count FROM medialab_core.${table}`);
       const canonicalCount = CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS[table as keyof typeof CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS] ?? 0;
-      if (result.rows[0].count !== expectedCount + canonicalCount) fail(`${table} fixture count mismatch: ${result.rows[0].count}`);
+      const orderCount = ORDER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof ORDER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0;
+      if (result.rows[0].count !== expectedCount + canonicalCount + orderCount) fail(`${table} fixture count mismatch: ${result.rows[0].count}`);
     }
 
     const selectable = await client.query(

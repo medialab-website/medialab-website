@@ -30,6 +30,10 @@ const expectedMigrations = [
   {
     filename: '0005_catalog_administration_lifecycle.sql',
     sha256: '928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40'
+  },
+  {
+    filename: '0006_orders_and_immutable_commercial_evidence.sql',
+    sha256: '5d2c2e785c2a9a8fb9b77a83a5e072c0231b43afb48ca322babec20e914e279f'
   }
 ];
 
