@@ -51,8 +51,9 @@ const CATALOG_ADMIN_APIS = [
 ];
 
 const ORDER_APIS = ['create_order', 'get_order_record'];
+const PROPERTY_HUB_APIS = ['create_property_hub', 'get_property_hub_record'];
 
-const ALL_RUNTIME_APIS = [...PUBLIC_APIS, ...CATALOG_APIS, ...CATALOG_ADMIN_APIS, ...ORDER_APIS].sort();
+const ALL_RUNTIME_APIS = [...PUBLIC_APIS, ...CATALOG_APIS, ...CATALOG_ADMIN_APIS, ...ORDER_APIS, ...PROPERTY_HUB_APIS].sort();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -244,7 +245,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
     );
   }
 
-  it('1 & 2. fresh reset applies 0001 through 0006 and an identical rerun skips all six', async () => {
+  it('1 & 2. fresh reset applies 0001 through 0007 and an identical rerun skips all seven', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
     expect(ledger.rows.map((row) => row.filename)).toEqual([
       '0001_identity_and_tenancy.sql',
@@ -252,7 +253,8 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
       '0005_catalog_administration_lifecycle.sql',
-      '0006_orders_and_immutable_commercial_evidence.sql'
+      '0006_orders_and_immutable_commercial_evidence.sql',
+      '0007_property_hub_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -267,7 +269,8 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
       '0005_catalog_administration_lifecycle.sql',
-      '0006_orders_and_immutable_commercial_evidence.sql'
+      '0006_orders_and_immutable_commercial_evidence.sql',
+      '0007_property_hub_foundation.sql'
     ]);
   });
 
@@ -667,7 +670,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(54);
+      expect(searchPaths.rows).toHaveLength(57);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

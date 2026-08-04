@@ -194,14 +194,15 @@ describe('Migration Engine Substantive Behavior', () => {
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
       '0005_catalog_administration_lifecycle.sql',
-      '0006_orders_and_immutable_commercial_evidence.sql'
+      '0006_orders_and_immutable_commercial_evidence.sql',
+      '0007_property_hub_foundation.sql'
     ]);
   });
 
   it('11. verifies canonical test database contains ledger rows and domain tables', async () => {
     const devRes = await client.query('SELECT COUNT(*)::int AS cnt, MAX(filename) AS fname FROM medialab_meta.schema_migrations;');
-    expect(devRes.rows[0].cnt).toBe(6);
-    expect(devRes.rows[0].fname).toBe('0006_orders_and_immutable_commercial_evidence.sql');
+    expect(devRes.rows[0].cnt).toBe(7);
+    expect(devRes.rows[0].fname).toBe('0007_property_hub_foundation.sql');
 
     const tablesRes = await client.query(
       "SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core' ORDER BY tablename;"
@@ -211,5 +212,7 @@ describe('Migration Engine Substantive Behavior', () => {
     expect(tables).toContain('property_snapshots');
     expect(tables).toContain('orders');
     expect(tables).toContain('order_items');
+    expect(tables).toContain('property_hubs');
+    expect(tables).toContain('property_hub_orders');
   });
 });

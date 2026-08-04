@@ -30,6 +30,7 @@ const AUTHORITY_PACKET_MIGRATION = '0003_person_contacts_and_account_lifecycle.s
 const CATALOG_PACKET_MIGRATION = '0004_current_catalog_and_price_snapshots.sql';
 const CATALOG_ADMIN_PACKET_MIGRATION = '0005_catalog_administration_lifecycle.sql';
 const ORDER_FOUNDATION_PACKET_MIGRATION = '0006_orders_and_immutable_commercial_evidence.sql';
+const PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION = '0007_property_hub_foundation.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -67,6 +68,11 @@ const CATALOG_ADMIN_PUBLIC_FUNCTIONS = [
 const ORDER_FOUNDATION_PUBLIC_FUNCTIONS = [
   'medialab_core.create_order(text, text, text, uuid, uuid, uuid, text, text, text, text, text, jsonb, jsonb, bigint, text, uuid, text, text)',
   'medialab_core.get_order_record(text, uuid)'
+];
+
+const PROPERTY_HUB_FOUNDATION_PUBLIC_FUNCTIONS = [
+  'medialab_core.create_property_hub(text, text, uuid, uuid, uuid, text, jsonb, jsonb, jsonb)',
+  'medialab_core.get_property_hub_record(text, uuid)'
 ];
 
 export function validateMigrationFilenames(filenames: string[]): void {
@@ -123,7 +129,8 @@ async function applyRuntimePrivilegePolicy(
   runtimeUser: string,
   includeCatalogFunctions: boolean,
   includeCatalogAdminFunctions = false,
-  includeOrderFoundationFunctions = false
+  includeOrderFoundationFunctions = false,
+  includePropertyHubFoundationFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -142,7 +149,8 @@ async function applyRuntimePrivilegePolicy(
       ...CONTACT_PUBLIC_MUTATION_FUNCTIONS,
       ...(includeCatalogFunctions ? CATALOG_PUBLIC_FUNCTIONS : []),
       ...(includeCatalogAdminFunctions ? CATALOG_ADMIN_PUBLIC_FUNCTIONS : []),
-      ...(includeOrderFoundationFunctions ? ORDER_FOUNDATION_PUBLIC_FUNCTIONS : [])
+      ...(includeOrderFoundationFunctions ? ORDER_FOUNDATION_PUBLIC_FUNCTIONS : []),
+      ...(includePropertyHubFoundationFunctions ? PROPERTY_HUB_FOUNDATION_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -267,6 +275,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -292,7 +304,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           runtimeUser!,
           sqlFiles.includes(CATALOG_PACKET_MIGRATION),
           sqlFiles.includes(CATALOG_ADMIN_PACKET_MIGRATION),
-          sqlFiles.includes(ORDER_FOUNDATION_PACKET_MIGRATION)
+          sqlFiles.includes(ORDER_FOUNDATION_PACKET_MIGRATION),
+          sqlFiles.includes(PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {

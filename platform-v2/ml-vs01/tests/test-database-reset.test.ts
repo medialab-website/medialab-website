@@ -5,6 +5,7 @@ import { EXPECTED_ROW_COUNTS } from '../db/fixtures/identity-tenancy-fixtures.js
 import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
+import { PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
 const TEST_DB = 'medialab_p02m04a_test';
 const TEST_ROLE = 'medialab_p02m04a_test_owner';
@@ -27,11 +28,13 @@ const EXACT_ROUTINE_NAMES = [
   'create_contact_method',
   'create_custom_commercial_snapshot',
   'create_order',
+  'create_property_hub',
   'delete_catalog_draft_product',
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
   'get_order_record',
+  'get_property_hub_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -55,6 +58,7 @@ const EXACT_ROUTINE_NAMES = [
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
   'reject_order_evidence_mutation',
+  'reject_property_hub_evidence_mutation',
   'reject_property_snapshot_mutation',
   'replace_catalog_bracket_set',
   'replace_catalog_package_composition',
@@ -62,6 +66,7 @@ const EXACT_ROUTINE_NAMES = [
   'require_catalog_permission',
   'require_identity_person',
   'require_order_permission',
+  'require_property_hub_permission',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
@@ -119,6 +124,12 @@ const EXACT_TRIGGERS = [
   ['primary_email_replacements_apply', 'primary_email_replacements', 'apply_primary_email_replacement'],
   ['primary_email_replacements_immutability_guard', 'primary_email_replacements', 'reject_contact_history_mutation'],
   ['primary_email_replacements_insert_guard', 'primary_email_replacements', 'guard_primary_email_replacement_insert'],
+  ['property_hub_events_immutability_guard', 'property_hub_events', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_external_references_immutability_guard', 'property_hub_external_references', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_idempotency_records_immutability_guard', 'property_hub_idempotency_records', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_orders_immutability_guard', 'property_hub_orders', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_participants_immutability_guard', 'property_hub_participants', 'reject_property_hub_evidence_mutation'],
+  ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation'],
   ['property_snapshots_immutability_guard', 'property_snapshots', 'reject_property_snapshot_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({
   trigger_name,
@@ -213,7 +224,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(6);
+    expect(ledgerRes.rows).toHaveLength(7);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -226,6 +237,8 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[4].sha256).toBe('928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40');
     expect(ledgerRes.rows[5].filename).toBe('0006_orders_and_immutable_commercial_evidence.sql');
     expect(ledgerRes.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(ledgerRes.rows[6].filename).toBe('0007_property_hub_foundation.sql');
+    expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
     const expectedCounts: Record<string, number> = { ...EXPECTED_ROW_COUNTS, ...CATALOG_EXPECTED_ROW_COUNTS };
@@ -233,6 +246,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(ORDER_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

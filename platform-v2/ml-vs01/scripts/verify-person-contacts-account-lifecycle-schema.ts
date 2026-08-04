@@ -34,6 +34,10 @@ const expectedMigrations = [
   {
     filename: '0006_orders_and_immutable_commercial_evidence.sql',
     sha256: '5d2c2e785c2a9a8fb9b77a83a5e072c0231b43afb48ca322babec20e914e279f'
+  },
+  {
+    filename: '0007_property_hub_foundation.sql',
+    sha256: '8288090bbcb9b7d8b1108247c2f955ab1a5a70f5680c5e5b8adce80f7f7bda16'
   }
 ];
 

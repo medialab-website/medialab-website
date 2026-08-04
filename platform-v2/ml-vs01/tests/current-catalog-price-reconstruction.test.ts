@@ -21,6 +21,7 @@ import {
   ORDER_FOUNDATION_ROW_COUNT_INCREMENTS,
   ORDER_FOUNDATION_SOURCE
 } from '../db/fixtures/order-foundation-fixtures.js';
+import { PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
 const TEST_DB = 'medialab_p02m04a_test';
 const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
@@ -141,11 +142,11 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     await reset();
   });
 
-  it('1. preserves the exact six-row migration ledger and predecessor checksums', async () => {
+  it('1. preserves the exact seven-row migration ledger and predecessor checksums', async () => {
     const ledger = await owner.query(
       'SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename'
     );
-    expect(ledger.rows).toHaveLength(6);
+    expect(ledger.rows).toHaveLength(7);
     expect(ledger.rows.slice(0, 3)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },
@@ -157,6 +158,8 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     expect(ledger.rows[4].sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(ledger.rows[5].filename).toBe('0006_orders_and_immutable_commercial_evidence.sql');
     expect(ledger.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(ledger.rows[6].filename).toBe('0007_property_hub_foundation.sql');
+    expect(ledger.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('2. preserves the exact synthetic packet evidence alongside the canonical catalog', async () => {
@@ -165,7 +168,8 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
       expect(count.rows[0].count, table).toBe(
         expected +
         (CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS[table as keyof typeof CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS] ?? 0) +
-        (ORDER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof ORDER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0)
+        (ORDER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof ORDER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
+        (PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0)
       );
     }
     const sources = await owner.query(

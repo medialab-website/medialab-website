@@ -1,10 +1,10 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M04-A-ORDER-FOUNDATION-R01
+# BUILD_STATE.md — ML-PLATFORM-V2-P02-M04-B-PROPERTY-HUB-FOUNDATION-R01
 
-- **Current Milestone:** P02-M04-A — Provider-Neutral Order and Immutable Commercial Evidence Foundation
+- **Current Milestone:** P02-M04-B — Provider-Neutral Property Hub Foundation
 - **Status:** Candidate / Locally Verified / Unstaged / Uncommitted / Unpushed
-- **Git Branch:** `platform-v2-p02-m04-a-order-foundation-r01`
-- **Workspace:** `/Users/seanstatz/.codex/.chatgpt-projects/g-p-6a6acee454688191ab314d6c156d0531/P02-M04-A-order-foundation-workspace`
-- **Base Commit:** `143ce44bc92eb6e6a40a48720654df8b8a10bbb9`
+- **Git Branch:** `platform-v2-p02-m04-b-property-hub-foundation-r01`
+- **Workspace:** `/Users/seanstatz/.codex/.chatgpt-projects/g-p-6a6acee454688191ab314d6c156d0531/property-hub-candidate`
+- **Base Commit:** `74ed3447e8c3a79321b1ae48744619f423e97332`
 - **Canonical Migrations:**
   - `0001_identity_and_tenancy.sql` (SHA-256: `29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31`)
   - `0002_property_identity_and_snapshots.sql` (SHA-256: `d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83`)
@@ -12,16 +12,19 @@
   - `0004_current_catalog_and_price_snapshots.sql` (SHA-256: `e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876`)
   - `0005_catalog_administration_lifecycle.sql` (SHA-256: `928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40`)
   - `0006_orders_and_immutable_commercial_evidence.sql` (SHA-256: `5d2c2e785c2a9a8fb9b77a83a5e072c0231b43afb48ca322babec20e914e279f`)
-- **Package Files:** `package.json` SHA-256 `64e952c7eab5d6c9ab602a0eaed0a1433500c969477830c3203bc072c4ef217d`; `package-lock.json` SHA-256 `11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258`.
-- **Order Boundary:** Seven tables implement canonical Orders, frozen party roles, immutable purchased items, provider-neutral external references, actor-scoped idempotency, append-only critical events, and immutable related-Order evidence.
-- **Party Law:** Ordering person, customer, billing party, commercial owner, organization, and authorized actor remain separate records. Runtime creation derives the actor from the ordinary session and validates active organization membership and exact `order.create` permission.
-- **Commercial Evidence:** Order items reference accepted catalog or custom commercial snapshots and copy immutable descriptions, quantities, units, integer-cent amounts, currency, catalog identity, source identity, custom reason, and custom actor. Catalog mutation cannot rewrite Order meaning.
-- **Idempotency:** `create_order` computes a server-side request SHA-256, serializes actor/command/key concurrency with a transaction advisory lock, returns the original result for exact replay, rejects conflicting reuse, and leaves no partial rows after failure.
-- **Lifecycle and Relationships:** The minimum current projection is `ACCEPTED`. `ORDER_CREATED`, `ORDER_ACCEPTED`, and relationship events are append-only. Correction, supplemental, replacement, customer-added-scope, and MediaLab-responsible-return relationships preserve both Orders and reject self-reference or cycles.
-- **Runtime API Inventory:** P02-M04-A adds exactly `create_order(...)` and `get_order_record(text, uuid)`. The three packet helpers remain owner-only. All 24 predecessor runtime APIs retain their reviewed signatures and grants.
-- **Authority Boundary:** Owner roles own all packet objects. Runtime roles own none, receive zero direct table or sequence DML, and receive EXECUTE only on the two packet APIs. `PUBLIC` receives no packet table or function authority.
-- **Fixture Boundary:** Deterministic synthetic fixtures add two permissions, one Property and immutable snapshot, one custom commercial snapshot, one accepted Order, six parties, two items, one external reference, one idempotency record, and two events. No raw Aryeo, customer, production, secret, payment, or external operational data was used.
-- **Verification:** Targeted P02-M04-A test: 1 file, 26/26 passed. Complete suite: 11 files, 159/159 passed. Typecheck and all packet machine verifiers pass with zero skips or retries.
-- **Deferred Capability:** No jobs, scheduling, appointments, crews, Mission Plans, payments, refunds, credits, publications, delivery, downloads, Property Hubs, UI, live Aryeo import, historical reconstruction, dual-run, production migration, deployment, or later-packet scaffold was added.
-- **START_FRESH Boundary:** START_FRESH records recovery intent for the same Person and Identity while preserving existing history. It does not currently delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data. Actual profile/preferences reset behavior remains deferred until those models exist.
-- **Known Nonblocking Event:** `verify-changed-files.ts` retains its known porcelain parsing and exact-set defect and remains unchanged. Independent porcelain-v2 evidence is controlling.
+  - `0007_property_hub_foundation.sql` (SHA-256: `8288090bbcb9b7d8b1108247c2f955ab1a5a70f5680c5e5b8adce80f7f7bda16`)
+- **Package Files:** `package.json` SHA-256 `a91c0b5d63e18479982fd6dfdfbb58f21dd3e4bc0859566ac0d37a1a4769101f`; `package-lock.json` SHA-256 `11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258`.
+- **Hub Boundary:** Six tables implement a distinct organization-owned engagement, exact Property and initial immutable snapshot evidence, canonical Order links, explicit participant roles, provider-neutral external references, actor-scoped idempotency, and append-only creation events.
+- **Engagement Cardinality:** No one-Hub-per-Property or one-active-Hub rule exists. Separate Hubs may reference the same Property while their Orders, participants, references, events, and idempotency evidence remain distinct.
+- **Snapshot Law:** Every Hub has one immutable `initial_property_snapshot_id`; a composite foreign key proves that snapshot belongs to the exact Hub Property and organization. Hub mutation guards prevent silent replacement.
+- **Order Law:** Hub Order links use composite organization-and-Property foreign keys. They do not mutate Order parties, items, commercial evidence, totals, state, source references, events, or related-Order meaning. The same Order is not duplicated within one Hub, and no unproven one-Hub-per-Order rule was added.
+- **Participant Law:** The authenticated creator is automatically recorded as `HUB_MANAGER`. Additional active organization memberships may be `HUB_MANAGER` or `HUB_PARTICIPANT`. Retrieval requires active membership, exact `property_hub.read`, and explicit Hub participation.
+- **Lifecycle and Events:** `ESTABLISHED` is the sole foundation state and `PROPERTY_HUB_CREATED` the sole foundation event. Hub identity and critical evidence are immutable and append-only; no operational lifecycle was invented.
+- **External Reference Rule:** `(provider, external_record_type, external_identifier)` is globally unique and provider-neutral. Required identifiers are normalized and nonempty. No provider-specific field or behavior exists.
+- **Idempotency:** `create_property_hub` uses a separate actor-scoped `CREATE_PROPERTY_HUB` record, server-computed request SHA-256, and transaction advisory lock. Exact replay returns the original Hub; conflicting reuse and concurrent duplicates fail closed without partial evidence.
+- **Runtime API Inventory:** P02-M04-B adds exactly `create_property_hub(...)` and `get_property_hub_record(text, uuid)`. Both derive the actor from the ordinary session. The two packet helpers remain owner-only.
+- **Authority Boundary:** Owner roles own all packet objects. Runtime roles own none, receive zero direct packet table or sequence DML, and receive EXECUTE only on the two packet APIs. `PUBLIC` receives no packet table or function authority.
+- **Fixture Boundary:** Deterministic synthetic fixtures add two permissions, a second accepted canonical Order with frozen evidence, one Hub associating two Orders, two participants, one provider-neutral reference, one Hub idempotency record, and one creation event.
+- **Verification:** Targeted P02-M04-B test: 1 file, 25/25 passed. Complete suite: 12 files, 184/184 passed. Typecheck, migration, reset, dependency, placeholder, predecessor schema, and packet-specific security verifiers pass.
+- **Known Nonblocking Event:** `verify-changed-files.ts` remains byte-identical and retains its known porcelain-v2 parsing defect; its first modified path loses the leading `p`. Independent exact porcelain-v2 evidence and the packet verifier are controlling.
+- **Deferred Capability:** No UI, jobs, tasks, media, scheduling, appointments, crews, Mission Plans, payments, refunds, credits, invoices, notifications, messages, publication, delivery, downloads, Aryeo access/import, Google Drive access/mutation, listing reconstruction, dual-run, cutover, deployment, or production mutation was added.

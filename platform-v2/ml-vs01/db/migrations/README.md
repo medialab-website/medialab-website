@@ -26,12 +26,13 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * `0004_current_catalog_and_price_snapshots.sql` is the bounded P02-M03-A additive migration for global catalog identity, effective prices, deterministic package brackets, immutable commercial snapshots, custom evidence, and provider mappings.
    * `0005_catalog_administration_lifecycle.sql` is the bounded P02-M03-B additive migration for draft/published authoring, independent archive visibility, attributable definition revision, and protected unused-draft deletion.
    * `0006_orders_and_immutable_commercial_evidence.sql` is the bounded P02-M04-A additive migration for canonical Orders, frozen parties and items, provider-neutral source references, command idempotency, append-only events, and related-Order evidence.
-   * Migrations `0001` through `0005` remain immutable predecessor inputs.
+   * `0007_property_hub_foundation.sql` is the bounded P02-M04-B additive migration for property-centered engagement identity, immutable initial snapshot evidence, canonical Order associations, explicit participants, provider-neutral references, idempotency, and append-only Hub events.
+   * Migrations `0001` through `0006` remain immutable predecessor inputs.
 
 6. **Owner and Runtime Role Separation**
    * `PGUSER` identifies the dedicated migration owner used for migrations, seed, and reset.
    * `PGRUNTIMEUSER` identifies an existing restricted runtime role and must differ from the migration owner.
-   * Migration SQL is deliberately environment-role-neutral; migrations `0003` through `0006` contain no environment-specific role names or grants.
+   * Migration SQL is deliberately environment-role-neutral; migrations `0003` through `0007` contain no environment-specific role names or grants.
    * `db/migrate.ts` is the canonical supported migration entrypoint. It validates that the owner and runtime roles both exist and differ.
    * Migration SQL, the runtime privilege policy, and the migration-ledger insert execute within the same database transaction without substituting environment-specific values into canonical migration bytes.
    * Raw manual execution of migration `0003` alone is safe but incomplete and is not a supported deployment path.
@@ -39,6 +40,7 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * Raw manual execution of migration `0004` alone is likewise incomplete. The canonical runner separately inventories ten P02-M03-A functions, reapplies zero direct table or sequence privileges, and grants the restricted runtime role only those ten functions plus the unchanged seven P02-M02-A APIs.
    * Raw manual execution of migration `0005` alone is likewise incomplete. The canonical runner separately inventories seven P02-M03-B runtime functions, keeps two new trigger helpers owner-only, and preserves all predecessor grants without changing predecessor API semantics.
    * Raw manual execution of migration `0006` alone is likewise incomplete. The canonical runner grants only `create_order` and `get_order_record` to the restricted runtime role, keeps all Order helpers owner-only, and preserves the preceding 24 runtime APIs unchanged.
+   * Raw manual execution of migration `0007` alone is likewise incomplete. The canonical runner grants only `create_property_hub` and `get_property_hub_record` as new runtime APIs, keeps all Hub helpers owner-only, and preserves predecessor runtime APIs unchanged.
 
 7. **Global Catalog and Commercial-Evidence Boundary**
    * Catalog products, package definitions, brackets, prices, and external mappings are global MediaLab-owned records and contain no organization ownership field.
@@ -69,12 +71,20 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * Orders, parties, items, source references, idempotency records, events, and relationships are immutable. Critical lifecycle evidence is append-only, and related Orders preserve correction, supplemental, replacement, customer-added-scope, or MediaLab-responsible-return work without reopening the original agreement.
    * `create_order` and `get_order_record` are the complete P02-M04-A runtime API inventory. Neither function trusts caller-supplied actor identity, and neither grants table DML or execution authority to `PUBLIC`.
 
-11. **Bearer Authority Boundary**
+11. **Property Hub Engagement Boundary**
+   * A Property Hub is a distinct organization-owned engagement around exactly one canonical Property and its immutable initial Property snapshot. Multiple Hubs may preserve separate engagements for the same Property.
+   * Hub Order links associate canonical Orders without mutating or flattening their parties, items, commercial snapshots, or related-Order evidence. The database requires every associated Order to share the Hub organization and Property.
+   * The authenticated creator is recorded as the initial `HUB_MANAGER`; additional active organization memberships may be recorded as `HUB_MANAGER` or `HUB_PARTICIPANT`. Retrieval requires both `property_hub.read` and explicit Hub participation.
+   * Hub external identity is provider-neutral and globally unique by provider, external record type, and external identifier. Actor-scoped creation idempotency is separate from Order idempotency and uses the same accepted request-fingerprint and advisory-lock pattern.
+   * Hub identity, initial snapshot evidence, Order links, participant evidence, external references, idempotency records, and creation events are immutable. `PROPERTY_HUB_CREATED` is the sole foundation lifecycle event and `ESTABLISHED` is the sole foundation state.
+   * `create_property_hub` and `get_property_hub_record` are the complete P02-M04-B runtime API inventory. Runtime roles have no direct Hub table or sequence DML, and `PUBLIC` has no Hub authority.
+
+12. **Bearer Authority Boundary**
    * Ordinary mutation APIs derive their actor from an unexpired, unrevoked bearer session digest in `development_sessions`.
    * Account recovery uses a separate short-lived, single-use digest in `account_recovery_sessions`.
    * Raw bearer tokens are never stored in canonical tables or immutable evidence.
 
-12. **Recovery Intent Boundary**
+13. **Recovery Intent Boundary**
    * `START_FRESH` records recovery intent for the same Person and Identity while preserving existing history.
    * It does not currently delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
    * Actual profile/preferences reset behavior remains deferred until those models exist.

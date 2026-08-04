@@ -22,11 +22,13 @@ const EXACT_ROUTINE_NAMES = [
   'create_contact_method',
   'create_custom_commercial_snapshot',
   'create_order',
+  'create_property_hub',
   'delete_catalog_draft_product',
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
   'get_order_record',
+  'get_property_hub_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -50,6 +52,7 @@ const EXACT_ROUTINE_NAMES = [
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
   'reject_order_evidence_mutation',
+  'reject_property_hub_evidence_mutation',
   'reject_property_snapshot_mutation',
   'replace_catalog_bracket_set',
   'replace_catalog_package_composition',
@@ -57,6 +60,7 @@ const EXACT_ROUTINE_NAMES = [
   'require_catalog_permission',
   'require_identity_person',
   'require_order_permission',
+  'require_property_hub_permission',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
@@ -114,6 +118,12 @@ const EXACT_TRIGGERS = [
   ['primary_email_replacements_apply', 'primary_email_replacements', 'apply_primary_email_replacement'],
   ['primary_email_replacements_immutability_guard', 'primary_email_replacements', 'reject_contact_history_mutation'],
   ['primary_email_replacements_insert_guard', 'primary_email_replacements', 'guard_primary_email_replacement_insert'],
+  ['property_hub_events_immutability_guard', 'property_hub_events', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_external_references_immutability_guard', 'property_hub_external_references', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_idempotency_records_immutability_guard', 'property_hub_idempotency_records', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_orders_immutability_guard', 'property_hub_orders', 'reject_property_hub_evidence_mutation'],
+  ['property_hub_participants_immutability_guard', 'property_hub_participants', 'reject_property_hub_evidence_mutation'],
+  ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation'],
   ['property_snapshots_immutability_guard', 'property_snapshots', 'reject_property_snapshot_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }));
 
@@ -170,7 +180,8 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
       '0005_catalog_administration_lifecycle.sql',
-      '0006_orders_and_immutable_commercial_evidence.sql'
+      '0006_orders_and_immutable_commercial_evidence.sql',
+      '0007_property_hub_foundation.sql'
     ]);
 
     expect(outTest.applied).toEqual([]);
@@ -180,7 +191,8 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0003_person_contacts_and_account_lifecycle.sql',
       '0004_current_catalog_and_price_snapshots.sql',
       '0005_catalog_administration_lifecycle.sql',
-      '0006_orders_and_immutable_commercial_evidence.sql'
+      '0006_orders_and_immutable_commercial_evidence.sql',
+      '0007_property_hub_foundation.sql'
     ]);
   });
 
@@ -675,9 +687,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 7,
+      permissions: 9,
       permission_sets: 1,
-      permission_set_permissions: 7,
+      permission_set_permissions: 9,
       membership_permission_sets: 1,
       development_sessions: 1
     };

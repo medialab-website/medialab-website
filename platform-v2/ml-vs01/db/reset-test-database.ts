@@ -9,6 +9,7 @@ import { EXPECTED_ROW_COUNTS } from './fixtures/identity-tenancy-fixtures.js';
 import { CATALOG_EXPECTED_ROW_COUNTS } from './fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from './fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/order-foundation-fixtures.js';
+import { PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/property-hub-foundation-fixtures.js';
 
 const EXPECTED_RESET_ROW_COUNTS: Record<string, number> = {
   ...EXPECTED_ROW_COUNTS,
@@ -18,6 +19,9 @@ for (const [table, count] of Object.entries(CURRENT_REAL_ESTATE_EXPECTED_ROW_COU
   EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
 }
 for (const [table, count] of Object.entries(ORDER_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+  EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
+}
+for (const [table, count] of Object.entries(PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS)) {
   EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
 }
 
