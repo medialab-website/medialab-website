@@ -31,6 +31,7 @@ const CATALOG_PACKET_MIGRATION = '0004_current_catalog_and_price_snapshots.sql';
 const CATALOG_ADMIN_PACKET_MIGRATION = '0005_catalog_administration_lifecycle.sql';
 const ORDER_FOUNDATION_PACKET_MIGRATION = '0006_orders_and_immutable_commercial_evidence.sql';
 const PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION = '0007_property_hub_foundation.sql';
+const SCHEDULING_APPOINTMENT_PACKET_MIGRATION = '0008_scheduling_request_and_appointment_foundation.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -73,6 +74,27 @@ const ORDER_FOUNDATION_PUBLIC_FUNCTIONS = [
 const PROPERTY_HUB_FOUNDATION_PUBLIC_FUNCTIONS = [
   'medialab_core.create_property_hub(text, text, uuid, uuid, uuid, text, jsonb, jsonb, jsonb)',
   'medialab_core.get_property_hub_record(text, uuid)'
+];
+
+const SCHEDULING_APPOINTMENT_PUBLIC_FUNCTIONS = [
+  'medialab_core.create_scheduling_request(text, text, uuid, uuid, uuid, text)',
+  'medialab_core.add_scheduling_requested_window(text, text, uuid, timestamptz, timestamptz, text, timestamp without time zone, timestamp without time zone)',
+  'medialab_core.propose_scheduling_window(text, text, uuid, timestamptz, timestamptz, text, timestamp without time zone, timestamp without time zone, text)',
+  'medialab_core.accept_scheduling_proposal(text, text, uuid, text)',
+  'medialab_core.record_scheduling_offline_acceptance(text, text, uuid, uuid, text, text)',
+  'medialab_core.withdraw_scheduling_request(text, text, uuid, text)',
+  'medialab_core.close_scheduling_request(text, text, uuid, text, text)',
+  'medialab_core.confirm_appointment(text, text, uuid, uuid, text)',
+  'medialab_core.assign_appointment_participant(text, text, uuid, uuid, text)',
+  'medialab_core.end_appointment_participant_assignment(text, text, uuid, text)',
+  'medialab_core.replace_appointment_participant_assignment(text, text, uuid, uuid, text)',
+  'medialab_core.cancel_appointment(text, text, uuid, text)',
+  'medialab_core.record_appointment_no_show(text, text, uuid, text)',
+  'medialab_core.record_appointment_unable_to_complete(text, text, uuid, text, text)',
+  'medialab_core.record_appointment_weather_delay(text, text, uuid, text)',
+  'medialab_core.supersede_and_reschedule_appointment(text, text, uuid, uuid, text, timestamptz, timestamptz, text, timestamp without time zone, timestamp without time zone, text, text)',
+  'medialab_core.get_scheduling_request_record(text, uuid)',
+  'medialab_core.get_appointment_record(text, uuid)'
 ];
 
 export function validateMigrationFilenames(filenames: string[]): void {
@@ -130,7 +152,8 @@ async function applyRuntimePrivilegePolicy(
   includeCatalogFunctions: boolean,
   includeCatalogAdminFunctions = false,
   includeOrderFoundationFunctions = false,
-  includePropertyHubFoundationFunctions = false
+  includePropertyHubFoundationFunctions = false,
+  includeSchedulingAppointmentFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -150,7 +173,8 @@ async function applyRuntimePrivilegePolicy(
       ...(includeCatalogFunctions ? CATALOG_PUBLIC_FUNCTIONS : []),
       ...(includeCatalogAdminFunctions ? CATALOG_ADMIN_PUBLIC_FUNCTIONS : []),
       ...(includeOrderFoundationFunctions ? ORDER_FOUNDATION_PUBLIC_FUNCTIONS : []),
-      ...(includePropertyHubFoundationFunctions ? PROPERTY_HUB_FOUNDATION_PUBLIC_FUNCTIONS : [])
+      ...(includePropertyHubFoundationFunctions ? PROPERTY_HUB_FOUNDATION_PUBLIC_FUNCTIONS : []),
+      ...(includeSchedulingAppointmentFunctions ? SCHEDULING_APPOINTMENT_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -279,6 +303,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === SCHEDULING_APPOINTMENT_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -305,7 +333,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           sqlFiles.includes(CATALOG_PACKET_MIGRATION),
           sqlFiles.includes(CATALOG_ADMIN_PACKET_MIGRATION),
           sqlFiles.includes(ORDER_FOUNDATION_PACKET_MIGRATION),
-          sqlFiles.includes(PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION)
+          sqlFiles.includes(PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION),
+          sqlFiles.includes(SCHEDULING_APPOINTMENT_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {

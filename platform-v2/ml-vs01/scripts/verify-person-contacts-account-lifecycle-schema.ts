@@ -38,6 +38,10 @@ const expectedMigrations = [
   {
     filename: '0007_property_hub_foundation.sql',
     sha256: '8288090bbcb9b7d8b1108247c2f955ab1a5a70f5680c5e5b8adce80f7f7bda16'
+  },
+  {
+    filename: '0008_scheduling_request_and_appointment_foundation.sql',
+    sha256: 'cd1b394f95fea42b4cb770e59a1de38e74c7c44bbb3de43de91189fdd9504c9e'
   }
 ];
 

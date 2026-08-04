@@ -27,12 +27,13 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * `0005_catalog_administration_lifecycle.sql` is the bounded P02-M03-B additive migration for draft/published authoring, independent archive visibility, attributable definition revision, and protected unused-draft deletion.
    * `0006_orders_and_immutable_commercial_evidence.sql` is the bounded P02-M04-A additive migration for canonical Orders, frozen parties and items, provider-neutral source references, command idempotency, append-only events, and related-Order evidence.
    * `0007_property_hub_foundation.sql` is the bounded P02-M04-B additive migration for property-centered engagement identity, immutable initial snapshot evidence, canonical Order associations, explicit participants, provider-neutral references, idempotency, and append-only Hub events.
-   * Migrations `0001` through `0006` remain immutable predecessor inputs.
+   * `0008_scheduling_request_and_appointment_foundation.sql` is the bounded P02-M05-A additive migration for provider-neutral Scheduling Requests, requested and proposed windows, attributable customer acceptance, confirmed Appointments, participant assignment history, operational outcomes, supersession, idempotency, and append-only events.
+   * Migrations `0001` through `0007` remain immutable predecessor inputs.
 
 6. **Owner and Runtime Role Separation**
    * `PGUSER` identifies the dedicated migration owner used for migrations, seed, and reset.
    * `PGRUNTIMEUSER` identifies an existing restricted runtime role and must differ from the migration owner.
-   * Migration SQL is deliberately environment-role-neutral; migrations `0003` through `0007` contain no environment-specific role names or grants.
+   * Migration SQL is deliberately environment-role-neutral; migrations `0003` through `0008` contain no environment-specific role names or grants.
    * `db/migrate.ts` is the canonical supported migration entrypoint. It validates that the owner and runtime roles both exist and differ.
    * Migration SQL, the runtime privilege policy, and the migration-ledger insert execute within the same database transaction without substituting environment-specific values into canonical migration bytes.
    * Raw manual execution of migration `0003` alone is safe but incomplete and is not a supported deployment path.
@@ -41,6 +42,7 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * Raw manual execution of migration `0005` alone is likewise incomplete. The canonical runner separately inventories seven P02-M03-B runtime functions, keeps two new trigger helpers owner-only, and preserves all predecessor grants without changing predecessor API semantics.
    * Raw manual execution of migration `0006` alone is likewise incomplete. The canonical runner grants only `create_order` and `get_order_record` to the restricted runtime role, keeps all Order helpers owner-only, and preserves the preceding 24 runtime APIs unchanged.
    * Raw manual execution of migration `0007` alone is likewise incomplete. The canonical runner grants only `create_property_hub` and `get_property_hub_record` as new runtime APIs, keeps all Hub helpers owner-only, and preserves predecessor runtime APIs unchanged.
+   * Raw manual execution of migration `0008` alone is likewise incomplete. The canonical runner grants only the eighteen controlled P02-M05-A scheduling and Appointment commands/projections, keeps all scheduling helpers owner-only, preserves predecessor runtime APIs unchanged, and grants no direct table or sequence authority.
 
 7. **Global Catalog and Commercial-Evidence Boundary**
    * Catalog products, package definitions, brackets, prices, and external mappings are global MediaLab-owned records and contain no organization ownership field.
@@ -79,12 +81,22 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * Hub identity, initial snapshot evidence, Order links, participant evidence, external references, idempotency records, and creation events are immutable. `PROPERTY_HUB_CREATED` is the sole foundation lifecycle event and `ESTABLISHED` is the sole foundation state.
    * `create_property_hub` and `get_property_hub_record` are the complete P02-M04-B runtime API inventory. Runtime roles have no direct Hub table or sequence DML, and `PUBLIC` has no Hub authority.
 
-12. **Bearer Authority Boundary**
+12. **Scheduling Request and Appointment Boundary**
+   * A Scheduling Request is distinct from every requested or staff-proposed window, acceptance record, and confirmed Appointment. A database uniqueness constraint permits no more than one Appointment per request.
+   * Customer commands derive the actor from an ordinary session and validate current Order-party evidence. Property Hub participation alone grants no scheduling mutation authority. Staff commands require the narrow `scheduling.staff.manage` permission.
+   * Staff-recorded offline acceptance preserves both the staff recorder and asserted authorized customer, the accepted proposal, method, timestamp, and optional note; it never represents the staff session as customer authentication.
+   * Every window and Appointment stores exact instants, explicit IANA timezone, and original local timestamps. Server-side validation reconstructs the instants with `AT TIME ZONE`, so browser, server, and database session timezone changes cannot silently alter meaning.
+   * Appointments may be unassigned. Assignments record canonical Person, operational role, assigning actor, and time; separate immutable ending evidence records end/replacement actor, reason, and time.
+   * Cancellation, no-show, inaccessible-property, unable-to-complete, weather-delay, and supersession are separate append-only events. No vague completion state is introduced.
+   * Rescheduling creates a new Scheduling Request, proposal, attributable acceptance, and Appointment, then marks the original Appointment superseded with an explicit replacement link. Original time, assignments, notes, and events remain immutable.
+   * Runtime roles receive EXECUTE only on the eighteen controlled scheduling APIs, receive no direct packet-table DML, and inherit no authority from caller-supplied actor identifiers. `PUBLIC` receives no table or function authority.
+
+13. **Bearer Authority Boundary**
    * Ordinary mutation APIs derive their actor from an unexpired, unrevoked bearer session digest in `development_sessions`.
    * Account recovery uses a separate short-lived, single-use digest in `account_recovery_sessions`.
    * Raw bearer tokens are never stored in canonical tables or immutable evidence.
 
-13. **Recovery Intent Boundary**
+14. **Recovery Intent Boundary**
    * `START_FRESH` records recovery intent for the same Person and Identity while preserving existing history.
    * It does not currently delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
    * Actual profile/preferences reset behavior remains deferred until those models exist.

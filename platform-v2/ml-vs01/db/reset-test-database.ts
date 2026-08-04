@@ -10,6 +10,7 @@ import { CATALOG_EXPECTED_ROW_COUNTS } from './fixtures/current-catalog-price-fi
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from './fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/property-hub-foundation-fixtures.js';
+import { SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/scheduling-appointment-foundation-fixtures.js';
 
 const EXPECTED_RESET_ROW_COUNTS: Record<string, number> = {
   ...EXPECTED_ROW_COUNTS,
@@ -22,6 +23,9 @@ for (const [table, count] of Object.entries(ORDER_FOUNDATION_ROW_COUNT_INCREMENT
   EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
 }
 for (const [table, count] of Object.entries(PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+  EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
+}
+for (const [table, count] of Object.entries(SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS)) {
   EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
 }
 

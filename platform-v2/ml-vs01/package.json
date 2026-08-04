@@ -21,6 +21,7 @@
     "verify:property-snapshot-schema": "tsx scripts/verify-property-snapshot-schema.ts",
     "verify:person-contacts-account-lifecycle-schema": "tsx scripts/verify-person-contacts-account-lifecycle-schema.ts",
     "verify:property-hub-foundation-schema": "tsx scripts/verify-property-hub-foundation-schema.ts",
+    "verify:scheduling-appointment-foundation-schema": "tsx scripts/verify-scheduling-appointment-foundation-schema.ts",
     "verify:foundation-closeout": "tsx scripts/verify-foundation-closeout.ts",
     "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files && npm run verify:migration-engine && npm run verify:identity-tenancy-schema && npm run verify:property-snapshot-schema && npm run verify:person-contacts-account-lifecycle-schema && npm run verify:foundation-closeout"
   },

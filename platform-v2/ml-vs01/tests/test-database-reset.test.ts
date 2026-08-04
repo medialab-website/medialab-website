@@ -6,6 +6,7 @@ import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-pric
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/property-hub-foundation-fixtures.js';
+import { SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/scheduling-appointment-foundation-fixtures.js';
 
 const TEST_DB = 'medialab_p02m04a_test';
 const TEST_ROLE = 'medialab_p02m04a_test_owner';
@@ -13,14 +14,24 @@ const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
 
 const EXACT_ROUTINE_NAMES = [
+  'accept_scheduling_proposal',
   'actor_can_administer_person',
+  'actor_can_read_scheduling',
+  'actor_has_permission',
+  'actor_is_order_customer',
+  'add_scheduling_requested_window',
   'apply_account_lifecycle_transition',
   'apply_catalog_product_administration_defaults',
   'apply_contact_retirement',
   'apply_contact_supersession',
   'apply_primary_email_replacement',
+  'assign_appointment_participant',
   'bootstrap_identity_account',
   'bootstrap_person_contact',
+  'cancel_appointment',
+  'check_scheduling_idempotency',
+  'close_scheduling_request',
+  'confirm_appointment',
   'correct_contact_method',
   'create_catalog_commercial_snapshot',
   'create_catalog_draft_product',
@@ -29,12 +40,18 @@ const EXACT_ROUTINE_NAMES = [
   'create_custom_commercial_snapshot',
   'create_order',
   'create_property_hub',
+  'create_scheduling_request',
+  'current_appointment_state',
+  'current_scheduling_request_state',
   'delete_catalog_draft_product',
+  'end_appointment_participant_assignment',
+  'get_appointment_record',
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
   'get_order_record',
   'get_property_hub_record',
+  'get_scheduling_request_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -47,19 +64,29 @@ const EXACT_ROUTINE_NAMES = [
   'guard_order_relationship_insert',
   'guard_people_primary_email_update',
   'guard_primary_email_replacement_insert',
+  'guard_scheduling_window_time',
   'guard_verification_invalidation_insert',
   'invalidate_contact_verification',
   'normalize_contact_value',
+  'propose_scheduling_window',
   'publish_catalog_draft_product',
+  'record_appointment_no_show',
+  'record_appointment_status',
+  'record_appointment_unable_to_complete',
+  'record_appointment_weather_delay',
   'record_catalog_external_mapping',
   'record_catalog_price',
   'record_contact_verification',
+  'record_scheduling_idempotency',
+  'record_scheduling_offline_acceptance',
   'reject_catalog_evidence_mutation',
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
   'reject_order_evidence_mutation',
   'reject_property_hub_evidence_mutation',
   'reject_property_snapshot_mutation',
+  'reject_scheduling_evidence_mutation',
+  'replace_appointment_participant_assignment',
   'replace_catalog_bracket_set',
   'replace_catalog_package_composition',
   'replace_primary_email',
@@ -67,6 +94,7 @@ const EXACT_ROUTINE_NAMES = [
   'require_identity_person',
   'require_order_permission',
   'require_property_hub_permission',
+  'require_scheduling_staff',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
@@ -74,13 +102,20 @@ const EXACT_ROUTINE_NAMES = [
   'revise_catalog_product',
   'revise_published_catalog_product_definition',
   'set_catalog_product_archived',
-  'transition_account_lifecycle'
+  'supersede_and_reschedule_appointment',
+  'transition_account_lifecycle',
+  'validate_scheduling_time_evidence',
+  'withdraw_scheduling_request'
 ];
 
 const EXACT_TRIGGERS = [
   ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
   ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
   ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
+  ['appointment_events_immutability_guard', 'appointment_events', 'reject_scheduling_evidence_mutation'],
+  ['appointment_assignment_endings_immutability_guard', 'appointment_participant_assignment_endings', 'reject_scheduling_evidence_mutation'],
+  ['appointment_assignments_immutability_guard', 'appointment_participant_assignments', 'reject_scheduling_evidence_mutation'],
+  ['appointments_immutability_guard', 'appointments', 'reject_scheduling_evidence_mutation'],
   ['catalog_administration_events_immutability_guard', 'catalog_administration_events', 'reject_catalog_evidence_mutation'],
   ['catalog_bracket_sets_immutability_guard', 'catalog_bracket_sets', 'reject_catalog_evidence_mutation'],
   ['catalog_external_mappings_immutability_guard', 'catalog_external_mappings', 'reject_catalog_evidence_mutation'],
@@ -130,7 +165,14 @@ const EXACT_TRIGGERS = [
   ['property_hub_orders_immutability_guard', 'property_hub_orders', 'reject_property_hub_evidence_mutation'],
   ['property_hub_participants_immutability_guard', 'property_hub_participants', 'reject_property_hub_evidence_mutation'],
   ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation'],
-  ['property_snapshots_immutability_guard', 'property_snapshots', 'reject_property_snapshot_mutation']
+  ['property_snapshots_immutability_guard', 'property_snapshots', 'reject_property_snapshot_mutation'],
+  ['scheduling_acceptances_immutability_guard', 'scheduling_acceptances', 'reject_scheduling_evidence_mutation'],
+  ['scheduling_command_idempotency_immutability_guard', 'scheduling_command_idempotency', 'reject_scheduling_evidence_mutation'],
+  ['scheduling_external_references_immutability_guard', 'scheduling_external_references', 'reject_scheduling_evidence_mutation'],
+  ['scheduling_request_events_immutability_guard', 'scheduling_request_events', 'reject_scheduling_evidence_mutation'],
+  ['scheduling_requests_immutability_guard', 'scheduling_requests', 'reject_scheduling_evidence_mutation'],
+  ['scheduling_windows_immutability_guard', 'scheduling_windows', 'reject_scheduling_evidence_mutation'],
+  ['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time']
 ].map(([trigger_name, table_name, function_name]) => ({
   trigger_name,
   table_name,
@@ -224,7 +266,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(7);
+    expect(ledgerRes.rows).toHaveLength(8);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -238,6 +280,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[5].filename).toBe('0006_orders_and_immutable_commercial_evidence.sql');
     expect(ledgerRes.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(ledgerRes.rows[6].filename).toBe('0007_property_hub_foundation.sql');
+    expect(ledgerRes.rows[7].filename).toBe('0008_scheduling_request_and_appointment_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -249,6 +292,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

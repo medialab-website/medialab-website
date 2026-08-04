@@ -16,6 +16,7 @@ import { CATALOG_FIXTURE_TABLES } from './fixtures/current-catalog-price-fixture
 import { CURRENT_REAL_ESTATE_CATALOG_TABLES } from './fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_FIXTURE_TABLES } from './fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_FOUNDATION_FIXTURE_TABLES } from './fixtures/property-hub-foundation-fixtures.js';
+import { SCHEDULING_APPOINTMENT_FOUNDATION_FIXTURE_TABLES } from './fixtures/scheduling-appointment-foundation-fixtures.js';
 
 export interface SeedOptions {
   host?: string;
@@ -379,6 +380,18 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
 
     // 13. Synthetic provider-neutral Property Hub engagement and authorization foundation
     for (const fixtureTable of PROPERTY_HUB_FOUNDATION_FIXTURE_TABLES) {
+      for (const fixtureRow of fixtureTable.rows) {
+        await ensureFixtureRow(
+          fixtureTable.table,
+          fixtureTable.keys,
+          fixtureRow as unknown as Record<string, unknown>,
+          false
+        );
+      }
+    }
+
+    // 14. Minimum scheduling staff and read permissions; no Appointment records are pre-created
+    for (const fixtureTable of SCHEDULING_APPOINTMENT_FOUNDATION_FIXTURE_TABLES) {
       for (const fixtureRow of fixtureTable.rows) {
         await ensureFixtureRow(
           fixtureTable.table,

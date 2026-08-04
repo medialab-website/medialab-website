@@ -7,14 +7,24 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'accept_scheduling_proposal',
   'actor_can_administer_person',
+  'actor_can_read_scheduling',
+  'actor_has_permission',
+  'actor_is_order_customer',
+  'add_scheduling_requested_window',
   'apply_account_lifecycle_transition',
   'apply_catalog_product_administration_defaults',
   'apply_contact_retirement',
   'apply_contact_supersession',
   'apply_primary_email_replacement',
+  'assign_appointment_participant',
   'bootstrap_identity_account',
   'bootstrap_person_contact',
+  'cancel_appointment',
+  'check_scheduling_idempotency',
+  'close_scheduling_request',
+  'confirm_appointment',
   'correct_contact_method',
   'create_catalog_commercial_snapshot',
   'create_catalog_draft_product',
@@ -23,12 +33,18 @@ const EXACT_ROUTINE_NAMES = [
   'create_custom_commercial_snapshot',
   'create_order',
   'create_property_hub',
+  'create_scheduling_request',
+  'current_appointment_state',
+  'current_scheduling_request_state',
   'delete_catalog_draft_product',
+  'end_appointment_participant_assignment',
+  'get_appointment_record',
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
   'get_order_record',
   'get_property_hub_record',
+  'get_scheduling_request_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -41,19 +57,29 @@ const EXACT_ROUTINE_NAMES = [
   'guard_order_relationship_insert',
   'guard_people_primary_email_update',
   'guard_primary_email_replacement_insert',
+  'guard_scheduling_window_time',
   'guard_verification_invalidation_insert',
   'invalidate_contact_verification',
   'normalize_contact_value',
+  'propose_scheduling_window',
   'publish_catalog_draft_product',
+  'record_appointment_no_show',
+  'record_appointment_status',
+  'record_appointment_unable_to_complete',
+  'record_appointment_weather_delay',
   'record_catalog_external_mapping',
   'record_catalog_price',
   'record_contact_verification',
+  'record_scheduling_idempotency',
+  'record_scheduling_offline_acceptance',
   'reject_catalog_evidence_mutation',
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
   'reject_order_evidence_mutation',
   'reject_property_hub_evidence_mutation',
   'reject_property_snapshot_mutation',
+  'reject_scheduling_evidence_mutation',
+  'replace_appointment_participant_assignment',
   'replace_catalog_bracket_set',
   'replace_catalog_package_composition',
   'replace_primary_email',
@@ -61,6 +87,7 @@ const EXACT_ROUTINE_NAMES = [
   'require_identity_person',
   'require_order_permission',
   'require_property_hub_permission',
+  'require_scheduling_staff',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
@@ -68,13 +95,20 @@ const EXACT_ROUTINE_NAMES = [
   'revise_catalog_product',
   'revise_published_catalog_product_definition',
   'set_catalog_product_archived',
+  'supersede_and_reschedule_appointment',
   'transition_account_lifecycle'
+  ,'validate_scheduling_time_evidence'
+  ,'withdraw_scheduling_request'
 ];
 
 const EXACT_TRIGGERS = [
   ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
   ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
   ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
+  ['appointment_events_immutability_guard', 'appointment_events', 'reject_scheduling_evidence_mutation'],
+  ['appointment_assignment_endings_immutability_guard', 'appointment_participant_assignment_endings', 'reject_scheduling_evidence_mutation'],
+  ['appointment_assignments_immutability_guard', 'appointment_participant_assignments', 'reject_scheduling_evidence_mutation'],
+  ['appointments_immutability_guard', 'appointments', 'reject_scheduling_evidence_mutation'],
   ['catalog_administration_events_immutability_guard', 'catalog_administration_events', 'reject_catalog_evidence_mutation'],
   ['catalog_bracket_sets_immutability_guard', 'catalog_bracket_sets', 'reject_catalog_evidence_mutation'],
   ['catalog_external_mappings_immutability_guard', 'catalog_external_mappings', 'reject_catalog_evidence_mutation'],
@@ -125,6 +159,13 @@ const EXACT_TRIGGERS = [
   ['property_hub_participants_immutability_guard', 'property_hub_participants', 'reject_property_hub_evidence_mutation'],
   ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation'],
   ['property_snapshots_immutability_guard', 'property_snapshots', 'reject_property_snapshot_mutation']
+  ,['scheduling_acceptances_immutability_guard', 'scheduling_acceptances', 'reject_scheduling_evidence_mutation']
+  ,['scheduling_command_idempotency_immutability_guard', 'scheduling_command_idempotency', 'reject_scheduling_evidence_mutation']
+  ,['scheduling_external_references_immutability_guard', 'scheduling_external_references', 'reject_scheduling_evidence_mutation']
+  ,['scheduling_request_events_immutability_guard', 'scheduling_request_events', 'reject_scheduling_evidence_mutation']
+  ,['scheduling_requests_immutability_guard', 'scheduling_requests', 'reject_scheduling_evidence_mutation']
+  ,['scheduling_windows_immutability_guard', 'scheduling_windows', 'reject_scheduling_evidence_mutation']
+  ,['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time']
 ].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }));
 
 describe('M02 Identity and Tenancy Schema', () => {
@@ -181,7 +222,8 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0004_current_catalog_and_price_snapshots.sql',
       '0005_catalog_administration_lifecycle.sql',
       '0006_orders_and_immutable_commercial_evidence.sql',
-      '0007_property_hub_foundation.sql'
+      '0007_property_hub_foundation.sql',
+      '0008_scheduling_request_and_appointment_foundation.sql'
     ]);
 
     expect(outTest.applied).toEqual([]);
@@ -192,7 +234,8 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0004_current_catalog_and_price_snapshots.sql',
       '0005_catalog_administration_lifecycle.sql',
       '0006_orders_and_immutable_commercial_evidence.sql',
-      '0007_property_hub_foundation.sql'
+      '0007_property_hub_foundation.sql',
+      '0008_scheduling_request_and_appointment_foundation.sql'
     ]);
   });
 
@@ -687,9 +730,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 9,
+      permissions: 11,
       permission_sets: 1,
-      permission_set_permissions: 9,
+      permission_set_permissions: 11,
       membership_permission_sets: 1,
       development_sessions: 1
     };
