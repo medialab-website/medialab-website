@@ -27,7 +27,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(8);
+        expect(res.rows).toHaveLength(9);
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
         expect(res.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -48,6 +48,8 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         expect(res.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
         expect(res.rows[7].filename).toBe('0008_scheduling_request_and_appointment_foundation.sql');
         expect(res.rows[7].sha256).toMatch(/^[0-9a-f]{64}$/);
+        expect(res.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
+        expect(res.rows[8].sha256).toMatch(/^[0-9a-f]{64}$/);
       });
 
       it('Catalog Assertions: properties and property_snapshots exist with correct owners', async () => {
@@ -378,9 +380,9 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         people: 3,
         identities: 2,
         memberships: 3,
-        permissions: 11,
+        permissions: 13,
         permission_sets: 1,
-        permission_set_permissions: 11,
+        permission_set_permissions: 13,
         membership_permission_sets: 1,
         development_sessions: 1
       };

@@ -173,9 +173,9 @@ describe('P02-M05-A provider-neutral Scheduling Request and Appointment foundati
     await reset();
   });
 
-  it('1. applies exactly eight immutable migrations and preserves predecessor checksums', async () => {
+  it('1. applies exactly nine immutable migrations and preserves predecessor checksums', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(8);
+    expect(ledger.rows).toHaveLength(9);
     expect(ledger.rows.slice(0, 7)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },
@@ -187,9 +187,10 @@ describe('P02-M05-A provider-neutral Scheduling Request and Appointment foundati
     ]);
     expect(ledger.rows[7]).toMatchObject({ filename: '0008_scheduling_request_and_appointment_foundation.sql' });
     expect(ledger.rows[7].sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(ledger.rows[8]).toMatchObject({ filename: '0009_job_and_service_workstream_foundation.sql' });
   });
 
-  it('2. creates the bounded relational inventory without Jobs, calendars, crews, payroll, or notifications', async () => {
+  it('2. creates the bounded scheduling inventory without calendars, crews, payroll, or notifications', async () => {
     const tables = await owner.query(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core'
          AND (tablename LIKE 'scheduling_%' OR tablename LIKE 'appointment%') ORDER BY tablename`
@@ -208,7 +209,7 @@ describe('P02-M05-A provider-neutral Scheduling Request and Appointment foundati
     ]);
     const excluded = await owner.query(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core'
-         AND (tablename LIKE 'job%' OR tablename LIKE 'calendar%' OR tablename LIKE 'crew%'
+         AND (tablename LIKE 'calendar%' OR tablename LIKE 'crew%'
            OR tablename LIKE 'payroll%' OR tablename LIKE 'notification%')`
     );
     expect(excluded.rows).toEqual([]);

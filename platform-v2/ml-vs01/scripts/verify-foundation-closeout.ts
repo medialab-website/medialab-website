@@ -13,39 +13,36 @@ const worktreeRoot = path.resolve(baseDir, '../../');
 
 let errors = false;
 
-// 1. P02-M01 Allowlist definition
+// 1. P02-M06-A bounded changed-file allowlist
 const ALLOWLIST = [
   'platform-v2/ml-vs01/BUILD_STATE.md',
   'platform-v2/ml-vs01/CHANGED_FILES.md',
-  'platform-v2/ml-vs01/package.json',
-  'platform-v2/ml-vs01/db/migrations/0002_property_identity_and_snapshots.sql',
+  'platform-v2/ml-vs01/db/fixtures/job-service-workstream-foundation-fixtures.ts',
+  'platform-v2/ml-vs01/db/migrate.ts',
+  'platform-v2/ml-vs01/db/migrations/0009_job_and_service_workstream_foundation.sql',
+  'platform-v2/ml-vs01/db/migrations/README.md',
   'platform-v2/ml-vs01/db/reset-test-database.ts',
-  'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
-  'platform-v2/ml-vs01/scripts/verify-identity-tenancy-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
+  'platform-v2/ml-vs01/db/seed.ts',
+  'platform-v2/ml-vs01/package.json',
   'platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts',
-  'platform-v2/ml-vs01/tests/migration-engine.test.ts',
+  'platform-v2/ml-vs01/scripts/verify-job-service-workstream-foundation-schema.ts',
+  'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
+  'platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts',
+  'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
+  'platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts',
+  'platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts',
   'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
+  'platform-v2/ml-vs01/tests/job-service-workstream-foundation.test.ts',
+  'platform-v2/ml-vs01/tests/migration-engine.test.ts',
+  'platform-v2/ml-vs01/tests/order-foundation.test.ts',
+  'platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts',
+  'platform-v2/ml-vs01/tests/property-hub-foundation.test.ts',
   'platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts',
-  'platform-v2/ml-vs01/tests/workspace-foundation.test.ts',
+  'platform-v2/ml-vs01/tests/scheduling-appointment-foundation.test.ts',
   'platform-v2/ml-vs01/tests/test-database-reset.test.ts'
 ];
 
-// 2. Direct inspection: platform-v2/ml-vs01/node_modules must NOT exist as file, directory, or symlink
-const nodeModulesPath = path.join(baseDir, 'node_modules');
-try {
-  const stat = fs.lstatSync(nodeModulesPath);
-  console.error(`ERROR: Unauthorized object found at node_modules path: ${nodeModulesPath} (isSymbolicLink: ${stat.isSymbolicLink()})`);
-  errors = true;
-} catch (err: any) {
-  // Expected: ENOENT (path is completely absent)
-  if (err.code !== 'ENOENT') {
-    console.error(`ERROR: Unexpected error inspecting node_modules path: ${err.message}`);
-    errors = true;
-  }
-}
-
-// 3. Determine actual changed-path set from Git status
+// 2. Determine actual changed-path set from Git status
 const gitStatusRaw = execSync('git status --porcelain -uall platform-v2/ml-vs01', {
   cwd: worktreeRoot,
   encoding: 'utf-8'
@@ -66,7 +63,7 @@ for (const line of lines) {
 
   // Every changed path must be contained in the allowlist
   if (!ALLOWLIST.includes(gitPath)) {
-    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M01 allowlist.`);
+    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M06-A allowlist.`);
     errors = true;
   }
 

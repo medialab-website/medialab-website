@@ -7,6 +7,7 @@ import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/property-hub-foundation-fixtures.js';
 import { SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/scheduling-appointment-foundation-fixtures.js';
+import { JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/job-service-workstream-foundation-fixtures.js';
 
 const TEST_DB = 'medialab_p02m04a_test';
 const TEST_ROLE = 'medialab_p02m04a_test_owner';
@@ -29,6 +30,7 @@ const EXACT_ROUTINE_NAMES = [
   'bootstrap_identity_account',
   'bootstrap_person_contact',
   'cancel_appointment',
+  'check_job_service_idempotency',
   'check_scheduling_idempotency',
   'close_scheduling_request',
   'confirm_appointment',
@@ -38,9 +40,11 @@ const EXACT_ROUTINE_NAMES = [
   'create_catalog_product',
   'create_contact_method',
   'create_custom_commercial_snapshot',
+  'create_job',
   'create_order',
   'create_property_hub',
   'create_scheduling_request',
+  'create_service_workstream',
   'current_appointment_state',
   'current_scheduling_request_state',
   'delete_catalog_draft_product',
@@ -49,9 +53,11 @@ const EXACT_ROUTINE_NAMES = [
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
+  'get_job_record',
   'get_order_record',
   'get_property_hub_record',
   'get_scheduling_request_record',
+  'get_service_workstream_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -61,12 +67,15 @@ const EXACT_ROUTINE_NAMES = [
   'guard_contact_retirement_insert',
   'guard_contact_supersession_insert',
   'guard_contact_verification_insert',
+  'guard_job_update',
   'guard_order_relationship_insert',
   'guard_people_primary_email_update',
   'guard_primary_email_replacement_insert',
   'guard_scheduling_window_time',
+  'guard_service_workstream_update',
   'guard_verification_invalidation_insert',
   'invalidate_contact_verification',
+  'link_job_appointment',
   'normalize_contact_value',
   'propose_scheduling_window',
   'publish_catalog_draft_product',
@@ -77,11 +86,14 @@ const EXACT_ROUTINE_NAMES = [
   'record_catalog_external_mapping',
   'record_catalog_price',
   'record_contact_verification',
+  'record_job_service_external_reference',
+  'record_job_service_idempotency',
   'record_scheduling_idempotency',
   'record_scheduling_offline_acceptance',
   'reject_catalog_evidence_mutation',
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
+  'reject_job_service_evidence_mutation',
   'reject_order_evidence_mutation',
   'reject_property_hub_evidence_mutation',
   'reject_property_snapshot_mutation',
@@ -92,6 +104,7 @@ const EXACT_ROUTINE_NAMES = [
   'replace_primary_email',
   'require_catalog_permission',
   'require_identity_person',
+  'require_job_service_permission',
   'require_order_permission',
   'require_property_hub_permission',
   'require_scheduling_staff',
@@ -104,6 +117,8 @@ const EXACT_ROUTINE_NAMES = [
   'set_catalog_product_archived',
   'supersede_and_reschedule_appointment',
   'transition_account_lifecycle',
+  'transition_job_state',
+  'transition_service_workstream_state',
   'validate_scheduling_time_evidence',
   'withdraw_scheduling_request'
 ];
@@ -143,6 +158,12 @@ const EXACT_TRIGGERS = [
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
   ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
+  ['job_appointments_immutability_guard', 'job_appointments', 'reject_job_service_evidence_mutation'],
+  ['job_events_immutability_guard', 'job_events', 'reject_job_service_evidence_mutation'],
+  ['job_service_command_idempotency_immutability_guard', 'job_service_command_idempotency', 'reject_job_service_evidence_mutation'],
+  ['job_service_external_references_immutability_guard', 'job_service_external_references', 'reject_job_service_evidence_mutation'],
+  ['jobs_delete_guard', 'jobs', 'reject_job_service_evidence_mutation'],
+  ['jobs_update_guard', 'jobs', 'guard_job_update'],
   ['order_events_immutability_guard', 'order_events', 'reject_order_evidence_mutation'],
   ['order_external_references_immutability_guard', 'order_external_references', 'reject_order_evidence_mutation'],
   ['order_idempotency_records_immutability_guard', 'order_idempotency_records', 'reject_order_evidence_mutation'],
@@ -172,7 +193,10 @@ const EXACT_TRIGGERS = [
   ['scheduling_request_events_immutability_guard', 'scheduling_request_events', 'reject_scheduling_evidence_mutation'],
   ['scheduling_requests_immutability_guard', 'scheduling_requests', 'reject_scheduling_evidence_mutation'],
   ['scheduling_windows_immutability_guard', 'scheduling_windows', 'reject_scheduling_evidence_mutation'],
-  ['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time']
+  ['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time'],
+  ['service_workstream_events_immutability_guard', 'service_workstream_events', 'reject_job_service_evidence_mutation'],
+  ['service_workstreams_delete_guard', 'service_workstreams', 'reject_job_service_evidence_mutation'],
+  ['service_workstreams_update_guard', 'service_workstreams', 'guard_service_workstream_update']
 ].map(([trigger_name, table_name, function_name]) => ({
   trigger_name,
   table_name,
@@ -266,7 +290,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(8);
+    expect(ledgerRes.rows).toHaveLength(9);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -281,6 +305,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(ledgerRes.rows[6].filename).toBe('0007_property_hub_foundation.sql');
     expect(ledgerRes.rows[7].filename).toBe('0008_scheduling_request_and_appointment_foundation.sql');
+    expect(ledgerRes.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -295,6 +320,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

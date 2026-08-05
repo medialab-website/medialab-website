@@ -22,6 +22,7 @@ const EXACT_ROUTINE_NAMES = [
   'bootstrap_identity_account',
   'bootstrap_person_contact',
   'cancel_appointment',
+  'check_job_service_idempotency',
   'check_scheduling_idempotency',
   'close_scheduling_request',
   'confirm_appointment',
@@ -31,9 +32,11 @@ const EXACT_ROUTINE_NAMES = [
   'create_catalog_product',
   'create_contact_method',
   'create_custom_commercial_snapshot',
+  'create_job',
   'create_order',
   'create_property_hub',
   'create_scheduling_request',
+  'create_service_workstream',
   'current_appointment_state',
   'current_scheduling_request_state',
   'delete_catalog_draft_product',
@@ -42,9 +45,11 @@ const EXACT_ROUTINE_NAMES = [
   'get_catalog_administration_products',
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
+  'get_job_record',
   'get_order_record',
   'get_property_hub_record',
   'get_scheduling_request_record',
+  'get_service_workstream_record',
   'guard_account_lifecycle_transition_insert',
   'guard_account_state_insert',
   'guard_account_state_update',
@@ -54,12 +59,15 @@ const EXACT_ROUTINE_NAMES = [
   'guard_contact_retirement_insert',
   'guard_contact_supersession_insert',
   'guard_contact_verification_insert',
+  'guard_job_update',
   'guard_order_relationship_insert',
   'guard_people_primary_email_update',
   'guard_primary_email_replacement_insert',
   'guard_scheduling_window_time',
+  'guard_service_workstream_update',
   'guard_verification_invalidation_insert',
   'invalidate_contact_verification',
+  'link_job_appointment',
   'normalize_contact_value',
   'propose_scheduling_window',
   'publish_catalog_draft_product',
@@ -70,11 +78,14 @@ const EXACT_ROUTINE_NAMES = [
   'record_catalog_external_mapping',
   'record_catalog_price',
   'record_contact_verification',
+  'record_job_service_external_reference',
+  'record_job_service_idempotency',
   'record_scheduling_idempotency',
   'record_scheduling_offline_acceptance',
   'reject_catalog_evidence_mutation',
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
+  'reject_job_service_evidence_mutation',
   'reject_order_evidence_mutation',
   'reject_property_hub_evidence_mutation',
   'reject_property_snapshot_mutation',
@@ -85,6 +96,7 @@ const EXACT_ROUTINE_NAMES = [
   'replace_primary_email',
   'require_catalog_permission',
   'require_identity_person',
+  'require_job_service_permission',
   'require_order_permission',
   'require_property_hub_permission',
   'require_scheduling_staff',
@@ -97,6 +109,8 @@ const EXACT_ROUTINE_NAMES = [
   'set_catalog_product_archived',
   'supersede_and_reschedule_appointment',
   'transition_account_lifecycle'
+  ,'transition_job_state'
+  ,'transition_service_workstream_state'
   ,'validate_scheduling_time_evidence'
   ,'withdraw_scheduling_request'
 ];
@@ -136,6 +150,12 @@ const EXACT_TRIGGERS = [
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
   ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
+  ['job_appointments_immutability_guard', 'job_appointments', 'reject_job_service_evidence_mutation'],
+  ['job_events_immutability_guard', 'job_events', 'reject_job_service_evidence_mutation'],
+  ['job_service_command_idempotency_immutability_guard', 'job_service_command_idempotency', 'reject_job_service_evidence_mutation'],
+  ['job_service_external_references_immutability_guard', 'job_service_external_references', 'reject_job_service_evidence_mutation'],
+  ['jobs_delete_guard', 'jobs', 'reject_job_service_evidence_mutation'],
+  ['jobs_update_guard', 'jobs', 'guard_job_update'],
   ['order_events_immutability_guard', 'order_events', 'reject_order_evidence_mutation'],
   ['order_external_references_immutability_guard', 'order_external_references', 'reject_order_evidence_mutation'],
   ['order_idempotency_records_immutability_guard', 'order_idempotency_records', 'reject_order_evidence_mutation'],
@@ -166,6 +186,9 @@ const EXACT_TRIGGERS = [
   ,['scheduling_requests_immutability_guard', 'scheduling_requests', 'reject_scheduling_evidence_mutation']
   ,['scheduling_windows_immutability_guard', 'scheduling_windows', 'reject_scheduling_evidence_mutation']
   ,['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time']
+  ,['service_workstream_events_immutability_guard', 'service_workstream_events', 'reject_job_service_evidence_mutation']
+  ,['service_workstreams_delete_guard', 'service_workstreams', 'reject_job_service_evidence_mutation']
+  ,['service_workstreams_update_guard', 'service_workstreams', 'guard_service_workstream_update']
 ].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }));
 
 describe('M02 Identity and Tenancy Schema', () => {
@@ -224,6 +247,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0006_orders_and_immutable_commercial_evidence.sql',
       '0007_property_hub_foundation.sql',
       '0008_scheduling_request_and_appointment_foundation.sql'
+      ,'0009_job_and_service_workstream_foundation.sql'
     ]);
 
     expect(outTest.applied).toEqual([]);
@@ -236,6 +260,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0006_orders_and_immutable_commercial_evidence.sql',
       '0007_property_hub_foundation.sql',
       '0008_scheduling_request_and_appointment_foundation.sql'
+      ,'0009_job_and_service_workstream_foundation.sql'
     ]);
   });
 
@@ -730,9 +755,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 11,
+      permissions: 13,
       permission_sets: 1,
-      permission_set_permissions: 11,
+      permission_set_permissions: 13,
       membership_permission_sets: 1,
       development_sessions: 1
     };

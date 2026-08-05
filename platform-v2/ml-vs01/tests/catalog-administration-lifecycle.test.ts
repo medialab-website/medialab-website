@@ -120,9 +120,9 @@ describe('P02-M03-B catalog administration lifecycle', () => {
     await reset();
   });
 
-  it('1. applies the exact eight-migration ledger while preserving the accepted 0004 hash', async () => {
+  it('1. applies the exact nine-migration ledger while preserving the accepted 0004 hash', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(8);
+    expect(ledger.rows).toHaveLength(9);
     expect(ledger.rows[3]).toEqual({
       filename: '0004_current_catalog_and_price_snapshots.sql',
       sha256: 'e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876'
@@ -133,6 +133,7 @@ describe('P02-M03-B catalog administration lifecycle', () => {
     expect(ledger.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(ledger.rows[6].filename).toBe('0007_property_hub_foundation.sql');
     expect(ledger.rows[7].filename).toBe('0008_scheduling_request_and_appointment_foundation.sql');
+    expect(ledger.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
     expect(ledger.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 

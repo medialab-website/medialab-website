@@ -73,13 +73,25 @@ const SCHEDULING_APIS = [
   'withdraw_scheduling_request'
 ];
 
+const JOB_SERVICE_APIS = [
+  'create_job',
+  'create_service_workstream',
+  'get_job_record',
+  'get_service_workstream_record',
+  'link_job_appointment',
+  'record_job_service_external_reference',
+  'transition_job_state',
+  'transition_service_workstream_state'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
   ...CATALOG_ADMIN_APIS,
   ...ORDER_APIS,
   ...PROPERTY_HUB_APIS,
-  ...SCHEDULING_APIS
+  ...SCHEDULING_APIS,
+  ...JOB_SERVICE_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -272,7 +284,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
     );
   }
 
-  it('1 & 2. fresh reset applies 0001 through 0008 and an identical rerun skips all eight', async () => {
+  it('1 & 2. fresh reset applies 0001 through 0009 and an identical rerun skips all nine', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
     expect(ledger.rows.map((row) => row.filename)).toEqual([
       '0001_identity_and_tenancy.sql',
@@ -282,7 +294,8 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0005_catalog_administration_lifecycle.sql',
       '0006_orders_and_immutable_commercial_evidence.sql',
       '0007_property_hub_foundation.sql',
-      '0008_scheduling_request_and_appointment_foundation.sql'
+      '0008_scheduling_request_and_appointment_foundation.sql',
+      '0009_job_and_service_workstream_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -299,7 +312,8 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0005_catalog_administration_lifecycle.sql',
       '0006_orders_and_immutable_commercial_evidence.sql',
       '0007_property_hub_foundation.sql',
-      '0008_scheduling_request_and_appointment_foundation.sql'
+      '0008_scheduling_request_and_appointment_foundation.sql',
+      '0009_job_and_service_workstream_foundation.sql'
     ]);
   });
 
@@ -699,7 +713,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(84);
+      expect(searchPaths.rows).toHaveLength(95);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

@@ -137,9 +137,9 @@ describe('P02-M04-B provider-neutral Property Hub foundation', () => {
     await reset();
   });
 
-  it('1. records the exact eight-migration ledger and preserves all predecessor checksums', async () => {
+  it('1. records the exact nine-migration ledger and preserves all predecessor checksums', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(8);
+    expect(ledger.rows).toHaveLength(9);
     expect(ledger.rows.slice(0, 6)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },
@@ -150,10 +150,11 @@ describe('P02-M04-B provider-neutral Property Hub foundation', () => {
     ]);
     expect(ledger.rows[6]).toMatchObject({ filename: '0007_property_hub_foundation.sql' });
     expect(ledger.rows[7]).toMatchObject({ filename: '0008_scheduling_request_and_appointment_foundation.sql' });
+    expect(ledger.rows[8]).toMatchObject({ filename: '0009_job_and_service_workstream_foundation.sql' });
     expect(ledger.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('2. creates exactly six bounded Hub tables and no speculative workflow tables', async () => {
+  it('2. creates exactly six bounded Hub tables and no excluded speculative workflow tables', async () => {
     const tables = await owner.query(
       `SELECT tablename FROM pg_tables
         WHERE schemaname = 'medialab_core' AND tablename LIKE 'property_hub%'
@@ -169,8 +170,7 @@ describe('P02-M04-B provider-neutral Property Hub foundation', () => {
     ]);
     const deferred = await owner.query(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core'
-        AND (tablename LIKE 'job%'
-          OR tablename LIKE 'media%' OR tablename LIKE 'payment%' OR tablename LIKE 'delivery%'
+        AND (tablename LIKE 'media%' OR tablename LIKE 'payment%' OR tablename LIKE 'delivery%'
           OR tablename LIKE 'publication%' OR tablename LIKE 'notification%')`
     );
     expect(deferred.rows).toEqual([]);

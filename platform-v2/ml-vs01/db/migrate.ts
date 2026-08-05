@@ -32,6 +32,7 @@ const CATALOG_ADMIN_PACKET_MIGRATION = '0005_catalog_administration_lifecycle.sq
 const ORDER_FOUNDATION_PACKET_MIGRATION = '0006_orders_and_immutable_commercial_evidence.sql';
 const PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION = '0007_property_hub_foundation.sql';
 const SCHEDULING_APPOINTMENT_PACKET_MIGRATION = '0008_scheduling_request_and_appointment_foundation.sql';
+const JOB_SERVICE_WORKSTREAM_PACKET_MIGRATION = '0009_job_and_service_workstream_foundation.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -97,6 +98,17 @@ const SCHEDULING_APPOINTMENT_PUBLIC_FUNCTIONS = [
   'medialab_core.get_appointment_record(text, uuid)'
 ];
 
+const JOB_SERVICE_WORKSTREAM_PUBLIC_FUNCTIONS = [
+  'medialab_core.create_job(text, text, uuid, uuid, uuid, text)',
+  'medialab_core.create_service_workstream(text, text, uuid, uuid, text)',
+  'medialab_core.link_job_appointment(text, text, uuid, uuid, text)',
+  'medialab_core.transition_job_state(text, text, uuid, text, text)',
+  'medialab_core.transition_service_workstream_state(text, text, uuid, text, text)',
+  'medialab_core.record_job_service_external_reference(text, text, uuid, uuid, text, text, text, text)',
+  'medialab_core.get_job_record(text, uuid)',
+  'medialab_core.get_service_workstream_record(text, uuid)'
+];
+
 export function validateMigrationFilenames(filenames: string[]): void {
   const filenameRegex = /^[0-9]{4}_[a-z0-9_]+\.sql$/;
   const prefixes = new Set<string>();
@@ -153,7 +165,8 @@ async function applyRuntimePrivilegePolicy(
   includeCatalogAdminFunctions = false,
   includeOrderFoundationFunctions = false,
   includePropertyHubFoundationFunctions = false,
-  includeSchedulingAppointmentFunctions = false
+  includeSchedulingAppointmentFunctions = false,
+  includeJobServiceWorkstreamFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -174,7 +187,8 @@ async function applyRuntimePrivilegePolicy(
       ...(includeCatalogAdminFunctions ? CATALOG_ADMIN_PUBLIC_FUNCTIONS : []),
       ...(includeOrderFoundationFunctions ? ORDER_FOUNDATION_PUBLIC_FUNCTIONS : []),
       ...(includePropertyHubFoundationFunctions ? PROPERTY_HUB_FOUNDATION_PUBLIC_FUNCTIONS : []),
-      ...(includeSchedulingAppointmentFunctions ? SCHEDULING_APPOINTMENT_PUBLIC_FUNCTIONS : [])
+      ...(includeSchedulingAppointmentFunctions ? SCHEDULING_APPOINTMENT_PUBLIC_FUNCTIONS : []),
+      ...(includeJobServiceWorkstreamFunctions ? JOB_SERVICE_WORKSTREAM_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -307,6 +321,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === JOB_SERVICE_WORKSTREAM_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -334,7 +352,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           sqlFiles.includes(CATALOG_ADMIN_PACKET_MIGRATION),
           sqlFiles.includes(ORDER_FOUNDATION_PACKET_MIGRATION),
           sqlFiles.includes(PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION),
-          sqlFiles.includes(SCHEDULING_APPOINTMENT_PACKET_MIGRATION)
+          sqlFiles.includes(SCHEDULING_APPOINTMENT_PACKET_MIGRATION),
+          sqlFiles.includes(JOB_SERVICE_WORKSTREAM_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {

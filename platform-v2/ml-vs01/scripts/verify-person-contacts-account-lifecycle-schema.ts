@@ -42,6 +42,10 @@ const expectedMigrations = [
   {
     filename: '0008_scheduling_request_and_appointment_foundation.sql',
     sha256: 'cd1b394f95fea42b4cb770e59a1de38e74c7c44bbb3de43de91189fdd9504c9e'
+  },
+  {
+    filename: '0009_job_and_service_workstream_foundation.sql',
+    sha256: '188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66'
   }
 ];
 

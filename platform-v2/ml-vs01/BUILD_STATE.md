@@ -1,24 +1,22 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M05-A-SCHEDULING-APPOINTMENT-FOUNDATION-R01
+# BUILD_STATE.md — ML-PLATFORM-V2-P02-M06-A-JOB-SERVICE-WORKSTREAM-FOUNDATION-R01
 
-- **Current Milestone:** P02-M05-A — Provider-Neutral Scheduling Request and Appointment Foundation
-- **Status:** Candidate / Unstaged / Uncommitted / Unpushed
-- **Git Branch:** `platform-v2-p02-m05-a-scheduling-appointment-foundation-r01`
-- **Workspace:** `/Users/seanstatz/.codex/.chatgpt-projects/g-p-6a6acee454688191ab314d6c156d0531/p02-m05-a-builder`
-- **Base Commit:** `dbecea4c7032a21b22def0a57e3c1339bd3d36d5`
-- **Base Tree:** `f6500ecc83da247a451f411a6485e28fe61b4c9d`
-- **Canonical Main:** `b72c3f2115fe00c217a7cda2eca699c404c312f8`
-- **Migration:** `0008_scheduling_request_and_appointment_foundation.sql` (SHA-256: `cd1b394f95fea42b4cb770e59a1de38e74c7c44bbb3de43de91189fdd9504c9e`)
-- **Predecessor Law:** Migrations `0001` through `0007` remain byte-identical; the accepted `0007` SHA-256 remains `8288090bbcb9b7d8b1108247c2f955ab1a5a70f5680c5e5b8adce80f7f7bda16`.
-- **Request Law:** A Scheduling Request belongs to one organization-consistent Property Hub and canonical Order. Requested windows, staff proposals, acceptance, fulfillment, withdrawal, decline, and cancellation remain separate attributable facts.
-- **Appointment Law:** A unique constraint permits at most one confirmed Appointment per Scheduling Request. Confirmation does not imply participant assignment, and no vague completion state exists.
-- **Acceptance Law:** Authenticated customer acceptance records the customer actor directly. Offline acceptance records the staff actor, asserted authorized customer, method, accepted proposal, timestamp, and optional attributable note without impersonation.
-- **Timezone Law:** Windows and Appointments preserve exact instants, explicit IANA timezone, and original local timestamps. Server-side reconstruction rejects mismatched evidence and does not depend on session timezone.
-- **Participant Law:** An Appointment may be unassigned. Assignment and ending/replacement evidence are immutable and preserve Person, operational role, actors, reasons, and timestamps.
-- **Outcome Law:** Cancellation, no-show, inaccessible property, unable to complete, weather delay, and supersession are distinct append-only Appointment events.
-- **Reschedule Law:** Rescheduling creates a new Scheduling Request, proposal, attributable acceptance, and Appointment, then links an immutable supersession event from the original Appointment. Original times and assignments remain unchanged.
-- **Idempotency:** Actor-scoped command keys, server-computed SHA-256 fingerprints, and transaction advisory locks make request creation, confirmation, assignment, outcomes, and rescheduling replay-safe while rejecting conflicting reuse.
-- **Authority Boundary:** Customer authority comes from authenticated runtime context plus active Order-party evidence. Staff mutation requires `scheduling.staff.manage`. Hub participation alone does not grant mutation. Runtime roles receive no direct packet table DML and `PUBLIC` receives no packet authority.
-- **Retrieval Boundary:** Active Order customers, explicitly authorized Hub participants, and MediaLab staff may retrieve bounded projections; unavailable or cross-organization records fail closed.
+- **Current Milestone:** P02-M06-A — Job and Service Workstream Foundation
+- **Status:** Candidate / Validated / Unstaged / Uncommitted / Unpushed
+- **Git Branch:** `platform-v2-p02-m06-a-job-service-workstream-foundation-r01`
+- **Workspace:** `/Users/seanstatz/.codex/.chatgpt-projects/g-p-6a6acee454688191ab314d6c156d0531/medialab-website`
+- **Base Commit:** `f59c39d72f9a96905452addf76a929df097bc8ba`
+- **Base Tree:** `a8464a3a81b30f950eccfccc07ce180f47d79cd9`
+- **Migration:** `0009_job_and_service_workstream_foundation.sql` (SHA-256: `188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66`)
+- **Predecessor Law:** Migrations `0001` through `0008` remain byte-identical; accepted `0008` SHA-256 remains `cd1b394f95fea42b4cb770e59a1de38e74c7c44bbb3de43de91189fdd9504c9e`.
+- **Commercial Law:** An Order remains accepted commercial truth. A Job references but never rewrites its Order. Every Service Workstream references one immutable Order Item and freezes its source description, quantity, unit, and evidence kind.
+- **Cardinality Law:** One Order may have multiple Jobs. A Job requires one or more Workstreams before becoming ready. One Order Item may source multiple Workstreams. Appointment links are optional and explicit; one Job may link to multiple confirmed Appointment records.
+- **Lifecycle Law:** Jobs use `DRAFT`, `READY`, `ACTIVE`, `BLOCKED`, `COMPLETED`, and `CANCELLED`. Workstreams use `PENDING`, `READY`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED`, and `CANCELLED`. Commands enforce allowed transitions and exclude terminal reopening.
+- **Completion Law:** Job completion is an explicit authorized command and succeeds only after every Workstream is terminal. No implicit completion derives merely from sibling state.
+- **Idempotency:** Creation, Appointment linking, lifecycle changes, cancellation, completion, and external-reference recording use authenticated actor-scoped keys, server-computed SHA-256 fingerprints, and transaction advisory locks. Matching replay returns the original result; conflicting reuse fails before mutation.
+- **Event Law:** Job and Workstream events are append-only, attributable, organization-scoped, command-keyed, and preserve previous/resulting state plus immutable related references.
+- **Authority Boundary:** Commands derive actors from ordinary authenticated sessions, validate active membership and exact `job.manage` permission, enforce organization-consistent Orders, Hubs, Order Items, and Appointments, and expose no actor override.
+- **Privilege Boundary:** The restricted runtime receives EXECUTE only on eight approved packet commands/projections and receives no direct packet table or sequence authority. Helpers remain owner-only and `PUBLIC` receives no packet authority.
+- **Synthetic Evidence:** Deterministic fixtures add only `job.manage` and `job.read`; no Job, Workstream, or Appointment is fabricated by seed.
 - **Preserved Recovery Intent Law:** `START_FRESH records recovery intent for the same Person and Identity while preserving existing history`; it does not delete `memberships, contacts, orders, payments, historical evidence, or profile/preferences data`. `Actual profile/preferences reset behavior remains deferred until those models exist`.
-- **Deferred Capability:** No UI, calendar synchronization, availability, crews, routing, workload, qualifications, arrival/departure, payroll, Mission Plans, Jobs, notification delivery, billing, publication, delivery, Aryeo, Google Drive operational access, migration, cutover, deployment, or production mutation was added.
-- **Known Nonblocking Event:** `verify-changed-files.ts` remains byte-identical and retains its known porcelain-v2 parsing defect. Independent porcelain-v2, Git diff, and the packet verifier are controlling.
+- **Known Limitation:** Terminal reopening, waiver/exception completion policy, and generic noncommercial Workstreams are intentionally absent.
+- **Deferred Capability:** No Mission Plans, Capture Sessions, crews, availability, routing, assignments, time punches, Desktop Engine, physical cards, media ingest, assets, Drive mutation, editor handoff, PixelMob, returned-edit review, Quick Edit, revisions, reshoots, corrective/added-work policy, billing, payments, invoices, publication, delivery, notifications, Aryeo integration, historical reconstruction, migration, UI, deployment, dual-run, or cutover was added.

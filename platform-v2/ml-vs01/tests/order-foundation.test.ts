@@ -157,9 +157,9 @@ describe('P02-M04-A provider-neutral Order foundation', () => {
     await reset();
   });
 
-  it('1. records the exact eight-migration ledger while preserving 0001 through 0006', async () => {
+  it('1. records the exact nine-migration ledger while preserving 0001 through 0006', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(8);
+    expect(ledger.rows).toHaveLength(9);
     expect(ledger.rows.slice(0, 5)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },
@@ -171,6 +171,7 @@ describe('P02-M04-A provider-neutral Order foundation', () => {
     expect(ledger.rows[5].sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(ledger.rows[6].filename).toBe('0007_property_hub_foundation.sql');
     expect(ledger.rows[7].filename).toBe('0008_scheduling_request_and_appointment_foundation.sql');
+    expect(ledger.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
     expect(ledger.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
@@ -571,11 +572,10 @@ describe('P02-M04-A provider-neutral Order foundation', () => {
     await expectFailure(createOrder(runtime, token, { propertyId: null, propertySnapshotId: null }), /require immutable property evidence/);
   });
 
-  it('26. creates no deferred job, scheduling, payment, delivery, publication, or UI objects', async () => {
+  it('26. creates no deferred payment, delivery, publication, or UI objects', async () => {
     const deferred = await owner.query(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core'
-        AND (tablename LIKE 'job%'
-          OR tablename LIKE 'payment%' OR tablename LIKE 'invoice%' OR tablename LIKE 'delivery%'
+        AND (tablename LIKE 'payment%' OR tablename LIKE 'invoice%' OR tablename LIKE 'delivery%'
           OR tablename LIKE 'publication%' OR tablename LIKE 'download%')
         ORDER BY tablename`
     );
