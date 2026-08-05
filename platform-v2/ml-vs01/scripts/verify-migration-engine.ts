@@ -33,7 +33,7 @@ if (fs.existsSync(canonicalDir)) {
   const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort();
 
   if (
-    sqlFiles.length !== 9 ||
+    sqlFiles.length !== 10 ||
     sqlFiles[0] !== '0001_identity_and_tenancy.sql' ||
     sqlFiles[1] !== '0002_property_identity_and_snapshots.sql' ||
     sqlFiles[2] !== '0003_person_contacts_and_account_lifecycle.sql' ||
@@ -42,9 +42,10 @@ if (fs.existsSync(canonicalDir)) {
     sqlFiles[5] !== '0006_orders_and_immutable_commercial_evidence.sql' ||
     sqlFiles[6] !== '0007_property_hub_foundation.sql' ||
     sqlFiles[7] !== '0008_scheduling_request_and_appointment_foundation.sql' ||
-    sqlFiles[8] !== '0009_job_and_service_workstream_foundation.sql'
+    sqlFiles[8] !== '0009_job_and_service_workstream_foundation.sql' ||
+    sqlFiles[9] !== '0010_mission_plan_foundation.sql'
   ) {
-    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0009. Found: ${sqlFiles.join(', ')}`);
+    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0010. Found: ${sqlFiles.join(', ')}`);
     errors = true;
   }
 
@@ -106,6 +107,7 @@ const allowedCanonical6 = path.join(baseDir, 'db/migrations/0006_orders_and_immu
 const allowedCanonical7 = path.join(baseDir, 'db/migrations/0007_property_hub_foundation.sql');
 const allowedCanonical8 = path.join(baseDir, 'db/migrations/0008_scheduling_request_and_appointment_foundation.sql');
 const allowedCanonical9 = path.join(baseDir, 'db/migrations/0009_job_and_service_workstream_foundation.sql');
+const allowedCanonical10 = path.join(baseDir, 'db/migrations/0010_mission_plan_foundation.sql');
 
 for (const sqlFile of allSqlFiles) {
   if (
@@ -118,7 +120,8 @@ for (const sqlFile of allSqlFiles) {
     sqlFile !== allowedCanonical6 &&
     sqlFile !== allowedCanonical7 &&
     sqlFile !== allowedCanonical8 &&
-    sqlFile !== allowedCanonical9
+    sqlFile !== allowedCanonical9 &&
+    sqlFile !== allowedCanonical10
   ) {
     console.error(`ERROR: SQL file outside isolated test-fixture directory: ${sqlFile}`);
     errors = true;

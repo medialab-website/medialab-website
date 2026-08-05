@@ -29,12 +29,13 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * `0007_property_hub_foundation.sql` is the bounded P02-M04-B additive migration for property-centered engagement identity, immutable initial snapshot evidence, canonical Order associations, explicit participants, provider-neutral references, idempotency, and append-only Hub events.
    * `0008_scheduling_request_and_appointment_foundation.sql` is the bounded P02-M05-A additive migration for provider-neutral Scheduling Requests, requested and proposed windows, attributable customer acceptance, confirmed Appointments, participant assignment history, operational outcomes, supersession, idempotency, and append-only events.
    * `0009_job_and_service_workstream_foundation.sql` is the bounded P02-M06-A additive migration for canonical Jobs, Order Item-sourced Service Workstreams, explicit Appointment links, independent lifecycle commands, provider-neutral references, actor-scoped idempotency, and append-only events.
+   * `0010_mission_plan_foundation.sql` is the bounded P02-M07-A additive migration for one Mission Plan per Job-Appointment relationship, mutable controlled drafts, sequential immutable issued versions, frozen Workstream/contact/note evidence, deterministic canonical JSON hashes, visibility-aware projections, opaque encrypted-envelope evidence, and append-only open events.
    * Migrations `0001` through `0008` remain immutable predecessor inputs.
 
 6. **Owner and Runtime Role Separation**
    * `PGUSER` identifies the dedicated migration owner used for migrations, seed, and reset.
    * `PGRUNTIMEUSER` identifies an existing restricted runtime role and must differ from the migration owner.
-   * Migration SQL is deliberately environment-role-neutral; migrations `0003` through `0009` contain no environment-specific role names or grants.
+   * Migration SQL is deliberately environment-role-neutral; migrations `0003` through `0010` contain no environment-specific role names or grants.
    * `db/migrate.ts` is the canonical supported migration entrypoint. It validates that the owner and runtime roles both exist and differ.
    * Migration SQL, the runtime privilege policy, and the migration-ledger insert execute within the same database transaction without substituting environment-specific values into canonical migration bytes.
    * Raw manual execution of migration `0003` alone is safe but incomplete and is not a supported deployment path.
@@ -45,6 +46,7 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * Raw manual execution of migration `0007` alone is likewise incomplete. The canonical runner grants only `create_property_hub` and `get_property_hub_record` as new runtime APIs, keeps all Hub helpers owner-only, and preserves predecessor runtime APIs unchanged.
    * Raw manual execution of migration `0008` alone is likewise incomplete. The canonical runner grants only the eighteen controlled P02-M05-A scheduling and Appointment commands/projections, keeps all scheduling helpers owner-only, preserves predecessor runtime APIs unchanged, and grants no direct table or sequence authority.
    * Raw manual execution of migration `0009` alone is likewise incomplete. The canonical runner grants only the eight controlled P02-M06-A Job and Service Workstream commands/projections, keeps all packet helpers owner-only, preserves predecessor runtime APIs unchanged, and grants no direct table or sequence authority.
+   * Raw manual execution of migration `0010` alone is likewise incomplete. The canonical runner grants only the thirteen controlled P02-M07-A Mission Plan commands/projections, keeps helpers owner-only, grants no direct table or sequence authority, and never grants decryption or key-management authority.
 
 7. **Global Catalog and Commercial-Evidence Boundary**
    * Catalog products, package definitions, brackets, prices, and external mappings are global MediaLab-owned records and contain no organization ownership field.

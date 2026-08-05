@@ -13,13 +13,13 @@ const worktreeRoot = path.resolve(baseDir, '../../');
 
 let errors = false;
 
-// 1. P02-M06-A bounded changed-file allowlist
+// 1. P02-M07-A bounded changed-file allowlist
 const ALLOWLIST = [
   'platform-v2/ml-vs01/BUILD_STATE.md',
   'platform-v2/ml-vs01/CHANGED_FILES.md',
-  'platform-v2/ml-vs01/db/fixtures/job-service-workstream-foundation-fixtures.ts',
+  'platform-v2/ml-vs01/db/fixtures/mission-plan-foundation-fixtures.ts',
   'platform-v2/ml-vs01/db/migrate.ts',
-  'platform-v2/ml-vs01/db/migrations/0009_job_and_service_workstream_foundation.sql',
+  'platform-v2/ml-vs01/db/migrations/0010_mission_plan_foundation.sql',
   'platform-v2/ml-vs01/db/migrations/README.md',
   'platform-v2/ml-vs01/db/reset-test-database.ts',
   'platform-v2/ml-vs01/db/seed.ts',
@@ -27,13 +27,17 @@ const ALLOWLIST = [
   'platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts',
   'platform-v2/ml-vs01/scripts/verify-job-service-workstream-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
+  'platform-v2/ml-vs01/scripts/verify-mission-plan-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts',
+  'platform-v2/ml-vs01/scripts/verify-property-hub-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
+  'platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts',
   'platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts',
   'platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts',
   'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
   'platform-v2/ml-vs01/tests/job-service-workstream-foundation.test.ts',
   'platform-v2/ml-vs01/tests/migration-engine.test.ts',
+  'platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts',
   'platform-v2/ml-vs01/tests/order-foundation.test.ts',
   'platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts',
   'platform-v2/ml-vs01/tests/property-hub-foundation.test.ts',
@@ -63,7 +67,7 @@ for (const line of lines) {
 
   // Every changed path must be contained in the allowlist
   if (!ALLOWLIST.includes(gitPath)) {
-    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M06-A allowlist.`);
+    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M07-A allowlist.`);
     errors = true;
   }
 

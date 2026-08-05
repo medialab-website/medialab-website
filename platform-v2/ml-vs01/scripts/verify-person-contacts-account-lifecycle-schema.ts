@@ -176,7 +176,10 @@ for (const relPath of requiredFiles) {
 
 const migrationsDir = path.join(baseDir, 'db/migrations');
 const migrationFiles = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql')).sort();
-exactNames('Canonical migration inventory', migrationFiles, expectedMigrations.map((entry) => entry.filename));
+exactNames('Canonical migration inventory', migrationFiles, [
+  ...expectedMigrations.map((entry) => entry.filename),
+  '0010_mission_plan_foundation.sql'
+]);
 for (const expected of expectedMigrations) {
   const bytes = fs.readFileSync(path.join(migrationsDir, expected.filename));
   const actual = crypto.createHash('sha256').update(bytes).digest('hex').toLowerCase();

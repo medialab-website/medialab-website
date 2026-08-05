@@ -33,6 +33,7 @@ const ORDER_FOUNDATION_PACKET_MIGRATION = '0006_orders_and_immutable_commercial_
 const PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION = '0007_property_hub_foundation.sql';
 const SCHEDULING_APPOINTMENT_PACKET_MIGRATION = '0008_scheduling_request_and_appointment_foundation.sql';
 const JOB_SERVICE_WORKSTREAM_PACKET_MIGRATION = '0009_job_and_service_workstream_foundation.sql';
+const MISSION_PLAN_PACKET_MIGRATION = '0010_mission_plan_foundation.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -109,6 +110,22 @@ const JOB_SERVICE_WORKSTREAM_PUBLIC_FUNCTIONS = [
   'medialab_core.get_service_workstream_record(text, uuid)'
 ];
 
+const MISSION_PLAN_PUBLIC_FUNCTIONS = [
+  'medialab_core.create_mission_plan_draft(text, text, uuid, jsonb, text, jsonb, text)',
+  'medialab_core.revise_mission_plan_draft(text, text, uuid, jsonb, text, jsonb, text)',
+  'medialab_core.replace_mission_plan_draft_workstreams(text, text, uuid, uuid[])',
+  'medialab_core.replace_mission_plan_draft_contacts(text, text, uuid, jsonb)',
+  'medialab_core.record_mission_plan_sensitive_envelope(text, text, uuid, uuid, text, text, text, text, text, text, text)',
+  'medialab_core.add_mission_plan_note(text, text, uuid, text, text)',
+  'medialab_core.refresh_mission_plan_draft(text, text, uuid)',
+  'medialab_core.create_mission_plan_superseding_draft(text, text, uuid, uuid)',
+  'medialab_core.issue_mission_plan_version(text, text, uuid)',
+  'medialab_core.record_mission_plan_open_event(text, text, uuid, uuid, text, jsonb)',
+  'medialab_core.get_mission_plan_record(text, uuid)',
+  'medialab_core.list_mission_plans(text, uuid, uuid)',
+  'medialab_core.get_mission_plan_sensitive_envelopes(text, uuid)'
+];
+
 export function validateMigrationFilenames(filenames: string[]): void {
   const filenameRegex = /^[0-9]{4}_[a-z0-9_]+\.sql$/;
   const prefixes = new Set<string>();
@@ -166,7 +183,8 @@ async function applyRuntimePrivilegePolicy(
   includeOrderFoundationFunctions = false,
   includePropertyHubFoundationFunctions = false,
   includeSchedulingAppointmentFunctions = false,
-  includeJobServiceWorkstreamFunctions = false
+  includeJobServiceWorkstreamFunctions = false,
+  includeMissionPlanFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -188,7 +206,8 @@ async function applyRuntimePrivilegePolicy(
       ...(includeOrderFoundationFunctions ? ORDER_FOUNDATION_PUBLIC_FUNCTIONS : []),
       ...(includePropertyHubFoundationFunctions ? PROPERTY_HUB_FOUNDATION_PUBLIC_FUNCTIONS : []),
       ...(includeSchedulingAppointmentFunctions ? SCHEDULING_APPOINTMENT_PUBLIC_FUNCTIONS : []),
-      ...(includeJobServiceWorkstreamFunctions ? JOB_SERVICE_WORKSTREAM_PUBLIC_FUNCTIONS : [])
+      ...(includeJobServiceWorkstreamFunctions ? JOB_SERVICE_WORKSTREAM_PUBLIC_FUNCTIONS : []),
+      ...(includeMissionPlanFunctions ? MISSION_PLAN_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -325,6 +344,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === MISSION_PLAN_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -353,7 +376,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           sqlFiles.includes(ORDER_FOUNDATION_PACKET_MIGRATION),
           sqlFiles.includes(PROPERTY_HUB_FOUNDATION_PACKET_MIGRATION),
           sqlFiles.includes(SCHEDULING_APPOINTMENT_PACKET_MIGRATION),
-          sqlFiles.includes(JOB_SERVICE_WORKSTREAM_PACKET_MIGRATION)
+          sqlFiles.includes(JOB_SERVICE_WORKSTREAM_PACKET_MIGRATION),
+          sqlFiles.includes(MISSION_PLAN_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {

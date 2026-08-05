@@ -1,22 +1,24 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M06-A-JOB-SERVICE-WORKSTREAM-FOUNDATION-R01
+# BUILD_STATE.md — ML-PLATFORM-V2-P02-M07-A-MISSION-PLAN-FOUNDATION-R01
 
-- **Current Milestone:** P02-M06-A — Job and Service Workstream Foundation
-- **Status:** Candidate / Validated / Unstaged / Uncommitted / Unpushed
-- **Git Branch:** `platform-v2-p02-m06-a-job-service-workstream-foundation-r01`
-- **Workspace:** `/Users/seanstatz/.codex/.chatgpt-projects/g-p-6a6acee454688191ab314d6c156d0531/medialab-website`
-- **Base Commit:** `f59c39d72f9a96905452addf76a929df097bc8ba`
-- **Base Tree:** `a8464a3a81b30f950eccfccc07ce180f47d79cd9`
-- **Migration:** `0009_job_and_service_workstream_foundation.sql` (SHA-256: `188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66`)
-- **Predecessor Law:** Migrations `0001` through `0008` remain byte-identical; accepted `0008` SHA-256 remains `cd1b394f95fea42b4cb770e59a1de38e74c7c44bbb3de43de91189fdd9504c9e`.
-- **Commercial Law:** An Order remains accepted commercial truth. A Job references but never rewrites its Order. Every Service Workstream references one immutable Order Item and freezes its source description, quantity, unit, and evidence kind.
-- **Cardinality Law:** One Order may have multiple Jobs. A Job requires one or more Workstreams before becoming ready. One Order Item may source multiple Workstreams. Appointment links are optional and explicit; one Job may link to multiple confirmed Appointment records.
-- **Lifecycle Law:** Jobs use `DRAFT`, `READY`, `ACTIVE`, `BLOCKED`, `COMPLETED`, and `CANCELLED`. Workstreams use `PENDING`, `READY`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED`, and `CANCELLED`. Commands enforce allowed transitions and exclude terminal reopening.
-- **Completion Law:** Job completion is an explicit authorized command and succeeds only after every Workstream is terminal. No implicit completion derives merely from sibling state.
-- **Idempotency:** Creation, Appointment linking, lifecycle changes, cancellation, completion, and external-reference recording use authenticated actor-scoped keys, server-computed SHA-256 fingerprints, and transaction advisory locks. Matching replay returns the original result; conflicting reuse fails before mutation.
-- **Event Law:** Job and Workstream events are append-only, attributable, organization-scoped, command-keyed, and preserve previous/resulting state plus immutable related references.
-- **Authority Boundary:** Commands derive actors from ordinary authenticated sessions, validate active membership and exact `job.manage` permission, enforce organization-consistent Orders, Hubs, Order Items, and Appointments, and expose no actor override.
-- **Privilege Boundary:** The restricted runtime receives EXECUTE only on eight approved packet commands/projections and receives no direct packet table or sequence authority. Helpers remain owner-only and `PUBLIC` receives no packet authority.
-- **Synthetic Evidence:** Deterministic fixtures add only `job.manage` and `job.read`; no Job, Workstream, or Appointment is fabricated by seed.
+- **Current Milestone:** P02-M07-A — Mission Plan Foundation
+- **Status:** Candidate / Locally Validated / Unstaged / Uncommitted / Unpushed
+- **Git Branch:** `platform-v2-p02-m07-a-mission-plan-foundation-r01`
+- **Workspace:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M07-A-Mission-Plan-Foundation`
+- **Base Commit:** `58cf68d365624d60d8bffa84cbd6d787725c4fc9`
+- **Base Tree:** `fd0b03133ed30b1609b9b7fa63637ee10bdb88a9`
+- **Migration:** `0010_mission_plan_foundation.sql` (83,612 bytes; SHA-256: `2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3`)
+- **Predecessor Law:** Migrations `0001` through `0009` remain byte-identical; accepted `0009` SHA-256 remains `188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66`.
+- **Identity Law:** Exactly one Mission Plan may attach to one canonical Job-Appointment relationship. Composite foreign keys preserve organization, Order, Property Hub, Job, Appointment, and relationship consistency.
+- **Draft Law:** One controlled mutable draft stores versioned structured content, attributable weather state, a monotonically increasing generation, and a server-computed source fingerprint. Direct runtime table mutation is denied.
+- **Selection Law:** Draft creation defaults every eligible nonterminal Workstream for the linked Job. Staff may replace that set explicitly; missing, terminal, cross-Job, and cross-tenant selections are rejected.
+- **Issuance Law:** Issuance requires a fresh source fingerprint and at least one eligible Workstream. Issued versions are sequential, immutable, and supersede by reference without overwriting predecessor evidence.
+- **Canonical JSON Law:** Issuance constructs a deterministic JSONB snapshot with a schema version, relationship evidence, content, weather, frozen Workstreams, historical contact snapshots, incorporated notes, and protected-envelope metadata. SHA-256 is calculated from stored JSONB text and verified after readback.
+- **Visibility Law:** Content, contacts, and notes use exactly `INTERNAL_STAFF_ONLY`, `ASSIGNED_CREW_ONLY`, or `POTENTIALLY_CUSTOMER_VISIBLE`. Ordinary projections filter staff-only evidence from assigned crew.
+- **Protected-Envelope Law:** The database stores provider-neutral opaque ciphertext plus envelope format, algorithm, key reference, nonce/IV metadata, ciphertext hash, optional trusted payload hash, actor, timestamp, and classification. It performs no encryption, decryption, or key management; ordinary projections and canonical JSON contain no ciphertext.
+- **Contact and Weather Law:** Contact evidence freezes historical submitted/normalized values while retaining canonical Person and Contact Method references. Weather is `AVAILABLE`, attributable `UNAVAILABLE`, or `NOT_REQUESTED`.
+- **Append-Only Law:** Issued versions and frozen children, sensitive envelopes, attributable notes, lifecycle events, open/acknowledgement events, and idempotency records reject UPDATE and DELETE.
+- **Validity Law:** Opening and acknowledgement are attributable append-only evidence and do not determine Mission Plan validity.
+- **Authority Boundary:** Commands derive actors from ordinary authenticated sessions, enforce active organization authority, and use actor-scoped idempotency keys. Restricted runtime receives EXECUTE only on thirteen Mission Plan commands/projections, no direct table or sequence authority, and no helper authority. `PUBLIC` receives none.
+- **Synthetic Evidence:** Deterministic fixtures add only `mission_plan.manage`, `mission_plan.read`, and `mission_plan.sensitive_read`; no Mission Plan, Job, Appointment, Workstream, contact selection, envelope, note, or event is fabricated by seed.
 - **Preserved Recovery Intent Law:** `START_FRESH records recovery intent for the same Person and Identity while preserving existing history`; it does not delete `memberships, contacts, orders, payments, historical evidence, or profile/preferences data`. `Actual profile/preferences reset behavior remains deferred until those models exist`.
-- **Known Limitation:** Terminal reopening, waiver/exception completion policy, and generic noncommercial Workstreams are intentionally absent.
-- **Deferred Capability:** No Mission Plans, Capture Sessions, crews, availability, routing, assignments, time punches, Desktop Engine, physical cards, media ingest, assets, Drive mutation, editor handoff, PixelMob, returned-edit review, Quick Edit, revisions, reshoots, corrective/added-work policy, billing, payments, invoices, publication, delivery, notifications, Aryeo integration, historical reconstruction, migration, UI, deployment, dual-run, or cutover was added.
+- **Excluded Capability:** No gear field, placeholder, table, relationship, or speculative extension exists. Capture Sessions, ingest, assets, billing, publication, delivery, UI, integrations, production configuration, deployment, dual-run, and cutover remain excluded.

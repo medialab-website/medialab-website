@@ -8,6 +8,7 @@ import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foun
 import { PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/property-hub-foundation-fixtures.js';
 import { SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/scheduling-appointment-foundation-fixtures.js';
 import { JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/job-service-workstream-foundation-fixtures.js';
+import { MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/mission-plan-foundation-fixtures.js';
 
 const TEST_DB = 'medialab_p02m04a_test';
 const TEST_ROLE = 'medialab_p02m04a_test_owner';
@@ -15,6 +16,27 @@ const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
 const TEST_PORT = 55432;
 
 const EXACT_ROUTINE_NAMES = [
+  'add_mission_plan_note',
+  'actor_can_read_mission_plan',
+  'check_mission_plan_idempotency',
+  'compute_mission_plan_source_fingerprint',
+  'create_mission_plan_draft',
+  'create_mission_plan_superseding_draft',
+  'get_mission_plan_record',
+  'get_mission_plan_sensitive_envelopes',
+  'guard_mission_plan_draft_update',
+  'issue_mission_plan_version',
+  'list_mission_plans',
+  'record_mission_plan_idempotency',
+  'record_mission_plan_open_event',
+  'record_mission_plan_sensitive_envelope',
+  'refresh_mission_plan_draft',
+  'reject_mission_plan_evidence_mutation',
+  'replace_mission_plan_draft_contacts',
+  'replace_mission_plan_draft_workstreams',
+  'require_mission_plan_permission',
+  'revise_mission_plan_draft',
+  'validate_mission_plan_content',
   'accept_scheduling_proposal',
   'actor_can_administer_person',
   'actor_can_read_scheduling',
@@ -196,13 +218,29 @@ const EXACT_TRIGGERS = [
   ['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time'],
   ['service_workstream_events_immutability_guard', 'service_workstream_events', 'reject_job_service_evidence_mutation'],
   ['service_workstreams_delete_guard', 'service_workstreams', 'reject_job_service_evidence_mutation'],
-  ['service_workstreams_update_guard', 'service_workstreams', 'guard_service_workstream_update']
+  ['service_workstreams_update_guard', 'service_workstreams', 'guard_service_workstream_update'],
+  ['mission_plan_command_idempotency_immutability_guard', 'mission_plan_command_idempotency', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_drafts_delete_guard', 'mission_plan_drafts', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_drafts_update_guard', 'mission_plan_drafts', 'guard_mission_plan_draft_update'],
+  ['mission_plan_events_immutability_guard', 'mission_plan_events', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_notes_immutability_guard', 'mission_plan_notes', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_open_events_immutability_guard', 'mission_plan_open_events', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_sensitive_envelopes_immutability_guard', 'mission_plan_sensitive_envelopes', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_version_contacts_immutability_guard', 'mission_plan_version_contacts', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_version_notes_immutability_guard', 'mission_plan_version_notes', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_version_workstreams_immutability_guard', 'mission_plan_version_workstreams', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plan_versions_immutability_guard', 'mission_plan_versions', 'reject_mission_plan_evidence_mutation'],
+  ['mission_plans_immutability_guard', 'mission_plans', 'reject_mission_plan_evidence_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({
   trigger_name,
   table_name,
   schema_name: 'medialab_core',
   function_name
-}));
+})).sort((a, b) =>
+  a.schema_name.localeCompare(b.schema_name) ||
+  a.table_name.localeCompare(b.table_name) ||
+  a.trigger_name.localeCompare(b.trigger_name)
+);
 
 describe('P01C Test Database Reset Tooling Tests', () => {
   let client: pg.Client;
@@ -290,7 +328,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(9);
+    expect(ledgerRes.rows).toHaveLength(10);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -306,6 +344,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[6].filename).toBe('0007_property_hub_foundation.sql');
     expect(ledgerRes.rows[7].filename).toBe('0008_scheduling_request_and_appointment_foundation.sql');
     expect(ledgerRes.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
+    expect(ledgerRes.rows[9].filename).toBe('0010_mission_plan_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -323,6 +362,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {
@@ -349,7 +391,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
        ORDER BY routine_schema, routine_name;`
     );
     expect(routRes.rows).toEqual(
-      EXACT_ROUTINE_NAMES.map((routine_name) => ({
+      [...EXACT_ROUTINE_NAMES].sort().map((routine_name) => ({
         routine_schema: 'medialab_core',
         routine_name,
         routine_type: 'FUNCTION'

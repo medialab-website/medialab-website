@@ -167,9 +167,9 @@ describe('P02-M06-A provider-neutral Job and Service Workstream foundation', () 
     await reset();
   });
 
-  it('1. applies nine immutable migrations with the canonical 0009 filename', async () => {
+  it('1. applies ten immutable migrations while preserving the canonical 0009 predecessor', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(9);
+    expect(ledger.rows).toHaveLength(10);
     expect(ledger.rows[8]).toMatchObject({ filename: '0009_job_and_service_workstream_foundation.sql' });
     expect(ledger.rows[8].sha256).toMatch(/^[0-9a-f]{64}$/);
   });

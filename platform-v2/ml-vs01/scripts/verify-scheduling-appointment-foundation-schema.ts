@@ -93,21 +93,27 @@ const packetTriggers = [
 const allowedPaths = [
   'platform-v2/ml-vs01/BUILD_STATE.md',
   'platform-v2/ml-vs01/CHANGED_FILES.md',
-  'platform-v2/ml-vs01/db/fixtures/scheduling-appointment-foundation-fixtures.ts',
+  'platform-v2/ml-vs01/db/fixtures/mission-plan-foundation-fixtures.ts',
   'platform-v2/ml-vs01/db/migrate.ts',
-  'platform-v2/ml-vs01/db/migrations/0008_scheduling_request_and_appointment_foundation.sql',
+  'platform-v2/ml-vs01/db/migrations/0010_mission_plan_foundation.sql',
   'platform-v2/ml-vs01/db/migrations/README.md',
   'platform-v2/ml-vs01/db/reset-test-database.ts',
   'platform-v2/ml-vs01/db/seed.ts',
   'platform-v2/ml-vs01/package.json',
+  'platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts',
+  'platform-v2/ml-vs01/scripts/verify-job-service-workstream-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
+  'platform-v2/ml-vs01/scripts/verify-mission-plan-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts',
+  'platform-v2/ml-vs01/scripts/verify-property-hub-foundation-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
   'platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts',
   'platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts',
   'platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts',
   'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
+  'platform-v2/ml-vs01/tests/job-service-workstream-foundation.test.ts',
   'platform-v2/ml-vs01/tests/migration-engine.test.ts',
+  'platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts',
   'platform-v2/ml-vs01/tests/order-foundation.test.ts',
   'platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts',
   'platform-v2/ml-vs01/tests/property-hub-foundation.test.ts',
@@ -197,10 +203,14 @@ try {
   const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
   const expectedLedger = [
     ...predecessorMigrations.map(([filename, sha256]) => ({ filename, sha256 })),
-    { filename: packetMigration, sha256: packetHash }
+    { filename: packetMigration, sha256: packetHash },
+    ...['0009_job_and_service_workstream_foundation.sql', '0010_mission_plan_foundation.sql'].map((filename) => ({
+      filename,
+      sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations', filename))).digest('hex')
+    }))
   ];
   if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) {
-    fail(`Eight-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
+    fail(`Ten-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
   }
 
   const tables = await client.query(

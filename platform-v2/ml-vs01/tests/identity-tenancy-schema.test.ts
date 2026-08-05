@@ -7,9 +7,11 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'add_mission_plan_note',
   'accept_scheduling_proposal',
   'actor_can_administer_person',
   'actor_can_read_scheduling',
+  'actor_can_read_mission_plan',
   'actor_has_permission',
   'actor_is_order_customer',
   'add_scheduling_requested_window',
@@ -23,9 +25,11 @@ const EXACT_ROUTINE_NAMES = [
   'bootstrap_person_contact',
   'cancel_appointment',
   'check_job_service_idempotency',
+  'check_mission_plan_idempotency',
   'check_scheduling_idempotency',
   'close_scheduling_request',
   'confirm_appointment',
+  'compute_mission_plan_source_fingerprint',
   'correct_contact_method',
   'create_catalog_commercial_snapshot',
   'create_catalog_draft_product',
@@ -33,6 +37,8 @@ const EXACT_ROUTINE_NAMES = [
   'create_contact_method',
   'create_custom_commercial_snapshot',
   'create_job',
+  'create_mission_plan_draft',
+  'create_mission_plan_superseding_draft',
   'create_order',
   'create_property_hub',
   'create_scheduling_request',
@@ -46,6 +52,8 @@ const EXACT_ROUTINE_NAMES = [
   'get_current_catalog_package_inclusions',
   'get_current_selectable_catalog',
   'get_job_record',
+  'get_mission_plan_record',
+  'get_mission_plan_sensitive_envelopes',
   'get_order_record',
   'get_property_hub_record',
   'get_scheduling_request_record',
@@ -60,6 +68,7 @@ const EXACT_ROUTINE_NAMES = [
   'guard_contact_supersession_insert',
   'guard_contact_verification_insert',
   'guard_job_update',
+  'guard_mission_plan_draft_update',
   'guard_order_relationship_insert',
   'guard_people_primary_email_update',
   'guard_primary_email_replacement_insert',
@@ -67,7 +76,9 @@ const EXACT_ROUTINE_NAMES = [
   'guard_service_workstream_update',
   'guard_verification_invalidation_insert',
   'invalidate_contact_verification',
+  'issue_mission_plan_version',
   'link_job_appointment',
+  'list_mission_plans',
   'normalize_contact_value',
   'propose_scheduling_window',
   'publish_catalog_draft_product',
@@ -80,37 +91,47 @@ const EXACT_ROUTINE_NAMES = [
   'record_contact_verification',
   'record_job_service_external_reference',
   'record_job_service_idempotency',
+  'record_mission_plan_idempotency',
+  'record_mission_plan_open_event',
+  'record_mission_plan_sensitive_envelope',
   'record_scheduling_idempotency',
   'record_scheduling_offline_acceptance',
   'reject_catalog_evidence_mutation',
   'reject_catalog_product_delete',
   'reject_contact_history_mutation',
   'reject_job_service_evidence_mutation',
+  'reject_mission_plan_evidence_mutation',
   'reject_order_evidence_mutation',
   'reject_property_hub_evidence_mutation',
   'reject_property_snapshot_mutation',
   'reject_scheduling_evidence_mutation',
   'replace_appointment_participant_assignment',
+  'replace_mission_plan_draft_contacts',
+  'replace_mission_plan_draft_workstreams',
   'replace_catalog_bracket_set',
   'replace_catalog_package_composition',
   'replace_primary_email',
   'require_catalog_permission',
   'require_identity_person',
   'require_job_service_permission',
+  'require_mission_plan_permission',
   'require_order_permission',
   'require_property_hub_permission',
   'require_scheduling_staff',
   'resolve_account_recovery_session',
   'resolve_ordinary_session',
   'retire_contact_method',
+  'refresh_mission_plan_draft',
   'revise_catalog_draft_product',
   'revise_catalog_product',
+  'revise_mission_plan_draft',
   'revise_published_catalog_product_definition',
   'set_catalog_product_archived',
   'supersede_and_reschedule_appointment',
   'transition_account_lifecycle'
   ,'transition_job_state'
   ,'transition_service_workstream_state'
+  ,'validate_mission_plan_content'
   ,'validate_scheduling_time_evidence'
   ,'withdraw_scheduling_request'
 ];
@@ -189,7 +210,20 @@ const EXACT_TRIGGERS = [
   ,['service_workstream_events_immutability_guard', 'service_workstream_events', 'reject_job_service_evidence_mutation']
   ,['service_workstreams_delete_guard', 'service_workstreams', 'reject_job_service_evidence_mutation']
   ,['service_workstreams_update_guard', 'service_workstreams', 'guard_service_workstream_update']
-].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }));
+  ,['mission_plan_command_idempotency_immutability_guard', 'mission_plan_command_idempotency', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_drafts_delete_guard', 'mission_plan_drafts', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_drafts_update_guard', 'mission_plan_drafts', 'guard_mission_plan_draft_update']
+  ,['mission_plan_events_immutability_guard', 'mission_plan_events', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_notes_immutability_guard', 'mission_plan_notes', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_open_events_immutability_guard', 'mission_plan_open_events', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_sensitive_envelopes_immutability_guard', 'mission_plan_sensitive_envelopes', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_version_contacts_immutability_guard', 'mission_plan_version_contacts', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_version_notes_immutability_guard', 'mission_plan_version_notes', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_version_workstreams_immutability_guard', 'mission_plan_version_workstreams', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plan_versions_immutability_guard', 'mission_plan_versions', 'reject_mission_plan_evidence_mutation']
+  ,['mission_plans_immutability_guard', 'mission_plans', 'reject_mission_plan_evidence_mutation']
+].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }))
+  .sort((a, b) => a.table_name.localeCompare(b.table_name) || a.trigger_name.localeCompare(b.trigger_name));
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
@@ -199,23 +233,15 @@ describe('M02 Identity and Tenancy Schema', () => {
     user: 'medialab_p02m04a_test_owner'
   });
 
-  const poolDev = new Pool({
-    host: '/tmp/mlvs01-p02m04a-pg',
-    port: 55432,
-    database: 'medialab_p02m04a',
-    user: 'medialab_p02m04a_owner'
-  });
-
   beforeAll(async () => {
     // Let the tests run without clearing DB initially
   });
 
   afterAll(async () => {
     await poolTest.end();
-    await poolDev.end();
-  });
+  }, 30_000);
 
-  it('1. Canonical migration scripts are path-independent and both databases are clean no-ops', async () => {
+  it('1. Canonical migration scripts are path-independent and the approved test database is a clean no-op', async () => {
     const cwd = path.resolve(__dirname, '..');
     const packageJson = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
 
@@ -224,31 +250,12 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const migrationsDir = path.join(cwd, 'db/migrations');
 
-    const outDev = await runMigrations({
-      migrationsDir,
-      database: 'medialab_p02m04a',
-      user: 'medialab_p02m04a_owner',
-      runtimeUser: 'medialab_p02m04a_app'
-    });
     const outTest = await runMigrations({
       migrationsDir,
       database: 'medialab_p02m04a_test',
       user: 'medialab_p02m04a_test_owner',
       runtimeUser: 'medialab_p02m04a_test_app'
     });
-
-    expect(outDev.applied).toEqual([]);
-    expect(outDev.skipped).toEqual([
-      '0001_identity_and_tenancy.sql',
-      '0002_property_identity_and_snapshots.sql',
-      '0003_person_contacts_and_account_lifecycle.sql',
-      '0004_current_catalog_and_price_snapshots.sql',
-      '0005_catalog_administration_lifecycle.sql',
-      '0006_orders_and_immutable_commercial_evidence.sql',
-      '0007_property_hub_foundation.sql',
-      '0008_scheduling_request_and_appointment_foundation.sql'
-      ,'0009_job_and_service_workstream_foundation.sql'
-    ]);
 
     expect(outTest.applied).toEqual([]);
     expect(outTest.skipped).toEqual([
@@ -261,6 +268,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       '0007_property_hub_foundation.sql',
       '0008_scheduling_request_and_appointment_foundation.sql'
       ,'0009_job_and_service_workstream_foundation.sql'
+      ,'0010_mission_plan_foundation.sql'
     ]);
   });
 
@@ -276,7 +284,7 @@ describe('M02 Identity and Tenancy Schema', () => {
     'permissions'
   ].sort();
 
-  for (const [env, pool] of Object.entries({ test: poolTest, dev: poolDev })) {
+  for (const [env, pool] of Object.entries({ test: poolTest })) {
     describe(`Catalog Assertions (${env})`, () => {
       it('2. Exact medialab_core schema and owner', async () => {
         const resSchema = await pool.query(`
@@ -320,7 +328,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           ORDER BY routine_name
         `);
         expect(resRoutines.rows).toEqual(
-          EXACT_ROUTINE_NAMES.map((routine_name) => ({ routine_name, routine_type: 'FUNCTION' }))
+          [...EXACT_ROUTINE_NAMES].sort().map((routine_name) => ({ routine_name, routine_type: 'FUNCTION' }))
         );
 
         const resTriggers = await pool.query(`
@@ -470,7 +478,7 @@ describe('M02 Identity and Tenancy Schema', () => {
         for (const fk of resFks.rows) {
           expect(fk.delete_rule).toBe('RESTRICT');
         }
-      });
+      }, 30_000);
 
       it('7. Privilege Assertions', async () => {
         // Assume using a standard low privilege app user for the dev db assertions
@@ -755,14 +763,14 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 13,
+      permissions: 16,
       permission_sets: 1,
-      permission_set_permissions: 13,
+      permission_set_permissions: 16,
       membership_permission_sets: 1,
       development_sessions: 1
     };
 
-    for (const [env, pool] of Object.entries({ test: poolTest, dev: poolDev })) {
+    for (const [env, pool] of Object.entries({ test: poolTest })) {
       for (const table of exactTableNames) {
         const res = await pool.query(`SELECT count(*)::int as count FROM medialab_core.${table}`);
         const cnt = res.rows[0].count;

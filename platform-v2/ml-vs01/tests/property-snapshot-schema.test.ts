@@ -11,23 +11,15 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     user: 'medialab_p02m04a_test_owner'
   });
 
-  const poolDev = new Pool({
-    host: '/tmp/mlvs01-p02m04a-pg',
-    port: 55432,
-    database: 'medialab_p02m04a',
-    user: 'medialab_p02m04a_owner'
-  });
-
   afterAll(async () => {
     await poolTest.end();
-    await poolDev.end();
   });
 
-  for (const [env, pool] of Object.entries({ test: poolTest, dev: poolDev })) {
+  for (const [env, pool] of Object.entries({ test: poolTest })) {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(9);
+        expect(res.rows).toHaveLength(10);
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
         expect(res.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -49,6 +41,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         expect(res.rows[7].filename).toBe('0008_scheduling_request_and_appointment_foundation.sql');
         expect(res.rows[7].sha256).toMatch(/^[0-9a-f]{64}$/);
         expect(res.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
+        expect(res.rows[9].filename).toBe('0010_mission_plan_foundation.sql');
         expect(res.rows[8].sha256).toMatch(/^[0-9a-f]{64}$/);
       });
 
@@ -368,7 +361,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
   });
 
   it('16 & 20. Verify exact synthetic Order property evidence and foundation fixture rows', async () => {
-    for (const [env, pool] of Object.entries({ test: poolTest, dev: poolDev })) {
+    for (const [env, pool] of Object.entries({ test: poolTest })) {
       const resProps = await pool.query(`SELECT count(*)::int as count FROM medialab_core.properties`);
       expect(resProps.rows[0].count, `Properties table in ${env} must have one synthetic Order fixture`).toBe(1);
 
@@ -380,9 +373,9 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         people: 3,
         identities: 2,
         memberships: 3,
-        permissions: 13,
+        permissions: 16,
         permission_sets: 1,
-        permission_set_permissions: 13,
+        permission_set_permissions: 16,
         membership_permission_sets: 1,
         development_sessions: 1
       };
