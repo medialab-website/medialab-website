@@ -11,11 +11,12 @@ const migrationDir = path.join(baseDir, 'db/migrations');
 const packetMigration = '0009_job_and_service_workstream_foundation.sql';
 const successorMigration = '0010_mission_plan_foundation.sql';
 const secondSuccessorMigration = '0011_media_asset_identity_and_lineage_foundation.sql';
-const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
-const TEST_PORT = 55438;
-const TEST_DB = 'medialab_p02m08a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m08a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m08a_test_app';
+const thirdSuccessorMigration = '0012_durable_media_operations_reconciliation_foundation.sql';
+const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
+const TEST_PORT = 55439;
+const TEST_DB = 'medialab_p02m09a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m09a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m09a_test_app';
 let errors = false;
 
 const predecessorMigrations = [
@@ -76,7 +77,7 @@ for (const [filename, expectedHash] of predecessorMigrations) {
 }
 
 const migrationFiles = fs.readdirSync(migrationDir).filter((filename) => filename.endsWith('.sql')).sort();
-exact('Canonical migration inventory', migrationFiles, [...predecessorMigrations.map(([filename]) => filename), packetMigration, successorMigration, secondSuccessorMigration]);
+exact('Canonical migration inventory', migrationFiles, [...predecessorMigrations.map(([filename]) => filename), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration]);
 
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
 const packetHash = crypto.createHash('sha256').update(packetBytes).digest('hex');
@@ -135,9 +136,13 @@ try {
     {
       filename: secondSuccessorMigration,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, secondSuccessorMigration))).digest('hex')
+    },
+    {
+      filename: thirdSuccessorMigration,
+      sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, thirdSuccessorMigration))).digest('hex')
     }
   ];
-  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Eleven-row migration ledger mismatch');
+  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Twelve-row migration ledger mismatch');
 
   const tables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables

@@ -10,13 +10,36 @@ import { SCHEDULING_APPOINTMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fi
 import { JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/job-service-workstream-foundation-fixtures.js';
 import { MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/mission-plan-foundation-fixtures.js';
 import { MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media-asset-identity-lineage-fixtures.js';
+import { MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/durable-media-operations-reconciliation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m08a_test';
-const TEST_ROLE = 'medialab_p02m08a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
-const TEST_PORT = 55438;
+const TEST_DB = 'medialab_p02m09a_test';
+const TEST_ROLE = 'medialab_p02m09a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
+const TEST_PORT = 55439;
 
 const EXACT_ROUTINE_NAMES = [
+  'append_media_operation_event',
+  'attach_media_operation_target',
+  'check_media_operation_runtime_idempotency',
+  'claim_media_operation',
+  'complete_media_operation_attempt',
+  'get_media_operation_record',
+  'guard_media_operation_projection_mutation',
+  'list_claimable_media_operations',
+  'list_media_operations',
+  'ready_media_operation',
+  'record_media_operation_checkpoint',
+  'record_media_operation_receipt',
+  'record_media_operation_reconciliation',
+  'record_media_operation_runtime_idempotency',
+  'reject_media_operation_evidence_mutation',
+  'request_media_operation',
+  'request_media_operation_control',
+  'require_media_operation_permission',
+  'schedule_media_operation_retry',
+  'start_media_operation_attempt',
+  'validate_media_operation_safe_json',
+  'validate_media_operation_target',
   'add_media_asset_version',
   'check_media_idempotency',
   'create_media_asset',
@@ -260,6 +283,17 @@ const EXACT_TRIGGERS = [
   ,['media_designations_immutability_guard', 'media_approved_source_designations', 'reject_media_evidence_mutation']
   ,['media_manifests_immutability_guard', 'media_manifests', 'reject_media_evidence_mutation']
   ,['media_command_idempotency_immutability_guard', 'media_command_idempotency', 'reject_media_evidence_mutation']
+  ,['media_operations_immutability_guard', 'media_operations', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_targets_validation_guard', 'media_operation_targets', 'validate_media_operation_target']
+  ,['media_operation_targets_immutability_guard', 'media_operation_targets', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_attempts_immutability_guard', 'media_operation_attempts', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_checkpoints_immutability_guard', 'media_operation_checkpoints', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_receipts_immutability_guard', 'media_operation_receipts', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_control_requests_immutability_guard', 'media_operation_control_requests', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_reconciliations_immutability_guard', 'media_operation_reconciliations', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_runtime_idempotency_immutability_guard', 'media_operation_runtime_idempotency', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_events_immutability_guard', 'media_operation_events', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_projections_control_guard', 'media_operation_projections', 'guard_media_operation_projection_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({
   trigger_name,
   table_name,
@@ -357,7 +391,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(11);
+    expect(ledgerRes.rows).toHaveLength(12);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -375,6 +409,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
     expect(ledgerRes.rows[9].filename).toBe('0010_mission_plan_foundation.sql');
     expect(ledgerRes.rows[10].filename).toBe('0011_media_asset_identity_and_lineage_foundation.sql');
+    expect(ledgerRes.rows[11].filename).toBe('0012_durable_media_operations_reconciliation_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -398,6 +433,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

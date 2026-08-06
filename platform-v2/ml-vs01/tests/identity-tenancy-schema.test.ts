@@ -7,6 +7,28 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'append_media_operation_event',
+  'attach_media_operation_target',
+  'check_media_operation_runtime_idempotency',
+  'claim_media_operation',
+  'complete_media_operation_attempt',
+  'get_media_operation_record',
+  'guard_media_operation_projection_mutation',
+  'list_claimable_media_operations',
+  'list_media_operations',
+  'ready_media_operation',
+  'record_media_operation_checkpoint',
+  'record_media_operation_receipt',
+  'record_media_operation_reconciliation',
+  'record_media_operation_runtime_idempotency',
+  'reject_media_operation_evidence_mutation',
+  'request_media_operation',
+  'request_media_operation_control',
+  'require_media_operation_permission',
+  'schedule_media_operation_retry',
+  'start_media_operation_attempt',
+  'validate_media_operation_safe_json',
+  'validate_media_operation_target',
   'add_media_asset_version',
   'check_media_idempotency',
   'create_media_asset',
@@ -250,15 +272,26 @@ const EXACT_TRIGGERS = [
   ,['media_designations_immutability_guard', 'media_approved_source_designations', 'reject_media_evidence_mutation']
   ,['media_manifests_immutability_guard', 'media_manifests', 'reject_media_evidence_mutation']
   ,['media_command_idempotency_immutability_guard', 'media_command_idempotency', 'reject_media_evidence_mutation']
+  ,['media_operation_attempts_immutability_guard', 'media_operation_attempts', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_checkpoints_immutability_guard', 'media_operation_checkpoints', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_control_requests_immutability_guard', 'media_operation_control_requests', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_events_immutability_guard', 'media_operation_events', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_projections_control_guard', 'media_operation_projections', 'guard_media_operation_projection_mutation']
+  ,['media_operation_receipts_immutability_guard', 'media_operation_receipts', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_reconciliations_immutability_guard', 'media_operation_reconciliations', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_runtime_idempotency_immutability_guard', 'media_operation_runtime_idempotency', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_targets_immutability_guard', 'media_operation_targets', 'reject_media_operation_evidence_mutation']
+  ,['media_operation_targets_validation_guard', 'media_operation_targets', 'validate_media_operation_target']
+  ,['media_operations_immutability_guard', 'media_operations', 'reject_media_operation_evidence_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }))
   .sort((a, b) => a.table_name.localeCompare(b.table_name) || a.trigger_name.localeCompare(b.trigger_name));
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m08a-pg',
-    port: 55438,
-    database: 'medialab_p02m08a_test',
-    user: 'medialab_p02m08a_test_owner'
+    host: '/tmp/mlvs01-p02m09a-pg',
+    port: 55439,
+    database: 'medialab_p02m09a_test',
+    user: 'medialab_p02m09a_test_owner'
   });
 
   beforeAll(async () => {
@@ -280,9 +313,9 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m08a_test',
-      user: 'medialab_p02m08a_test_owner',
-      runtimeUser: 'medialab_p02m08a_test_app'
+      database: 'medialab_p02m09a_test',
+      user: 'medialab_p02m09a_test_owner',
+      runtimeUser: 'medialab_p02m09a_test_app'
     });
 
     expect(outTest.applied).toEqual([]);
@@ -298,6 +331,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0009_job_and_service_workstream_foundation.sql'
       ,'0010_mission_plan_foundation.sql'
       ,'0011_media_asset_identity_and_lineage_foundation.sql'
+      ,'0012_durable_media_operations_reconciliation_foundation.sql'
     ]);
   });
 
@@ -321,7 +355,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m08a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m09a_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -334,7 +368,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m08a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m09a_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
@@ -792,9 +826,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 18,
+      permissions: 20,
       permission_sets: 1,
-      permission_set_permissions: 18,
+      permission_set_permissions: 20,
       membership_permission_sets: 1,
       development_sessions: 1
     };

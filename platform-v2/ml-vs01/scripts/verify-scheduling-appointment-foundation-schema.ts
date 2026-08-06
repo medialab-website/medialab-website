@@ -4,17 +4,17 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M08_A_ALLOWLIST } from './p02-m08-a-changed-files.js';
+import { P02_M09_A_ALLOWLIST } from './p02-m09-a-changed-files.js';
 
 console.log('Running verify-scheduling-appointment-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
-const TEST_PORT = 55438;
-const TEST_DB = 'medialab_p02m08a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m08a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m08a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
+const TEST_PORT = 55439;
+const TEST_DB = 'medialab_p02m09a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m09a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m09a_test_app';
 let errors = false;
 
 const predecessorMigrations = [
@@ -91,7 +91,7 @@ const packetTriggers = [
   ['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time']
 ];
 
-const allowedPaths = [...P02_M08_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M09_A_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -175,13 +175,13 @@ try {
   const expectedLedger = [
     ...predecessorMigrations.map(([filename, sha256]) => ({ filename, sha256 })),
     { filename: packetMigration, sha256: packetHash },
-    ...['0009_job_and_service_workstream_foundation.sql', '0010_mission_plan_foundation.sql', '0011_media_asset_identity_and_lineage_foundation.sql'].map((filename) => ({
+    ...['0009_job_and_service_workstream_foundation.sql', '0010_mission_plan_foundation.sql', '0011_media_asset_identity_and_lineage_foundation.sql', '0012_durable_media_operations_reconciliation_foundation.sql'].map((filename) => ({
       filename,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations', filename))).digest('hex')
     }))
   ];
   if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) {
-    fail(`Eleven-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
+    fail(`Twelve-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
   }
 
   const tables = await client.query(

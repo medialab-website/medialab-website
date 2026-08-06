@@ -4,12 +4,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 
-console.log('Running verify-media-asset-identity-lineage-schema.ts...');
+console.log('Running verify-durable-media-operations-reconciliation-schema.ts...');
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const migrationDir = path.join(baseDir, 'db/migrations');
-const packetMigration = '0011_media_asset_identity_and_lineage_foundation.sql';
-const successorMigration = '0012_durable_media_operations_reconciliation_foundation.sql';
-const predecessorMigrations = [
+const packetMigration = '0012_durable_media_operations_reconciliation_foundation.sql';
+const predecessors = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
   ['0002_property_identity_and_snapshots.sql', 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83'],
   ['0003_person_contacts_and_account_lifecycle.sql', '984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3'],
@@ -19,17 +18,28 @@ const predecessorMigrations = [
   ['0007_property_hub_foundation.sql', '8288090bbcb9b7d8b1108247c2f955ab1a5a70f5680c5e5b8adce80f7f7bda16'],
   ['0008_scheduling_request_and_appointment_foundation.sql', 'cd1b394f95fea42b4cb770e59a1de38e74c7c44bbb3de43de91189fdd9504c9e'],
   ['0009_job_and_service_workstream_foundation.sql', '188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66'],
-  ['0010_mission_plan_foundation.sql', '2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3']
+  ['0010_mission_plan_foundation.sql', '2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3'],
+  ['0011_media_asset_identity_and_lineage_foundation.sql', '1b9fbde392d801ffc8fb0a00a461447cac855bae0046f1d433ac0360b8c15c80']
 ] as const;
-const tables = ['media_approved_source_designations', 'media_asset_lineage', 'media_asset_versions',
-  'media_assets', 'media_capture_relationships', 'media_command_idempotency', 'media_location_observations',
-  'media_manifests', 'media_storage_objects', 'media_transfer_events', 'media_verification_events'];
-const publicFunctions = ['add_media_asset_version', 'create_media_asset', 'create_media_manifest',
-  'designate_media_approved_source', 'get_media_asset_record', 'get_media_manifest',
-  'record_media_capture_relationship', 'record_media_lineage', 'record_media_location_observation',
-  'record_media_storage_object', 'record_media_transfer_event', 'record_media_verification_event'];
-const helperFunctions = ['check_media_idempotency', 'record_media_idempotency', 'reject_media_evidence_mutation',
-  'require_media_permission', 'validate_media_safe_json'];
+const tables = [
+  'media_operation_attempts', 'media_operation_checkpoints', 'media_operation_control_requests',
+  'media_operation_events', 'media_operation_projections', 'media_operation_receipts',
+  'media_operation_reconciliations', 'media_operation_runtime_idempotency',
+  'media_operation_targets', 'media_operations'
+];
+const publicFunctions = [
+  'attach_media_operation_target', 'claim_media_operation', 'complete_media_operation_attempt',
+  'get_media_operation_record', 'list_claimable_media_operations', 'list_media_operations',
+  'ready_media_operation', 'record_media_operation_checkpoint', 'record_media_operation_receipt',
+  'record_media_operation_reconciliation', 'request_media_operation', 'request_media_operation_control',
+  'schedule_media_operation_retry', 'start_media_operation_attempt'
+];
+const helperFunctions = [
+  'append_media_operation_event', 'check_media_operation_runtime_idempotency',
+  'guard_media_operation_projection_mutation', 'record_media_operation_runtime_idempotency',
+  'reject_media_operation_evidence_mutation', 'require_media_operation_permission',
+  'validate_media_operation_safe_json', 'validate_media_operation_target'
+];
 let errors = false;
 function fail(message: string): void { console.error(`ERROR: ${message}`); errors = true; }
 function exact(label: string, actual: string[], expected: string[]): void {
@@ -37,56 +47,54 @@ function exact(label: string, actual: string[], expected: string[]): void {
     fail(`${label} mismatch. Expected ${[...expected].sort().join(', ')}, got ${[...actual].sort().join(', ')}`);
   }
 }
-for (const [filename, expected] of predecessorMigrations) {
+for (const [filename, expected] of predecessors) {
   const actual = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, filename))).digest('hex');
   if (actual !== expected) fail(`${filename} predecessor SHA-256 mismatch`);
 }
-const migrationFiles = fs.readdirSync(migrationDir).filter((name) => name.endsWith('.sql')).sort();
-exact('Migration inventory', migrationFiles, [...predecessorMigrations.map(([name]) => name), packetMigration, successorMigration]);
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
 const packetHash = crypto.createHash('sha256').update(packetBytes).digest('hex');
-const successorHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, successorMigration))).digest('hex');
 const sql = packetBytes.toString('utf8');
+exact('Migration inventory', fs.readdirSync(migrationDir).filter((name) => name.endsWith('.sql')),
+  [...predecessors.map(([name]) => name), packetMigration]);
 exact('Packet table inventory', [...sql.matchAll(/CREATE TABLE medialab_core\.([a-z0-9_]+)/g)].map((m) => m[1]), tables);
-exact('Packet function inventory', [...sql.matchAll(/CREATE OR REPLACE FUNCTION medialab_core\.([a-z0-9_]+)/g)].map((m) => m[1]), [...publicFunctions, ...helperFunctions]);
-for (const evidence of ['ORIGINAL_TO_EDITOR_RETURN', 'EDITOR_RETURN_TO_CORRECTED_VERSION', 'HDR_BRACKET',
-  'JPEG_RAW_PAIR', 'DRONE_JPEG_DNG_PAIR', 'USE_ORIGINAL', 'SKIP_QUICK_EDIT', 'REPLACEMENT_SOURCE',
-  'Media manifest readback hash mismatch', 'pg_advisory_xact_lock', 'media_asset.manage', 'media_asset.read',
-  'Provider credentials and secrets are prohibited', 'SECURITY DEFINER',
-  'SET search_path = pg_catalog, medialab_core, pg_temp']) {
-  if (!sql.includes(evidence)) fail(`Migration 0011 missing required evidence: ${evidence}`);
-}
-for (const prohibited of ['ON DELETE CASCADE', 'CREATE TABLE medialab_core.capture_sessions',
-  'CREATE TABLE medialab_core.quick_edit', 'CREATE TABLE medialab_core.deliveries',
-  'CREATE TABLE medialab_core.publications', 'drive.googleapis.com', 'aws_secret_access_key']) {
-  if (sql.includes(prohibited)) fail(`Migration 0011 contains prohibited evidence: ${prohibited}`);
+exact('Packet function inventory', [...sql.matchAll(/CREATE OR REPLACE FUNCTION medialab_core\.([a-z0-9_]+)/g)].map((m) => m[1]),
+  [...publicFunctions, ...helperFunctions]);
+for (const evidence of [
+  'FOR UPDATE OF p SKIP LOCKED', 'EXPECTED_OBJECT_MISSING', 'UNEXPECTED_OBJECT_PRESENT',
+  'ORPHANED_OBJECT_PRESENT', 'LATE_SUCCESS_AFTER_FAILURE', 'DUPLICATE_TECHNICAL_EFFECT',
+  'STALE_CANONICAL_PROJECTION', 'RETRY_AMBIGUITY', 'STOP_REQUESTED', 'CANCELLATION_REQUESTED',
+  'MANUAL_FALLBACK_RECORDED', 'media_operation.manage', 'media_operation.read',
+  'Credentials, signed references, provider payloads, media bytes, paths, URLs, and filenames are prohibited',
+  'SECURITY DEFINER', 'SET search_path = pg_catalog, medialab_core, pg_temp'
+]) if (!sql.includes(evidence)) fail(`Migration 0012 missing required evidence: ${evidence}`);
+for (const prohibited of ['ON DELETE CASCADE', 'drive.googleapis.com', 'dropbox.com', 'box.com', 'aws_secret_access_key']) {
+  if (sql.includes(prohibited)) fail(`Migration 0012 contains prohibited evidence: ${prohibited}`);
 }
 const client = new pg.Client({ host: '/tmp/mlvs01-p02m09a-pg', port: 55439,
   database: 'medialab_p02m09a_test', user: 'medialab_p02m09a_test_owner' });
 try {
   await client.connect();
   const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-  const expectedLedger = [...predecessorMigrations.map(([filename, sha256]) => ({ filename, sha256 })),
-    { filename: packetMigration, sha256: packetHash }, { filename: successorMigration, sha256: successorHash }];
+  const expectedLedger = [...predecessors.map(([filename, sha256]) => ({ filename, sha256 })),
+    { filename: packetMigration, sha256: packetHash }];
   if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Twelve-row migration ledger mismatch');
   const dbTables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core'
-      AND tablename = ANY($1::text[]) ORDER BY tablename`, [tables]
-  );
+      AND tablename = ANY($1::text[]) ORDER BY tablename`, [tables]);
   exact('Database table inventory', dbTables.rows.map((row) => row.tablename), tables);
   if (dbTables.rows.some((row) => row.tableowner !== 'medialab_p02m09a_test_owner')) fail('Packet table ownership mismatch');
+  const functions = [...publicFunctions, ...helperFunctions];
   const dbFunctions = await client.query(
     `SELECT p.proname, pg_get_userbyid(p.proowner) AS owner, p.prosecdef, p.proconfig,
             has_function_privilege($1, p.oid, 'EXECUTE') AS runtime_execute,
             has_function_privilege('public', p.oid, 'EXECUTE') AS public_execute
        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'medialab_core' AND p.proname = ANY($2::text[]) ORDER BY p.proname`,
-    ['medialab_p02m09a_test_app', [...publicFunctions, ...helperFunctions]]
-  );
-  exact('Database function inventory', dbFunctions.rows.map((row) => row.proname), [...publicFunctions, ...helperFunctions]);
+    ['medialab_p02m09a_test_app', functions]);
+  exact('Database function inventory', dbFunctions.rows.map((row) => row.proname), functions);
   if (dbFunctions.rows.some((row) => row.owner !== 'medialab_p02m09a_test_owner')) fail('Packet function ownership mismatch');
   if (dbFunctions.rows.some((row) => row.public_execute)) fail('PUBLIC can execute a packet function');
-  if (dbFunctions.rows.some((row) => publicFunctions.includes(row.proname) !== row.runtime_execute)) fail('Runtime function grant inventory mismatch');
+  if (dbFunctions.rows.some((row) => publicFunctions.includes(row.proname) !== row.runtime_execute)) fail('Runtime function grants mismatch');
   if (dbFunctions.rows.some((row) => row.prosecdef && JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp']))) {
     fail('A SECURITY DEFINER function lacks the hardened search path');
   }
@@ -95,11 +103,13 @@ try {
             has_table_privilege('public', c.oid, 'SELECT,INSERT,UPDATE,DELETE') AS public_access
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'medialab_core' AND c.relname = ANY($2::text[])`,
-    ['medialab_p02m09a_test_app', tables]
-  );
+    ['medialab_p02m09a_test_app', tables]);
   if (privileges.rows.some((row) => row.runtime_access || row.public_access)) fail('Direct table privilege boundary mismatch');
+  const permissionRows = await client.query(
+    `SELECT code FROM medialab_core.permissions WHERE code LIKE 'media_operation.%' ORDER BY code`);
+  exact('Permission fixture inventory', permissionRows.rows.map((row) => row.code), ['media_operation.manage', 'media_operation.read']);
 } catch (error: any) {
   fail(`Database verification failed: ${error.message || String(error)}`);
 } finally { await client.end().catch(() => undefined); }
-if (errors) { console.error('Media asset identity and lineage verification FAILED.'); process.exit(1); }
-console.log(`Media asset identity and lineage verification PASSED. 0011 SHA-256: ${packetHash}`);
+if (errors) { console.error('Durable media operations and reconciliation verification FAILED.'); process.exit(1); }
+console.log(`Durable media operations and reconciliation verification PASSED. 0012 SHA-256: ${packetHash}`);

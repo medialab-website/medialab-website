@@ -20,7 +20,7 @@ if (!fs.existsSync(pgBinary)) {
 console.log(`PostgreSQL binary verified: ${pgBinary}`);
 
 // 3. Verify PostgreSQL cluster directory
-const pgDataDir = '/tmp/mlvs01-p02m08a-pgdata';
+const pgDataDir = '/tmp/mlvs01-p02m09a-pgdata';
 if (!fs.existsSync(pgDataDir)) {
   console.error(`ERROR: PostgreSQL cluster data directory not found at ${pgDataDir}`);
   process.exit(1);
@@ -28,7 +28,7 @@ if (!fs.existsSync(pgDataDir)) {
 console.log(`PostgreSQL cluster data dir verified: ${pgDataDir}`);
 
 // 4. Verify socket directory
-const socketDir = '/tmp/mlvs01-p02m08a-pg';
+const socketDir = '/tmp/mlvs01-p02m09a-pg';
 if (!fs.existsSync(socketDir)) {
   console.error(`ERROR: Approved socket directory not found at ${socketDir}`);
   process.exit(1);
@@ -37,9 +37,9 @@ console.log(`PostgreSQL socket dir verified: ${socketDir}`);
 
 // 5. Verify no rogue TCP listeners or socket locks while stopped
 try {
-  const lsof = execSync('lsof -i :55438 || true', { encoding: 'utf-8' }).trim();
+  const lsof = execSync('lsof -i :55439 || true', { encoding: 'utf-8' }).trim();
   if (lsof.length > 0) {
-    console.error(`ERROR: Port 55438 has active listener:\n${lsof}`);
+    console.error(`ERROR: Port 55439 has active listener:\n${lsof}`);
     process.exit(1);
   }
 } catch (e) {

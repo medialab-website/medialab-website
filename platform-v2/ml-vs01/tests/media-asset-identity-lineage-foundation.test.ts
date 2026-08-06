@@ -6,11 +6,11 @@ import { IDENTITY_FIXTURES, ORGANIZATION_FIXTURE } from '../db/fixtures/identity
 import { ORDER_FOUNDATION_ORDER_ID, ORDER_ITEM_FIXTURES } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m08a_test';
-const OWNER_ROLE = 'medialab_p02m08a_test_owner';
-const RUNTIME_ROLE = 'medialab_p02m08a_test_app';
-const SOCKET = '/tmp/mlvs01-p02m08a-pg';
-const PORT = 55438;
+const TEST_DB = 'medialab_p02m09a_test';
+const OWNER_ROLE = 'medialab_p02m09a_test_owner';
+const RUNTIME_ROLE = 'medialab_p02m09a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m09a-pg';
+const PORT = 55439;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M08_A_TEST';
 const ORIGINAL_HASH = crypto.createHash('sha256').update('synthetic-original-bytes').digest('hex');
@@ -92,9 +92,9 @@ describe('P02-M08-A Media Asset Identity and Lineage foundation', () => {
     await reset();
   });
 
-  it('replays eleven migrations, preserves 0010, and exposes only the controlled runtime inventory', async () => {
+  it('replays twelve migrations, preserves 0010 and 0011, and exposes only the controlled runtime inventory', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(11);
+    expect(ledger.rows).toHaveLength(12);
     expect(ledger.rows[9]).toEqual({
       filename: '0010_mission_plan_foundation.sql',
       sha256: '2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3'
@@ -117,9 +117,16 @@ describe('P02-M08-A Media Asset Identity and Lineage foundation', () => {
         WHERE n.nspname = 'medialab_core' AND p.proname LIKE '%media%' ORDER BY p.proname`, [RUNTIME_ROLE]
     );
     const publicNames = ['add_media_asset_version', 'create_media_asset', 'create_media_manifest',
+      'attach_media_operation_target', 'claim_media_operation', 'complete_media_operation_attempt',
       'designate_media_approved_source', 'get_media_asset_record', 'get_media_manifest',
+      'get_media_operation_record', 'list_claimable_media_operations', 'list_media_operations',
+      'ready_media_operation',
       'record_media_capture_relationship', 'record_media_lineage', 'record_media_location_observation',
-      'record_media_storage_object', 'record_media_transfer_event', 'record_media_verification_event'];
+      'record_media_operation_checkpoint', 'record_media_operation_receipt',
+      'record_media_operation_reconciliation', 'record_media_storage_object',
+      'record_media_transfer_event', 'record_media_verification_event', 'request_media_operation',
+      'request_media_operation_control', 'schedule_media_operation_retry',
+      'start_media_operation_attempt'];
     expect(grants.rows.filter((row) => row.runtime_execute).map((row) => row.proname).sort()).toEqual(publicNames.sort());
     expect(grants.rows.some((row) => row.public_execute)).toBe(false);
   });

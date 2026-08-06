@@ -6,11 +6,11 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_p02m08a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m08a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m08a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
-const TEST_PORT = 55438;
+const TEST_DB = 'medialab_p02m09a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m09a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m09a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
+const TEST_PORT = 55439;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -115,6 +115,23 @@ const MEDIA_ASSET_APIS = [
   'record_media_verification_event'
 ];
 
+const MEDIA_OPERATION_APIS = [
+  'attach_media_operation_target',
+  'claim_media_operation',
+  'complete_media_operation_attempt',
+  'get_media_operation_record',
+  'list_claimable_media_operations',
+  'list_media_operations',
+  'ready_media_operation',
+  'record_media_operation_checkpoint',
+  'record_media_operation_receipt',
+  'record_media_operation_reconciliation',
+  'request_media_operation',
+  'request_media_operation_control',
+  'schedule_media_operation_retry',
+  'start_media_operation_attempt'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
@@ -124,7 +141,8 @@ const ALL_RUNTIME_APIS = [
   ...SCHEDULING_APIS,
   ...JOB_SERVICE_APIS,
   ...MISSION_PLAN_APIS,
-  ...MEDIA_ASSET_APIS
+  ...MEDIA_ASSET_APIS,
+  ...MEDIA_OPERATION_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -331,6 +349,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0009_job_and_service_workstream_foundation.sql',
       '0010_mission_plan_foundation.sql',
       '0011_media_asset_identity_and_lineage_foundation.sql'
+      ,'0012_durable_media_operations_reconciliation_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -351,6 +370,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0009_job_and_service_workstream_foundation.sql',
       '0010_mission_plan_foundation.sql',
       '0011_media_asset_identity_and_lineage_foundation.sql'
+      ,'0012_durable_media_operations_reconciliation_foundation.sql'
     ]);
   });
 
@@ -750,7 +770,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(128);
+      expect(searchPaths.rows).toHaveLength(146);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

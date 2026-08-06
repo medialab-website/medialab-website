@@ -1,23 +1,23 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M08-A-MEDIA-ASSET-IDENTITY-LINEAGE-R01
+# BUILD_STATE.md — ML-PLATFORM-V2-P02-M09-A-DURABLE-MEDIA-OPERATIONS-RECONCILIATION-R01
 
-- **Current Milestone:** P02-M08-A — Media Asset Identity and Lineage Foundation
+- **Current Milestone:** P02-M09-A — Durable Media Operations and Reconciliation Foundation
 - **Status:** Candidate / Locally Validated / Unstaged / Uncommitted / Unpushed
-- **Git Branch:** `platform-v2-p02-m08-a-media-asset-identity-lineage-r01`
-- **Workspace:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M08-A-Media-Asset-Identity-Lineage`
-- **Base Commit:** `43f1fc33963b8912599c872c82f276e9163fdd31`
-- **Base Tree:** `3d6754307c831bf1c5b2a4805008b4d4a06c0ba3`
-- **Migration:** `0011_media_asset_identity_and_lineage_foundation.sql` (final size and SHA-256 recorded in the frozen review manifest)
-- **Predecessor Law:** Migrations `0001` through `0010` remain byte-identical; accepted `0010` SHA-256 remains `2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3`.
-- **Logical Identity Law:** A logical media asset is organization-, Job-, and optionally Workstream-scoped. Its UUID is independent of filename, location, provider, machine, and current version.
-- **Version Law:** Every file state is a distinct immutable version. The first version is `ORIGINAL`; later originals are rejected; no version overwrites its predecessor.
-- **Lineage Law:** Source/derivative, parent/child, replacement, supersession, editor-return correction, and approved-final-source relationships remain append-only and inspectable.
-- **Capture Relationship Law:** HDR brackets, capture groups, JPEG/RAW pairs, drone JPEG/DNG pairs, related captures, and selected-media evidence relate distinct physical file versions without collapsing them.
-- **Storage Law:** Storage-object identity and observed locations are separate append-only evidence. Movement changes location evidence, not logical asset identity.
-- **Evidence Law:** Verification states, checksums, byte sizes, media types, movement attempts, failures, retries, conflicts, and receipts remain attributable and append-only.
-- **Approved Source Law:** `ACCEPTED_VERSION`, `FINAL_SOURCE`, `USE_ORIGINAL`, `SKIP_QUICK_EDIT`, and `REPLACEMENT_SOURCE` designations are append-only and may explicitly supersede earlier same-purpose designations.
-- **Manifest Law:** Versioned manifests use deterministic ordering, store canonical JSONB, preserve the full packet evidence graph, and verify SHA-256 after database readback. Credential-bearing JSON keys and signed provider-reference patterns are rejected.
-- **Authority Boundary:** Ordinary sessions derive the actor; actor-scoped idempotency protects commands. Restricted runtime receives EXECUTE only on twelve controlled media commands/projections, no direct table or sequence authority, and no helper authority. `PUBLIC` receives none.
-- **Synthetic Evidence:** Seed adds only `media_asset.manage` and `media_asset.read`; no media, ingest, storage, transfer, or manifest records are fabricated by seed.
-- **Isolated Test Environment:** Dedicated database `medialab_p02m08a_test`, roles `medialab_p02m08a_test_owner` / `medialab_p02m08a_test_app`, socket `/tmp/mlvs01-p02m08a-pg`, and port `55438`.
+- **Git Branch:** `platform-v2-p02-m09-a-durable-media-operations-reconciliation-r01`
+- **Workspace:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M09-A-Durable-Media-Operations-Reconciliation`
+- **Base Commit:** `142e6cfe86348f09c888aa6c1a59d7ef494e9479`
+- **Base Tree:** `eeec2666f812ecdea32dfe3da9eb20f673d79d0b`
+- **Migration:** `0012_durable_media_operations_reconciliation_foundation.sql` (final size and SHA-256 recorded in the frozen review manifest)
+- **Predecessor Law:** Migrations `0001` through `0011` remain byte-identical; accepted `0011` SHA-256 remains `1b9fbde392d801ffc8fb0a00a461447cac855bae0046f1d433ac0360b8c15c80`.
+- **Operation Law:** Every provider-neutral media operation records organization, Job, optional Workstream, family/subtype, requesting actor, reason, and safe synthetic evidence before work becomes claimable.
+- **Target Law:** Explicit targets may reference only a same-tenant, same-Job media asset, media version, storage object, or manifest; target evidence is append-only.
+- **Concurrency Law:** Claiming locks the durable projection with `FOR UPDATE OF p SKIP LOCKED`; competing workers cannot win the same eligible operation.
+- **Attempt Law:** Claims, attempts, checkpoints, receipts, terminal outcomes, and retry scheduling are attributable, ordered, immutable evidence. Worker-scoped idempotency prevents duplicate technical commands.
+- **Receipt Law:** A receipt records provider-neutral observations and verification state; receipt creation alone never asserts operation success.
+- **Control Law:** Stop requests, cancellation requests, overrides, and manual-fallback records are distinct durable events and cannot silently erase earlier state.
+- **Reconciliation Law:** Expected missing effects, unexpected/orphaned effects, checksum/byte/media/manifest/location conflicts, late success, duplicate technical effects, stale projections, and retry ambiguity remain explicit inspectable findings.
+- **Authority Boundary:** Ordinary actor commands derive identity from the session and require `media_operation.manage` or `media_operation.read`. Restricted runtime receives EXECUTE only on fourteen controlled operation commands/projections, with no direct table or helper authority. `PUBLIC` receives none.
+- **Evidence Safety:** Credential-bearing JSON keys, signed references, provider payloads, media bytes, paths, URLs, and filenames are rejected from operation evidence.
+- **Synthetic Evidence:** Seed adds only `media_operation.manage` and `media_operation.read`; no operations, attempts, receipts, reconciliation records, media, or provider effects are fabricated by seed.
+- **Isolated Test Environment:** Dedicated database `medialab_p02m09a_test`, roles `medialab_p02m09a_test_owner` / `medialab_p02m09a_test_app`, socket `/tmp/mlvs01-p02m09a-pg`, and port `55439`.
 - **Preserved Recovery Intent Law:** `START_FRESH records recovery intent for the same Person and Identity while preserving existing history`; it does not delete `memberships, contacts, orders, payments, historical evidence, or profile/preferences data`. `Actual profile/preferences reset behavior remains deferred until those models exist`.
-- **Excluded Capability:** No real media, ingest, scan, culling UI, editor workflow, Quick Edit execution, Desktop Engine, operational Drive flow, provider I/O, API route, web UI, delivery, publication, deployment, production configuration, or production migration exists in this candidate.
+- **Excluded Capability:** No real media, provider API, Desktop modification, delivery/publication, UI/API route, deployment, production configuration, or production migration exists in this candidate.

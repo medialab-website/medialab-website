@@ -31,6 +31,7 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * `0009_job_and_service_workstream_foundation.sql` is the bounded P02-M06-A additive migration for canonical Jobs, Order Item-sourced Service Workstreams, explicit Appointment links, independent lifecycle commands, provider-neutral references, actor-scoped idempotency, and append-only events.
    * `0010_mission_plan_foundation.sql` is the bounded P02-M07-A additive migration for one Mission Plan per Job-Appointment relationship, mutable controlled drafts, sequential immutable issued versions, frozen Workstream/contact/note evidence, deterministic canonical JSON hashes, visibility-aware projections, opaque encrypted-envelope evidence, and append-only open events.
    * `0011_media_asset_identity_and_lineage_foundation.sql` is the bounded P02-M08-A additive migration for provider-neutral logical asset identity, immutable versions, explicit lineage and capture relationships, separate storage/location evidence, append-only verification/transfer/approved-source history, and deterministic versioned media manifests.
+   * `0012_durable_media_operations_reconciliation_foundation.sql` is the bounded P02-M09-A additive migration for durable provider-neutral media-operation requests, targets, ordered events, one-winner claims, attempts, checkpoints, receipts, explicit control requests, runtime idempotency, and reconciliation evidence.
    * Migrations `0001` through `0008` remain immutable predecessor inputs.
 
 6. **Owner and Runtime Role Separation**

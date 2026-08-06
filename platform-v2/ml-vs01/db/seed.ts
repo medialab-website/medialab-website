@@ -20,6 +20,7 @@ import { SCHEDULING_APPOINTMENT_FOUNDATION_FIXTURE_TABLES } from './fixtures/sch
 import { JOB_SERVICE_WORKSTREAM_FOUNDATION_FIXTURE_TABLES } from './fixtures/job-service-workstream-foundation-fixtures.js';
 import { MISSION_PLAN_FOUNDATION_FIXTURE_TABLES } from './fixtures/mission-plan-foundation-fixtures.js';
 import { MEDIA_ASSET_FOUNDATION_FIXTURE_TABLES } from './fixtures/media-asset-identity-lineage-fixtures.js';
+import { MEDIA_OPERATION_FOUNDATION_FIXTURE_TABLES } from './fixtures/durable-media-operations-reconciliation-fixtures.js';
 
 export interface SeedOptions {
   host?: string;
@@ -35,19 +36,13 @@ export interface SeedResult {
   verified: number;
 }
 
-const APPROVED_DATABASES = [
-  'medialab_p02m04a',
-  'medialab_p02m08a_test'
-];
+const APPROVED_DATABASES = ['medialab_p02m09a_test'];
 
 export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
-  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m08a-pg';
-  const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55438);
-  const database = options.database || process.env.PGDATABASE || 'medialab_p02m04a';
-  const user = options.user || process.env.PGUSER ||
-    (database === 'medialab_p02m08a_test'
-      ? 'medialab_p02m08a_test_owner'
-      : 'medialab_p02m04a_owner');
+  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m09a-pg';
+  const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55439);
+  const database = options.database || process.env.PGDATABASE || 'medialab_p02m09a_test';
+  const user = options.user || process.env.PGUSER || 'medialab_p02m09a_test_owner';
 
   // Guard 1: Database name restriction
   if (!APPROVED_DATABASES.includes(database)) {
@@ -55,18 +50,16 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   }
 
   // Guard 2: Exact packet socket restriction, with no TCP or predecessor-cluster fallback
-  if (host !== '/tmp/mlvs01-p02m08a-pg') {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m08a-pg'.`);
+  if (host !== '/tmp/mlvs01-p02m09a-pg') {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m09a-pg'.`);
   }
 
-  if (port !== 55438) {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved port ${port}. Must be 55438.`);
+  if (port !== 55439) {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved port ${port}. Must be 55439.`);
   }
 
   // Guard 3: User role validation
-  const expectedUser = database === 'medialab_p02m08a_test'
-    ? 'medialab_p02m08a_test_owner'
-    : 'medialab_p02m04a_owner';
+  const expectedUser = 'medialab_p02m09a_test_owner';
   if (user !== expectedUser) {
     throw new Error(`SEED_SAFETY_FAILURE: Role mismatch for database '${database}'. Expected role '${expectedUser}', got '${user}'.`);
   }
@@ -441,6 +434,18 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
       }
     }
 
+    // 18. Minimum durable media operation manage/read permissions; no operation evidence is pre-created
+    for (const fixtureTable of MEDIA_OPERATION_FOUNDATION_FIXTURE_TABLES) {
+      for (const fixtureRow of fixtureTable.rows) {
+        await ensureFixtureRow(
+          fixtureTable.table,
+          fixtureTable.keys,
+          fixtureRow as unknown as Record<string, unknown>,
+          false
+        );
+      }
+    }
+
     await client.query('COMMIT;');
     return { inserted, verified };
   } catch (err) {
@@ -458,9 +463,7 @@ const currentPath = fileURLToPath(import.meta.url);
 const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 
 if (scriptPath && currentPath === scriptPath) {
-  const isTestDb = process.argv.includes('--test');
-  const targetDb = process.env.PGDATABASE ||
-    (isTestDb ? 'medialab_p02m08a_test' : 'medialab_p02m04a');
+  const targetDb = process.env.PGDATABASE || 'medialab_p02m09a_test';
   const targetUser = process.env.PGUSER;
 
   if (!targetUser) {
