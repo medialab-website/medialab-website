@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M10_A_ALLOWLIST } from './p02-m10-a-changed-files.js';
+import { P02_M11_A_ALLOWLIST } from './p02-m11-a-changed-files.js';
 import {
   CURRENT_CATALOG_EFFECTIVE_AT,
   CURRENT_CATALOG_SEED_EFFECTIVE_DATE,
@@ -20,11 +20,11 @@ const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m10a-pg';
-const TEST_PORT = 55440;
-const TEST_DB = 'medialab_p02m10a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m10a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m10a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m11a-pg';
+const TEST_PORT = 55441;
+const TEST_DB = 'medialab_p02m11a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m11a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m11a_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
@@ -32,7 +32,15 @@ const expectedMigrations = [
   ['0003_person_contacts_and_account_lifecycle.sql', '984577c586ed2b04aa142e33614eedcc5a957f0a64a2f0ad157f96644b08d3c3'],
   ['0004_current_catalog_and_price_snapshots.sql', 'e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876'],
   ['0005_catalog_administration_lifecycle.sql', '928ffdfa7fc1064471e387ebaf51c7be6aa3b57d70a75e39569bc169f845cf40'],
-  ['0006_orders_and_immutable_commercial_evidence.sql', '5d2c2e785c2a9a8fb9b77a83a5e072c0231b43afb48ca322babec20e914e279f']
+  ['0006_orders_and_immutable_commercial_evidence.sql', '5d2c2e785c2a9a8fb9b77a83a5e072c0231b43afb48ca322babec20e914e279f'],
+  ['0007_property_hub_foundation.sql', '8288090bbcb9b7d8b1108247c2f955ab1a5a70f5680c5e5b8adce80f7f7bda16'],
+  ['0008_scheduling_request_and_appointment_foundation.sql', 'cd1b394f95fea42b4cb770e59a1de38e74c7c44bbb3de43de91189fdd9504c9e'],
+  ['0009_job_and_service_workstream_foundation.sql', '188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66'],
+  ['0010_mission_plan_foundation.sql', '2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3'],
+  ['0011_media_asset_identity_and_lineage_foundation.sql', '1b9fbde392d801ffc8fb0a00a461447cac855bae0046f1d433ac0360b8c15c80'],
+  ['0012_durable_media_operations_reconciliation_foundation.sql', '37ae08918b3fdd38ee9fbe2eb24dad3e252c2a58fca0db4171c493a081bb7a8f'],
+  ['0013_capture_session_ingest_custody_foundation.sql', 'fb90823b98c56242dcbe4d148f63440d061ae0d7efcc652652c9feafa9be29fa'],
+  ['0014_media_cull_workspace_selected_media_evidence_foundation.sql', 'f406c7c329f863f0b34c8a1b99259386dc89c7f26934073de08d01057df8569f']
 ] as const;
 
 const packetFunctions = [
@@ -130,7 +138,7 @@ const packetIndexes = [
   'catalog_products_duplicate_source_idx'
 ];
 
-const allowedPaths = [...P02_M10_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M11_A_ALLOWLIST].sort();
 
 const exactPrices: Record<string, number> = {
   ADDITIONAL_AERIAL_EXTERIOR_PHOTO: 1500,
@@ -170,7 +178,7 @@ for (const [filename, expectedHash] of expectedMigrations) {
 
 const packageHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package.json'))).digest('hex');
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package-lock.json'))).digest('hex');
-if (packageHash !== '64e952c7eab5d6c9ab602a0eaed0a1433500c969477830c3203bc072c4ef217d') fail(`package.json SHA-256 mismatch: ${packageHash}`);
+if (packageHash !== '10dd5ca5c6f2fa855c26ea8152ec97f12d61318621eea6545ce8ee2bb6ec7da2') fail(`package.json SHA-256 mismatch: ${packageHash}`);
 if (lockHash !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') fail(`package-lock.json SHA-256 mismatch: ${lockHash}`);
 
 const migrationText = fs.readFileSync(path.join(baseDir, 'db/migrations/0005_catalog_administration_lifecycle.sql'), 'utf8');

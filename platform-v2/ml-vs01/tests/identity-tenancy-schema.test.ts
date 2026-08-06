@@ -7,6 +7,24 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'admit_cull_candidate',
+  'admit_cull_candidates',
+  'clear_cull_candidate_decision',
+  'create_cull_successor_workspace',
+  'create_cull_workspace',
+  'decide_cull_candidate',
+  'decide_cull_candidates',
+  'finalize_cull_workspace',
+  'get_cull_candidate_history',
+  'get_cull_selected_media',
+  'get_cull_workspace',
+  'list_cull_workspaces',
+  'reject_cull_evidence_mutation',
+  'require_cull_permission',
+  'seal_cull_inventory',
+  'validate_cull_reason',
+  'validate_cull_safe_json',
+  'withdraw_cull_candidate',
   'assign_capture_session',
   'capture_session_assignment',
   'create_capture_session',
@@ -225,6 +243,16 @@ const EXACT_TRIGGERS = [
   ['contact_verification_evidence_insert_guard', 'contact_verification_evidence', 'guard_contact_verification_insert'],
   ['contact_verification_invalidations_immutability_guard', 'contact_verification_invalidations', 'reject_contact_history_mutation'],
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
+  ['cull_candidate_inventory_events_immutability_guard', 'cull_candidate_inventory_events', 'reject_cull_evidence_mutation'],
+  ['cull_candidate_relationship_contexts_immutability_guard', 'cull_candidate_relationship_contexts', 'reject_cull_evidence_mutation'],
+  ['cull_candidates_immutability_guard', 'cull_candidates', 'reject_cull_evidence_mutation'],
+  ['cull_decision_batches_immutability_guard', 'cull_decision_batches', 'reject_cull_evidence_mutation'],
+  ['cull_decision_events_immutability_guard', 'cull_decision_events', 'reject_cull_evidence_mutation'],
+  ['cull_inventory_seals_immutability_guard', 'cull_inventory_seals', 'reject_cull_evidence_mutation'],
+  ['cull_selection_designation_events_immutability_guard', 'cull_selection_designation_events', 'reject_cull_evidence_mutation'],
+  ['cull_workspace_completions_immutability_guard', 'cull_workspace_completions', 'reject_cull_evidence_mutation'],
+  ['cull_workspace_events_immutability_guard', 'cull_workspace_events', 'reject_cull_evidence_mutation'],
+  ['cull_workspaces_immutability_guard', 'cull_workspaces', 'reject_cull_evidence_mutation'],
   ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
   ['job_appointments_immutability_guard', 'job_appointments', 'reject_job_service_evidence_mutation'],
@@ -316,10 +344,10 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m10a-pg',
-    port: 55440,
-    database: 'medialab_p02m10a_test',
-    user: 'medialab_p02m10a_test_owner'
+    host: '/tmp/mlvs01-p02m11a-pg',
+    port: 55441,
+    database: 'medialab_p02m11a_test',
+    user: 'medialab_p02m11a_test_owner'
   });
 
   beforeAll(async () => {
@@ -341,9 +369,9 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m10a_test',
-      user: 'medialab_p02m10a_test_owner',
-      runtimeUser: 'medialab_p02m10a_test_app'
+      database: 'medialab_p02m11a_test',
+      user: 'medialab_p02m11a_test_owner',
+      runtimeUser: 'medialab_p02m11a_test_app'
     });
 
     expect(outTest.applied).toEqual([]);
@@ -361,6 +389,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0011_media_asset_identity_and_lineage_foundation.sql'
       ,'0012_durable_media_operations_reconciliation_foundation.sql'
       ,'0013_capture_session_ingest_custody_foundation.sql'
+      ,'0014_media_cull_workspace_selected_media_evidence_foundation.sql'
     ]);
   });
 
@@ -384,7 +413,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m10a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m11a_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -397,7 +426,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m10a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m11a_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
@@ -855,9 +884,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 22,
+      permissions: 24,
       permission_sets: 1,
-      permission_set_permissions: 22,
+      permission_set_permissions: 24,
       membership_permission_sets: 1,
       development_sessions: 1
     };

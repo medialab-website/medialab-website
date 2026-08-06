@@ -13,11 +13,12 @@ const successorMigration = '0010_mission_plan_foundation.sql';
 const secondSuccessorMigration = '0011_media_asset_identity_and_lineage_foundation.sql';
 const thirdSuccessorMigration = '0012_durable_media_operations_reconciliation_foundation.sql';
 const fourthSuccessorMigration = '0013_capture_session_ingest_custody_foundation.sql';
-const TEST_SOCKET = '/tmp/mlvs01-p02m10a-pg';
-const TEST_PORT = 55440;
-const TEST_DB = 'medialab_p02m10a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m10a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m10a_test_app';
+const fifthSuccessorMigration = '0014_media_cull_workspace_selected_media_evidence_foundation.sql';
+const TEST_SOCKET = '/tmp/mlvs01-p02m11a-pg';
+const TEST_PORT = 55441;
+const TEST_DB = 'medialab_p02m11a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m11a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m11a_test_app';
 let errors = false;
 
 const predecessorMigrations = [
@@ -78,7 +79,7 @@ for (const [filename, expectedHash] of predecessorMigrations) {
 }
 
 const migrationFiles = fs.readdirSync(migrationDir).filter((filename) => filename.endsWith('.sql')).sort();
-exact('Canonical migration inventory', migrationFiles, [...predecessorMigrations.map(([filename]) => filename), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration]);
+exact('Canonical migration inventory', migrationFiles, [...predecessorMigrations.map(([filename]) => filename), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration, fifthSuccessorMigration]);
 
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
 const packetHash = crypto.createHash('sha256').update(packetBytes).digest('hex');
@@ -145,9 +146,13 @@ try {
     {
       filename: fourthSuccessorMigration,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, fourthSuccessorMigration))).digest('hex')
+    },
+    {
+      filename: fifthSuccessorMigration,
+      sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, fifthSuccessorMigration))).digest('hex')
     }
   ];
-  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Thirteen-row migration ledger mismatch');
+  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Fourteen-row migration ledger mismatch');
 
   const tables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables

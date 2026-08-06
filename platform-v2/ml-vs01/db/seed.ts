@@ -22,6 +22,7 @@ import { MISSION_PLAN_FOUNDATION_FIXTURE_TABLES } from './fixtures/mission-plan-
 import { MEDIA_ASSET_FOUNDATION_FIXTURE_TABLES } from './fixtures/media-asset-identity-lineage-fixtures.js';
 import { MEDIA_OPERATION_FOUNDATION_FIXTURE_TABLES } from './fixtures/durable-media-operations-reconciliation-fixtures.js';
 import { MEDIA_CAPTURE_FOUNDATION_FIXTURE_TABLES } from './fixtures/capture-session-ingest-custody-fixtures.js';
+import { MEDIA_CULL_FOUNDATION_FIXTURE_TABLES } from './fixtures/media-cull-workspace-selected-media-fixtures.js';
 
 export interface SeedOptions {
   host?: string;
@@ -37,13 +38,13 @@ export interface SeedResult {
   verified: number;
 }
 
-const APPROVED_DATABASES = ['medialab_p02m10a_test'];
+const APPROVED_DATABASES = ['medialab_p02m11a_test'];
 
 export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
-  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m10a-pg';
-  const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55440);
-  const database = options.database || process.env.PGDATABASE || 'medialab_p02m10a_test';
-  const user = options.user || process.env.PGUSER || 'medialab_p02m10a_test_owner';
+  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m11a-pg';
+  const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55441);
+  const database = options.database || process.env.PGDATABASE || 'medialab_p02m11a_test';
+  const user = options.user || process.env.PGUSER || 'medialab_p02m11a_test_owner';
 
   // Guard 1: Database name restriction
   if (!APPROVED_DATABASES.includes(database)) {
@@ -51,16 +52,16 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   }
 
   // Guard 2: Exact packet socket restriction, with no TCP or predecessor-cluster fallback
-  if (host !== '/tmp/mlvs01-p02m10a-pg') {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m10a-pg'.`);
+  if (host !== '/tmp/mlvs01-p02m11a-pg') {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m11a-pg'.`);
   }
 
-  if (port !== 55440) {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved port ${port}. Must be 55440.`);
+  if (port !== 55441) {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved port ${port}. Must be 55441.`);
   }
 
   // Guard 3: User role validation
-  const expectedUser = 'medialab_p02m10a_test_owner';
+  const expectedUser = 'medialab_p02m11a_test_owner';
   if (user !== expectedUser) {
     throw new Error(`SEED_SAFETY_FAILURE: Role mismatch for database '${database}'. Expected role '${expectedUser}', got '${user}'.`);
   }
@@ -459,6 +460,18 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
       }
     }
 
+    // 20. Minimum Media Cull manage/read permissions; no Cull Workspace evidence is pre-created
+    for (const fixtureTable of MEDIA_CULL_FOUNDATION_FIXTURE_TABLES) {
+      for (const fixtureRow of fixtureTable.rows) {
+        await ensureFixtureRow(
+          fixtureTable.table,
+          fixtureTable.keys,
+          fixtureRow as unknown as Record<string, unknown>,
+          false
+        );
+      }
+    }
+
     await client.query('COMMIT;');
     return { inserted, verified };
   } catch (err) {
@@ -476,7 +489,7 @@ const currentPath = fileURLToPath(import.meta.url);
 const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 
 if (scriptPath && currentPath === scriptPath) {
-  const targetDb = process.env.PGDATABASE || 'medialab_p02m10a_test';
+  const targetDb = process.env.PGDATABASE || 'medialab_p02m11a_test';
   const targetUser = process.env.PGUSER;
 
   if (!targetUser) {

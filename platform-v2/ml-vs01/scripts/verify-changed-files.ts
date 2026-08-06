@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { P02_M10_A_ALLOWLIST } from './p02-m10-a-changed-files.js';
+import { P02_M11_A_ALLOWLIST } from './p02-m11-a-changed-files.js';
 
 console.log('Running verify-changed-files.ts...');
 
@@ -56,8 +56,8 @@ if (missingInMd) {
   process.exit(1);
 }
 
-if (JSON.stringify([...actualGitFiles].sort()) !== JSON.stringify([...P02_M10_A_ALLOWLIST].sort())) {
-  console.error('ERROR: Actual Git candidate files do not exactly match the P02-M10-A allowlist.');
+if (JSON.stringify([...actualGitFiles].sort()) !== JSON.stringify([...P02_M11_A_ALLOWLIST].sort())) {
+  console.error('ERROR: Actual Git candidate files do not exactly match the P02-M11-A allowlist.');
   process.exit(1);
 }
 

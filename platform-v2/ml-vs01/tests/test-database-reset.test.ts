@@ -12,13 +12,20 @@ import { MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/mis
 import { MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media-asset-identity-lineage-fixtures.js';
 import { MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/durable-media-operations-reconciliation-fixtures.js';
 import { MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/capture-session-ingest-custody-fixtures.js';
+import { MEDIA_CULL_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media-cull-workspace-selected-media-fixtures.js';
 
-const TEST_DB = 'medialab_p02m10a_test';
-const TEST_ROLE = 'medialab_p02m10a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m10a-pg';
-const TEST_PORT = 55440;
+const TEST_DB = 'medialab_p02m11a_test';
+const TEST_ROLE = 'medialab_p02m11a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m11a-pg';
+const TEST_PORT = 55441;
 
 const EXACT_ROUTINE_NAMES = [
+  'admit_cull_candidate', 'admit_cull_candidates', 'clear_cull_candidate_decision',
+  'create_cull_successor_workspace', 'create_cull_workspace', 'decide_cull_candidate',
+  'decide_cull_candidates', 'finalize_cull_workspace', 'get_cull_candidate_history',
+  'get_cull_selected_media', 'get_cull_workspace', 'list_cull_workspaces',
+  'reject_cull_evidence_mutation', 'require_cull_permission', 'seal_cull_inventory',
+  'validate_cull_reason', 'validate_cull_safe_json', 'withdraw_cull_candidate',
   'assign_capture_session',
   'capture_session_assignment',
   'create_capture_session',
@@ -237,6 +244,16 @@ const EXACT_TRIGGERS = [
   ['contact_verification_evidence_insert_guard', 'contact_verification_evidence', 'guard_contact_verification_insert'],
   ['contact_verification_invalidations_immutability_guard', 'contact_verification_invalidations', 'reject_contact_history_mutation'],
   ['contact_verification_invalidations_insert_guard', 'contact_verification_invalidations', 'guard_verification_invalidation_insert'],
+  ['cull_candidate_inventory_events_immutability_guard', 'cull_candidate_inventory_events', 'reject_cull_evidence_mutation'],
+  ['cull_candidate_relationship_contexts_immutability_guard', 'cull_candidate_relationship_contexts', 'reject_cull_evidence_mutation'],
+  ['cull_candidates_immutability_guard', 'cull_candidates', 'reject_cull_evidence_mutation'],
+  ['cull_decision_batches_immutability_guard', 'cull_decision_batches', 'reject_cull_evidence_mutation'],
+  ['cull_decision_events_immutability_guard', 'cull_decision_events', 'reject_cull_evidence_mutation'],
+  ['cull_inventory_seals_immutability_guard', 'cull_inventory_seals', 'reject_cull_evidence_mutation'],
+  ['cull_selection_designation_events_immutability_guard', 'cull_selection_designation_events', 'reject_cull_evidence_mutation'],
+  ['cull_workspace_completions_immutability_guard', 'cull_workspace_completions', 'reject_cull_evidence_mutation'],
+  ['cull_workspace_events_immutability_guard', 'cull_workspace_events', 'reject_cull_evidence_mutation'],
+  ['cull_workspaces_immutability_guard', 'cull_workspaces', 'reject_cull_evidence_mutation'],
   ['custom_commercial_snapshots_immutability_guard', 'custom_commercial_snapshots', 'reject_catalog_evidence_mutation'],
   ['identities_account_bootstrap', 'identities', 'bootstrap_identity_account'],
   ['job_appointments_immutability_guard', 'job_appointments', 'reject_job_service_evidence_mutation'],
@@ -420,7 +437,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(13);
+    expect(ledgerRes.rows).toHaveLength(14);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -440,6 +457,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[10].filename).toBe('0011_media_asset_identity_and_lineage_foundation.sql');
     expect(ledgerRes.rows[11].filename).toBe('0012_durable_media_operations_reconciliation_foundation.sql');
     expect(ledgerRes.rows[12].filename).toBe('0013_capture_session_ingest_custody_foundation.sql');
+    expect(ledgerRes.rows[13].filename).toBe('0014_media_cull_workspace_selected_media_evidence_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -469,6 +487,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(MEDIA_CULL_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

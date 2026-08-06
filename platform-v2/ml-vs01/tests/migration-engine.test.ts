@@ -15,10 +15,10 @@ describe('Migration Engine Substantive Behavior', () => {
 
   beforeAll(async () => {
     client = new pg.Client({
-      host: '/tmp/mlvs01-p02m10a-pg',
-      port: 55440,
-      database: 'medialab_p02m10a_test',
-      user: 'medialab_p02m10a_test_owner'
+      host: '/tmp/mlvs01-p02m11a-pg',
+      port: 55441,
+      database: 'medialab_p02m11a_test',
+      user: 'medialab_p02m11a_test_owner'
     });
     await client.connect();
   });
@@ -202,13 +202,14 @@ describe('Migration Engine Substantive Behavior', () => {
       '0011_media_asset_identity_and_lineage_foundation.sql'
       ,'0012_durable_media_operations_reconciliation_foundation.sql'
       ,'0013_capture_session_ingest_custody_foundation.sql'
+      ,'0014_media_cull_workspace_selected_media_evidence_foundation.sql'
     ]);
   });
 
   it('11. verifies canonical test database contains ledger rows and domain tables', async () => {
     const devRes = await client.query('SELECT COUNT(*)::int AS cnt, MAX(filename) AS fname FROM medialab_meta.schema_migrations;');
-    expect(devRes.rows[0].cnt).toBe(13);
-    expect(devRes.rows[0].fname).toBe('0013_capture_session_ingest_custody_foundation.sql');
+    expect(devRes.rows[0].cnt).toBe(14);
+    expect(devRes.rows[0].fname).toBe('0014_media_cull_workspace_selected_media_evidence_foundation.sql');
 
     const tablesRes = await client.query(
       "SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core' ORDER BY tablename;"

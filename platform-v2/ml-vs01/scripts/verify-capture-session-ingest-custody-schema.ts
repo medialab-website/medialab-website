@@ -8,6 +8,7 @@ console.log('Running verify-capture-session-ingest-custody-schema.ts...');
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const migrationDir = path.join(baseDir, 'db/migrations');
 const packetMigration = '0013_capture_session_ingest_custody_foundation.sql';
+const successorMigration = '0014_media_cull_workspace_selected_media_evidence_foundation.sql';
 const predecessors = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
   ['0002_property_identity_and_snapshots.sql', 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83'],
@@ -47,9 +48,10 @@ for (const [filename, expected] of predecessors) {
 }
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
 const packetHash = crypto.createHash('sha256').update(packetBytes).digest('hex');
+const successorHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, successorMigration))).digest('hex');
 const sql = packetBytes.toString('utf8');
 exact('Migration inventory', fs.readdirSync(migrationDir).filter((name) => name.endsWith('.sql')),
-  [...predecessors.map(([name]) => name), packetMigration]);
+  [...predecessors.map(([name]) => name), packetMigration, successorMigration]);
 exact('Packet table inventory', [...sql.matchAll(/CREATE TABLE medialab_core\.([a-z0-9_]+)/g)].map((m) => m[1]), tables);
 exact('Packet function inventory', [...sql.matchAll(/CREATE OR REPLACE FUNCTION medialab_core\.([a-z0-9_]+)/g)].map((m) => m[1]),
   [...publicFunctions, ...helperFunctions]);
@@ -65,26 +67,26 @@ for (const prohibited of ['ON DELETE CASCADE', 'CREATE TABLE medialab_core.media
   if (sql.includes(prohibited)) fail(`Migration 0013 contains prohibited evidence: ${prohibited}`);
 }
 
-const client = new pg.Client({ host: '/tmp/mlvs01-p02m10a-pg', port: 55440,
-  database: 'medialab_p02m10a_test', user: 'medialab_p02m10a_test_owner' });
+const client = new pg.Client({ host: '/tmp/mlvs01-p02m11a-pg', port: 55441,
+  database: 'medialab_p02m11a_test', user: 'medialab_p02m11a_test_owner' });
 try {
   await client.connect();
   const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
   const expectedLedger = [...predecessors.map(([filename, sha256]) => ({ filename, sha256 })),
-    { filename: packetMigration, sha256: packetHash }];
-  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Thirteen-row migration ledger mismatch');
+    { filename: packetMigration, sha256: packetHash }, { filename: successorMigration, sha256: successorHash }];
+  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Fourteen-row migration ledger mismatch');
   const dbTables = await client.query(`SELECT tablename,tableowner FROM pg_tables
     WHERE schemaname='medialab_core' AND tablename=ANY($1::text[]) ORDER BY tablename`, [tables]);
   exact('Database table inventory', dbTables.rows.map((row) => row.tablename), tables);
-  if (dbTables.rows.some((row) => row.tableowner !== 'medialab_p02m10a_test_owner')) fail('Packet table ownership mismatch');
+  if (dbTables.rows.some((row) => row.tableowner !== 'medialab_p02m11a_test_owner')) fail('Packet table ownership mismatch');
   const dbFunctions = await client.query(`SELECT p.proname,pg_get_userbyid(p.proowner) AS owner,p.prosecdef,p.proconfig,
       has_function_privilege($1,p.oid,'EXECUTE') AS runtime_execute,
       has_function_privilege('public',p.oid,'EXECUTE') AS public_execute
     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='medialab_core' AND p.proname=ANY($2::text[]) ORDER BY p.proname`,
-    ['medialab_p02m10a_test_app', [...publicFunctions, ...helperFunctions]]);
+    ['medialab_p02m11a_test_app', [...publicFunctions, ...helperFunctions]]);
   exact('Database function inventory', dbFunctions.rows.map((row) => row.proname), [...publicFunctions, ...helperFunctions]);
-  if (dbFunctions.rows.some((row) => row.owner !== 'medialab_p02m10a_test_owner')) fail('Packet function ownership mismatch');
+  if (dbFunctions.rows.some((row) => row.owner !== 'medialab_p02m11a_test_owner')) fail('Packet function ownership mismatch');
   if (dbFunctions.rows.some((row) => row.public_execute)) fail('PUBLIC can execute a packet function');
   if (dbFunctions.rows.some((row) => publicFunctions.includes(row.proname) !== row.runtime_execute)) fail('Runtime function grant inventory mismatch');
   if (dbFunctions.rows.some((row) => row.prosecdef && JSON.stringify(row.proconfig) !==
@@ -97,7 +99,7 @@ try {
       has_table_privilege($1,c.oid,'SELECT,INSERT,UPDATE,DELETE') AS runtime_access,
       has_table_privilege('public',c.oid,'SELECT,INSERT,UPDATE,DELETE') AS public_access
     FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-    WHERE n.nspname='medialab_core' AND c.relname=ANY($2::text[])`, ['medialab_p02m10a_test_app', tables]);
+    WHERE n.nspname='medialab_core' AND c.relname=ANY($2::text[])`, ['medialab_p02m11a_test_app', tables]);
   if (privileges.rows.some((row) => row.runtime_access || row.public_access)) fail('Direct table privilege boundary mismatch');
   const schema = await client.query(`SELECT has_schema_privilege('public','medialab_core','USAGE,CREATE') AS public_authority`);
   if (schema.rows[0].public_authority) fail('PUBLIC has schema authority');

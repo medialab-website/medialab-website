@@ -1,17 +1,19 @@
-# P02-M10-A Changed Files
+# P02-M11-A Changed Files
 
-The uncommitted and unstaged candidate is limited to the following exact allowlist:
+The uncommitted and unstaged candidate contains exactly the paths exported by `scripts/p02-m11-a-changed-files.ts`.
+
+The 45-path inventory is limited to migration 0014, permission-only fixtures, deterministic migration/seed/reset integration, packet verifiers and tests, and additive predecessor inventory updates. No UI, API, Desktop, provider, deployment, production, or media-processing path is included.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
-- platform-v2/ml-vs01/db/fixtures/capture-session-ingest-custody-fixtures.ts
+- platform-v2/ml-vs01/db/fixtures/media-cull-workspace-selected-media-fixtures.ts
 - platform-v2/ml-vs01/db/migrate.ts
-- platform-v2/ml-vs01/db/migrations/0013_capture_session_ingest_custody_foundation.sql
+- platform-v2/ml-vs01/db/migrations/0014_media_cull_workspace_selected_media_evidence_foundation.sql
 - platform-v2/ml-vs01/db/migrations/README.md
 - platform-v2/ml-vs01/db/reset-test-database.ts
 - platform-v2/ml-vs01/db/seed.ts
 - platform-v2/ml-vs01/package.json
-- platform-v2/ml-vs01/scripts/p02-m10-a-changed-files.ts
+- platform-v2/ml-vs01/scripts/p02-m11-a-changed-files.ts
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
 - platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-changed-files.ts
@@ -20,6 +22,7 @@ The uncommitted and unstaged candidate is limited to the following exact allowli
 - platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts
 - platform-v2/ml-vs01/scripts/verify-job-service-workstream-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-media-asset-identity-lineage-schema.ts
+- platform-v2/ml-vs01/scripts/verify-media-cull-workspace-selected-media-schema.ts
 - platform-v2/ml-vs01/scripts/verify-migration-engine.ts
 - platform-v2/ml-vs01/scripts/verify-mission-plan-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts
@@ -37,6 +40,7 @@ The uncommitted and unstaged candidate is limited to the following exact allowli
 - platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts
 - platform-v2/ml-vs01/tests/job-service-workstream-foundation.test.ts
 - platform-v2/ml-vs01/tests/media-asset-identity-lineage-foundation.test.ts
+- platform-v2/ml-vs01/tests/media-cull-workspace-selected-media-foundation.test.ts
 - platform-v2/ml-vs01/tests/migration-engine.test.ts
 - platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts
 - platform-v2/ml-vs01/tests/order-foundation.test.ts
