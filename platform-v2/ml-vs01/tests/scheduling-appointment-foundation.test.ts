@@ -11,11 +11,11 @@ import {
 import { ORDER_FOUNDATION_ORDER_ID, ORDER_FOUNDATION_PROPERTY_ID } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m11a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m11a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m11a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m11a-pg';
-const TEST_PORT = 55441;
+const TEST_DB = 'medialab_p02m12a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m12a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m12a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m12a-pg';
+const TEST_PORT = 55442;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const CUSTOMER_IDENTITY_ID = IDENTITY_FIXTURES[0].id;
 const STAFF_PERSON_ID = PEOPLE_FIXTURES[1].id;
@@ -175,7 +175,7 @@ describe('P02-M05-A provider-neutral Scheduling Request and Appointment foundati
 
   it('1. applies exactly ten immutable migrations and preserves predecessor checksums', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(14);
+    expect(ledger.rows).toHaveLength(15);
     expect(ledger.rows.slice(0, 7)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },

@@ -183,6 +183,7 @@ exactNames('Canonical migration inventory', migrationFiles, [
   '0012_durable_media_operations_reconciliation_foundation.sql'
   ,'0013_capture_session_ingest_custody_foundation.sql'
   ,'0014_media_cull_workspace_selected_media_evidence_foundation.sql'
+  ,'0015_editor_handoff_returned_media_intake_foundation.sql'
 ]);
 for (const expected of expectedMigrations) {
   const bytes = fs.readFileSync(path.join(migrationsDir, expected.filename));

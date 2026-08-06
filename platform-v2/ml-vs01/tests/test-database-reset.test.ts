@@ -13,13 +13,19 @@ import { MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/medi
 import { MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/durable-media-operations-reconciliation-fixtures.js';
 import { MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/capture-session-ingest-custody-fixtures.js';
 import { MEDIA_CULL_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media-cull-workspace-selected-media-fixtures.js';
+import { MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/editor-handoff-returned-media-fixtures.js';
 
-const TEST_DB = 'medialab_p02m11a_test';
-const TEST_ROLE = 'medialab_p02m11a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m11a-pg';
-const TEST_PORT = 55441;
+const TEST_DB = 'medialab_p02m12a_test';
+const TEST_ROLE = 'medialab_p02m12a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m12a-pg';
+const TEST_PORT = 55442;
 
 const EXACT_ROUTINE_NAMES = [
+  'complete_editor_handoff_returns', 'create_editor_handoff_batch', 'create_returned_media_intake_batch',
+  'create_returned_version_for_match', 'get_editor_handoff_batch', 'get_returned_media_history',
+  'list_editor_handoff_batches', 'record_editor_handoff_event', 'record_returned_media_item',
+  'recompute_editor_handoff_current', 'reject_editor_handoff_evidence_mutation', 'require_editor_handoff_permission',
+  'resolve_returned_media_match', 'validate_editor_handoff_reason', 'validate_editor_handoff_safe_json',
   'admit_cull_candidate', 'admit_cull_candidates', 'clear_cull_candidate_decision',
   'create_cull_successor_workspace', 'create_cull_workspace', 'decide_cull_candidate',
   'decide_cull_candidates', 'finalize_cull_workspace', 'get_cull_candidate_history',
@@ -212,6 +218,13 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['editor_handoff_batches_immutability_guard', 'editor_handoff_batches', 'reject_editor_handoff_evidence_mutation'],
+  ['editor_handoff_events_immutability_guard', 'editor_handoff_events', 'reject_editor_handoff_evidence_mutation'],
+  ['editor_handoff_items_immutability_guard', 'editor_handoff_items', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_intake_batches_immutability_guard', 'returned_media_intake_batches', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_intake_events_immutability_guard', 'returned_media_intake_events', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_items_immutability_guard', 'returned_media_items', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_match_events_immutability_guard', 'returned_media_match_events', 'reject_editor_handoff_evidence_mutation'],
   ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
   ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
   ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
@@ -437,7 +450,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(14);
+    expect(ledgerRes.rows).toHaveLength(15);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -458,6 +471,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[11].filename).toBe('0012_durable_media_operations_reconciliation_foundation.sql');
     expect(ledgerRes.rows[12].filename).toBe('0013_capture_session_ingest_custody_foundation.sql');
     expect(ledgerRes.rows[13].filename).toBe('0014_media_cull_workspace_selected_media_evidence_foundation.sql');
+    expect(ledgerRes.rows[14].filename).toBe('0015_editor_handoff_returned_media_intake_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -490,6 +504,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(MEDIA_CULL_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

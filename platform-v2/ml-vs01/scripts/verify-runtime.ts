@@ -20,7 +20,7 @@ if (!fs.existsSync(pgBinary)) {
 console.log(`PostgreSQL binary verified: ${pgBinary}`);
 
 // 3. Verify PostgreSQL cluster directory
-const pgDataDir = '/tmp/mlvs01-p02m11a-data';
+const pgDataDir = '/tmp/mlvs01-p02m12a-data';
 if (!fs.existsSync(pgDataDir)) {
   console.error(`ERROR: PostgreSQL cluster data directory not found at ${pgDataDir}`);
   process.exit(1);
@@ -28,7 +28,7 @@ if (!fs.existsSync(pgDataDir)) {
 console.log(`PostgreSQL cluster data dir verified: ${pgDataDir}`);
 
 // 4. Verify socket directory
-const socketDir = '/tmp/mlvs01-p02m11a-pg';
+const socketDir = '/tmp/mlvs01-p02m12a-pg';
 if (!fs.existsSync(socketDir)) {
   console.error(`ERROR: Approved socket directory not found at ${socketDir}`);
   process.exit(1);
@@ -37,14 +37,14 @@ console.log(`PostgreSQL socket dir verified: ${socketDir}`);
 
 // 5. Verify the packet-specific PostgreSQL listener is the only process on this packet port.
 try {
-  const lsof = execSync('lsof -i :55441 || true', { encoding: 'utf-8' }).trim();
+  const lsof = execSync('lsof -i :55442 || true', { encoding: 'utf-8' }).trim();
   const lines = lsof.split('\n').filter((line) => line.trim().length > 0);
   if (lines.length < 2 || lines.slice(1).some((line) => !line.startsWith('postgres '))) {
-    console.error(`ERROR: Port 55441 is not exclusively owned by packet PostgreSQL:\n${lsof}`);
+    console.error(`ERROR: Port 55442 is not exclusively owned by packet PostgreSQL:\n${lsof}`);
     process.exit(1);
   }
-  execSync('/Applications/Postgres.app/Contents/Versions/latest/bin/pg_isready -h /tmp/mlvs01-p02m11a-pg -p 55441 -d medialab_p02m11a_test', { encoding: 'utf-8' });
-  console.log('Packet-specific PostgreSQL listener verified on socket and port 55441.');
+  execSync('/Applications/Postgres.app/Contents/Versions/latest/bin/pg_isready -h /tmp/mlvs01-p02m12a-pg -p 55442 -d medialab_p02m12a_test', { encoding: 'utf-8' });
+  console.log('Packet-specific PostgreSQL listener verified on socket and port 55442.');
 } catch (e) {
   console.error(`ERROR: Failed to verify packet-specific PostgreSQL listener: ${e}`);
   process.exit(1);

@@ -7,6 +7,21 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'complete_editor_handoff_returns',
+  'create_editor_handoff_batch',
+  'create_returned_media_intake_batch',
+  'create_returned_version_for_match',
+  'get_editor_handoff_batch',
+  'get_returned_media_history',
+  'list_editor_handoff_batches',
+  'record_editor_handoff_event',
+  'record_returned_media_item',
+  'recompute_editor_handoff_current',
+  'reject_editor_handoff_evidence_mutation',
+  'require_editor_handoff_permission',
+  'resolve_returned_media_match',
+  'validate_editor_handoff_reason',
+  'validate_editor_handoff_safe_json',
   'admit_cull_candidate',
   'admit_cull_candidates',
   'clear_cull_candidate_decision',
@@ -211,6 +226,13 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['editor_handoff_batches_immutability_guard', 'editor_handoff_batches', 'reject_editor_handoff_evidence_mutation'],
+  ['editor_handoff_events_immutability_guard', 'editor_handoff_events', 'reject_editor_handoff_evidence_mutation'],
+  ['editor_handoff_items_immutability_guard', 'editor_handoff_items', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_intake_batches_immutability_guard', 'returned_media_intake_batches', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_intake_events_immutability_guard', 'returned_media_intake_events', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_items_immutability_guard', 'returned_media_items', 'reject_editor_handoff_evidence_mutation'],
+  ['returned_media_match_events_immutability_guard', 'returned_media_match_events', 'reject_editor_handoff_evidence_mutation'],
   ['account_lifecycle_transitions_apply', 'account_lifecycle_transitions', 'apply_account_lifecycle_transition'],
   ['account_lifecycle_transitions_immutability_guard', 'account_lifecycle_transitions', 'reject_contact_history_mutation'],
   ['account_lifecycle_transitions_insert_guard', 'account_lifecycle_transitions', 'guard_account_lifecycle_transition_insert'],
@@ -344,10 +366,10 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m11a-pg',
-    port: 55441,
-    database: 'medialab_p02m11a_test',
-    user: 'medialab_p02m11a_test_owner'
+    host: '/tmp/mlvs01-p02m12a-pg',
+    port: 55442,
+    database: 'medialab_p02m12a_test',
+    user: 'medialab_p02m12a_test_owner'
   });
 
   beforeAll(async () => {
@@ -369,9 +391,9 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m11a_test',
-      user: 'medialab_p02m11a_test_owner',
-      runtimeUser: 'medialab_p02m11a_test_app'
+      database: 'medialab_p02m12a_test',
+      user: 'medialab_p02m12a_test_owner',
+      runtimeUser: 'medialab_p02m12a_test_app'
     });
 
     expect(outTest.applied).toEqual([]);
@@ -390,6 +412,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0012_durable_media_operations_reconciliation_foundation.sql'
       ,'0013_capture_session_ingest_custody_foundation.sql'
       ,'0014_media_cull_workspace_selected_media_evidence_foundation.sql'
+      ,'0015_editor_handoff_returned_media_intake_foundation.sql'
     ]);
   });
 
@@ -413,7 +436,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m11a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m12a_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -426,7 +449,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m11a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m12a_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
@@ -884,9 +907,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 24,
+      permissions: 26,
       permission_sets: 1,
-      permission_set_permissions: 24,
+      permission_set_permissions: 26,
       membership_permission_sets: 1,
       development_sessions: 1
     };

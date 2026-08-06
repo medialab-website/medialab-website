@@ -6,11 +6,11 @@ import { IDENTITY_FIXTURES, ORGANIZATION_FIXTURE, PERMISSION_SET_FIXTURE } from 
 import { ORDER_FOUNDATION_ORDER_ID, ORDER_ITEM_FIXTURES } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m11a_test';
-const OWNER_ROLE = 'medialab_p02m11a_test_owner';
-const RUNTIME_ROLE = 'medialab_p02m11a_test_app';
-const SOCKET = '/tmp/mlvs01-p02m11a-pg';
-const PORT = 55441;
+const TEST_DB = 'medialab_p02m12a_test';
+const OWNER_ROLE = 'medialab_p02m12a_test_owner';
+const RUNTIME_ROLE = 'medialab_p02m12a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m12a-pg';
+const PORT = 55442;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M11_A_TEST';
 
@@ -89,10 +89,11 @@ describe('P02-M11-A Media Cull Workspace and selected-media evidence foundation'
   beforeEach(async () => { await reset(); });
   afterAll(async () => { if (runtime) await runtime.end(); if (owner) await owner.end(); await reset(); });
 
-  it('replays fourteen exact migrations with permission-only fixtures and exact restricted authority', async () => {
+  it('replays fifteen exact migrations with permission-only fixtures and exact restricted authority', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(14);
+    expect(ledger.rows).toHaveLength(15);
     expect(ledger.rows[13].filename).toBe('0014_media_cull_workspace_selected_media_evidence_foundation.sql');
+    expect(ledger.rows[14].filename).toBe('0015_editor_handoff_returned_media_intake_foundation.sql');
     const perms = await owner.query("SELECT code FROM medialab_core.permissions WHERE code LIKE 'media_cull.%' ORDER BY code");
     expect(perms.rows.map(r=>r.code)).toEqual(['media_cull.manage','media_cull.read']);
     const seeded = await owner.query(`SELECT sum(n)::int AS n FROM (
