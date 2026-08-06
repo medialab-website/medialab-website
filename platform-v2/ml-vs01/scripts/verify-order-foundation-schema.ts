@@ -4,18 +4,18 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M09_A_ALLOWLIST } from './p02-m09-a-changed-files.js';
+import { P02_M10_A_ALLOWLIST } from './p02-m10-a-changed-files.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS, ORDER_FOUNDATION_SOURCE } from '../db/fixtures/order-foundation-fixtures.js';
 
 console.log('Running verify-order-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
-const TEST_PORT = 55439;
-const TEST_DB = 'medialab_p02m09a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m09a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m09a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m10a-pg';
+const TEST_PORT = 55440;
+const TEST_DB = 'medialab_p02m10a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m10a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m10a_test_app';
 let errors = false;
 
 const expectedMigrations = [
@@ -56,7 +56,7 @@ const packetTriggers = [
   ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation']
 ];
 
-const allowedPaths = [...P02_M09_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M10_A_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);

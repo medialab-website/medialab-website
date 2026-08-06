@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
-import { P02_M09_A_ALLOWLIST } from './p02-m09-a-changed-files.js';
+import { P02_M10_A_ALLOWLIST } from './p02-m10-a-changed-files.js';
 
 console.log('Running verify-foundation-closeout.ts...');
 
@@ -15,7 +15,7 @@ const worktreeRoot = path.resolve(baseDir, '../../');
 let errors = false;
 
 // 1. P02-M07-A bounded changed-file allowlist
-const ALLOWLIST = [...P02_M09_A_ALLOWLIST];
+const ALLOWLIST = [...P02_M10_A_ALLOWLIST];
 
 // 2. Determine actual changed-path set from Git status
 const gitStatusRaw = execSync('git status --porcelain -uall platform-v2/ml-vs01', {

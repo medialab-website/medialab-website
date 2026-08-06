@@ -1,23 +1,21 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M09-A-DURABLE-MEDIA-OPERATIONS-RECONCILIATION-R01
+# P02-M10-A Build State
 
-- **Current Milestone:** P02-M09-A — Durable Media Operations and Reconciliation Foundation
-- **Status:** Candidate / Locally Validated / Unstaged / Uncommitted / Unpushed
-- **Git Branch:** `platform-v2-p02-m09-a-durable-media-operations-reconciliation-r01`
-- **Workspace:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M09-A-Durable-Media-Operations-Reconciliation`
-- **Base Commit:** `142e6cfe86348f09c888aa6c1a59d7ef494e9479`
-- **Base Tree:** `eeec2666f812ecdea32dfe3da9eb20f673d79d0b`
-- **Migration:** `0012_durable_media_operations_reconciliation_foundation.sql` (final size and SHA-256 recorded in the frozen review manifest)
-- **Predecessor Law:** Migrations `0001` through `0011` remain byte-identical; accepted `0011` SHA-256 remains `1b9fbde392d801ffc8fb0a00a461447cac855bae0046f1d433ac0360b8c15c80`.
-- **Operation Law:** Every provider-neutral media operation records organization, Job, optional Workstream, family/subtype, requesting actor, reason, and safe synthetic evidence before work becomes claimable.
-- **Target Law:** Explicit targets may reference only a same-tenant, same-Job media asset, media version, storage object, or manifest; target evidence is append-only.
-- **Concurrency Law:** Claiming locks the durable projection with `FOR UPDATE OF p SKIP LOCKED`; competing workers cannot win the same eligible operation.
-- **Attempt Law:** Claims, attempts, checkpoints, receipts, terminal outcomes, and retry scheduling are attributable, ordered, immutable evidence. Worker-scoped idempotency prevents duplicate technical commands.
-- **Receipt Law:** A receipt records provider-neutral observations and verification state; receipt creation alone never asserts operation success.
-- **Control Law:** Stop requests, cancellation requests, overrides, and manual-fallback records are distinct durable events and cannot silently erase earlier state.
-- **Reconciliation Law:** Expected missing effects, unexpected/orphaned effects, checksum/byte/media/manifest/location conflicts, late success, duplicate technical effects, stale projections, and retry ambiguity remain explicit inspectable findings.
-- **Authority Boundary:** Ordinary actor commands derive identity from the session and require `media_operation.manage` or `media_operation.read`. Restricted runtime receives EXECUTE only on fourteen controlled operation commands/projections, with no direct table or helper authority. `PUBLIC` receives none.
-- **Evidence Safety:** Credential-bearing JSON keys, signed references, provider payloads, media bytes, paths, URLs, and filenames are rejected from operation evidence.
-- **Synthetic Evidence:** Seed adds only `media_operation.manage` and `media_operation.read`; no operations, attempts, receipts, reconciliation records, media, or provider effects are fabricated by seed.
-- **Isolated Test Environment:** Dedicated database `medialab_p02m09a_test`, roles `medialab_p02m09a_test_owner` / `medialab_p02m09a_test_app`, socket `/tmp/mlvs01-p02m09a-pg`, and port `55439`.
-- **Preserved Recovery Intent Law:** `START_FRESH records recovery intent for the same Person and Identity while preserving existing history`; it does not delete `memberships, contacts, orders, payments, historical evidence, or profile/preferences data`. `Actual profile/preferences reset behavior remains deferred until those models exist`.
-- **Excluded Capability:** No real media, provider API, Desktop modification, delivery/publication, UI/API route, deployment, production configuration, or production migration exists in this candidate.
+- Packet: P02-M10-A — Capture Session, Ingest, and Custody Foundation
+- Candidate state: uncommitted, unstaged, nonproduction review candidate
+- Base commit: `772b994412437cbb4f620b021552eae18dc72c11`
+- Base tree: `b04aac3728b2ec77bd0231b7f5eceee6cc7178a5`
+- Production/default main evidence: `b72c3f2115fe00c217a7cda2eca699c404c312f8`
+- Local branch: `platform-v2-p02-m10-a-capture-session-ingest-custody-r01`
+- Migration: `db/migrations/0013_capture_session_ingest_custody_foundation.sql`
+- Database: `medialab_p02m10a_test`
+- Owner role: `medialab_p02m10a_test_owner`
+- Restricted runtime role: `medialab_p02m10a_test_app`
+- Socket and port: `/tmp/mlvs01-p02m10a-pg`, `55440`
+- Disposable cluster data directory: `/tmp/mlvs01-p02m10a-data`
+- Accepted predecessor migrations: 0001 through 0012, byte-identical
+- Seed boundary: two permission definitions and permission-set associations only; no capture or media operational rows
+- Preserved recovery intent law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history; it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data. Actual profile/preferences reset behavior remains deferred until those models exist.
+- Network/provider/real-media/Desktop/production/deployment activity: none
+- Commit, push, remote branch, platform advancement, and main mutation: none
+
+Validation and frozen evidence identifiers are recorded outside the repository in the review package produced from this exact candidate.

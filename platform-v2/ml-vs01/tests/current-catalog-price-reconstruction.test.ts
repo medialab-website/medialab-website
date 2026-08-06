@@ -27,12 +27,13 @@ import { JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fi
 import { MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/mission-plan-foundation-fixtures.js';
 import { MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media-asset-identity-lineage-fixtures.js';
 import { MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/durable-media-operations-reconciliation-fixtures.js';
+import { MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/capture-session-ingest-custody-fixtures.js';
 
-const TEST_DB = 'medialab_p02m09a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m09a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m09a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
-const TEST_PORT = 55439;
+const TEST_DB = 'medialab_p02m10a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m10a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m10a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m10a-pg';
+const TEST_PORT = 55440;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -151,7 +152,7 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     const ledger = await owner.query(
       'SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename'
     );
-    expect(ledger.rows).toHaveLength(12);
+    expect(ledger.rows).toHaveLength(13);
     expect(ledger.rows.slice(0, 3)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },
@@ -183,7 +184,8 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
         (JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
         (MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
         (MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
-        (MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0)
+        (MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
+        (MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0)
       );
     }
     const sources = await owner.query(

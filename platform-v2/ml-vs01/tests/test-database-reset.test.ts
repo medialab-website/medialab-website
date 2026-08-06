@@ -11,13 +11,31 @@ import { JOB_SERVICE_WORKSTREAM_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fi
 import { MISSION_PLAN_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/mission-plan-foundation-fixtures.js';
 import { MEDIA_ASSET_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media-asset-identity-lineage-fixtures.js';
 import { MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/durable-media-operations-reconciliation-fixtures.js';
+import { MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/capture-session-ingest-custody-fixtures.js';
 
-const TEST_DB = 'medialab_p02m09a_test';
-const TEST_ROLE = 'medialab_p02m09a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
-const TEST_PORT = 55439;
+const TEST_DB = 'medialab_p02m10a_test';
+const TEST_ROLE = 'medialab_p02m10a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m10a-pg';
+const TEST_PORT = 55440;
 
 const EXACT_ROUTINE_NAMES = [
+  'assign_capture_session',
+  'capture_session_assignment',
+  'create_capture_session',
+  'get_capture_item_record',
+  'get_capture_session_record',
+  'list_capture_sessions',
+  'promote_capture_item',
+  'record_capture_duplicate_evidence',
+  'record_capture_item_custody',
+  'record_capture_item_observation',
+  'record_capture_item_verification',
+  'record_capture_source_observation',
+  'register_capture_item',
+  'register_capture_source',
+  'reject_capture_evidence_mutation',
+  'require_capture_permission',
+  'validate_capture_safe_json',
   'append_media_operation_event',
   'attach_media_operation_target',
   'check_media_operation_runtime_idempotency',
@@ -294,6 +312,17 @@ const EXACT_TRIGGERS = [
   ,['media_operation_runtime_idempotency_immutability_guard', 'media_operation_runtime_idempotency', 'reject_media_operation_evidence_mutation']
   ,['media_operation_events_immutability_guard', 'media_operation_events', 'reject_media_operation_evidence_mutation']
   ,['media_operation_projections_control_guard', 'media_operation_projections', 'guard_media_operation_projection_mutation']
+  ,['capture_sessions_immutability_guard', 'capture_sessions', 'reject_capture_evidence_mutation']
+  ,['capture_session_assignments_immutability_guard', 'capture_session_assignments', 'reject_capture_evidence_mutation']
+  ,['capture_session_events_immutability_guard', 'capture_session_events', 'reject_capture_evidence_mutation']
+  ,['capture_sources_immutability_guard', 'capture_sources', 'reject_capture_evidence_mutation']
+  ,['capture_source_observations_immutability_guard', 'capture_source_observations', 'reject_capture_evidence_mutation']
+  ,['capture_items_immutability_guard', 'capture_items', 'reject_capture_evidence_mutation']
+  ,['capture_item_observations_immutability_guard', 'capture_item_observations', 'reject_capture_evidence_mutation']
+  ,['capture_item_verification_immutability_guard', 'capture_item_verification_events', 'reject_capture_evidence_mutation']
+  ,['capture_item_custody_immutability_guard', 'capture_item_custody_events', 'reject_capture_evidence_mutation']
+  ,['capture_duplicate_evidence_immutability_guard', 'capture_duplicate_evidence', 'reject_capture_evidence_mutation']
+  ,['capture_item_promotions_immutability_guard', 'capture_item_promotions', 'reject_capture_evidence_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({
   trigger_name,
   table_name,
@@ -391,7 +420,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(12);
+    expect(ledgerRes.rows).toHaveLength(13);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -410,6 +439,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[9].filename).toBe('0010_mission_plan_foundation.sql');
     expect(ledgerRes.rows[10].filename).toBe('0011_media_asset_identity_and_lineage_foundation.sql');
     expect(ledgerRes.rows[11].filename).toBe('0012_durable_media_operations_reconciliation_foundation.sql');
+    expect(ledgerRes.rows[12].filename).toBe('0013_capture_session_ingest_custody_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -436,6 +466,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

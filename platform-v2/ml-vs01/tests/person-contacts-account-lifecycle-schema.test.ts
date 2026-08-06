@@ -6,11 +6,11 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_p02m09a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m09a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m09a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m09a-pg';
-const TEST_PORT = 55439;
+const TEST_DB = 'medialab_p02m10a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m10a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m10a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m10a-pg';
+const TEST_PORT = 55440;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -132,6 +132,22 @@ const MEDIA_OPERATION_APIS = [
   'start_media_operation_attempt'
 ];
 
+const MEDIA_CAPTURE_APIS = [
+  'assign_capture_session',
+  'create_capture_session',
+  'get_capture_item_record',
+  'get_capture_session_record',
+  'list_capture_sessions',
+  'promote_capture_item',
+  'record_capture_duplicate_evidence',
+  'record_capture_item_custody',
+  'record_capture_item_observation',
+  'record_capture_item_verification',
+  'record_capture_source_observation',
+  'register_capture_item',
+  'register_capture_source'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
@@ -142,7 +158,8 @@ const ALL_RUNTIME_APIS = [
   ...JOB_SERVICE_APIS,
   ...MISSION_PLAN_APIS,
   ...MEDIA_ASSET_APIS,
-  ...MEDIA_OPERATION_APIS
+  ...MEDIA_OPERATION_APIS,
+  ...MEDIA_CAPTURE_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -350,6 +367,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0010_mission_plan_foundation.sql',
       '0011_media_asset_identity_and_lineage_foundation.sql'
       ,'0012_durable_media_operations_reconciliation_foundation.sql'
+      ,'0013_capture_session_ingest_custody_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -371,6 +389,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0010_mission_plan_foundation.sql',
       '0011_media_asset_identity_and_lineage_foundation.sql'
       ,'0012_durable_media_operations_reconciliation_foundation.sql'
+      ,'0013_capture_session_ingest_custody_foundation.sql'
     ]);
   });
 
@@ -770,7 +789,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(146);
+      expect(searchPaths.rows).toHaveLength(161);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }
