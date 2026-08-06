@@ -1,24 +1,23 @@
-# BUILD_STATE.md — ML-PLATFORM-V2-P02-M07-A-MISSION-PLAN-FOUNDATION-R01
+# BUILD_STATE.md — ML-PLATFORM-V2-P02-M08-A-MEDIA-ASSET-IDENTITY-LINEAGE-R01
 
-- **Current Milestone:** P02-M07-A — Mission Plan Foundation
+- **Current Milestone:** P02-M08-A — Media Asset Identity and Lineage Foundation
 - **Status:** Candidate / Locally Validated / Unstaged / Uncommitted / Unpushed
-- **Git Branch:** `platform-v2-p02-m07-a-mission-plan-foundation-r01`
-- **Workspace:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M07-A-Mission-Plan-Foundation`
-- **Base Commit:** `58cf68d365624d60d8bffa84cbd6d787725c4fc9`
-- **Base Tree:** `fd0b03133ed30b1609b9b7fa63637ee10bdb88a9`
-- **Migration:** `0010_mission_plan_foundation.sql` (83,612 bytes; SHA-256: `2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3`)
-- **Predecessor Law:** Migrations `0001` through `0009` remain byte-identical; accepted `0009` SHA-256 remains `188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66`.
-- **Identity Law:** Exactly one Mission Plan may attach to one canonical Job-Appointment relationship. Composite foreign keys preserve organization, Order, Property Hub, Job, Appointment, and relationship consistency.
-- **Draft Law:** One controlled mutable draft stores versioned structured content, attributable weather state, a monotonically increasing generation, and a server-computed source fingerprint. Direct runtime table mutation is denied.
-- **Selection Law:** Draft creation defaults every eligible nonterminal Workstream for the linked Job. Staff may replace that set explicitly; missing, terminal, cross-Job, and cross-tenant selections are rejected.
-- **Issuance Law:** Issuance requires a fresh source fingerprint and at least one eligible Workstream. Issued versions are sequential, immutable, and supersede by reference without overwriting predecessor evidence.
-- **Canonical JSON Law:** Issuance constructs a deterministic JSONB snapshot with a schema version, relationship evidence, content, weather, frozen Workstreams, historical contact snapshots, incorporated notes, and protected-envelope metadata. SHA-256 is calculated from stored JSONB text and verified after readback.
-- **Visibility Law:** Content, contacts, and notes use exactly `INTERNAL_STAFF_ONLY`, `ASSIGNED_CREW_ONLY`, or `POTENTIALLY_CUSTOMER_VISIBLE`. Ordinary projections filter staff-only evidence from assigned crew.
-- **Protected-Envelope Law:** The database stores provider-neutral opaque ciphertext plus envelope format, algorithm, key reference, nonce/IV metadata, ciphertext hash, optional trusted payload hash, actor, timestamp, and classification. It performs no encryption, decryption, or key management; ordinary projections and canonical JSON contain no ciphertext.
-- **Contact and Weather Law:** Contact evidence freezes historical submitted/normalized values while retaining canonical Person and Contact Method references. Weather is `AVAILABLE`, attributable `UNAVAILABLE`, or `NOT_REQUESTED`.
-- **Append-Only Law:** Issued versions and frozen children, sensitive envelopes, attributable notes, lifecycle events, open/acknowledgement events, and idempotency records reject UPDATE and DELETE.
-- **Validity Law:** Opening and acknowledgement are attributable append-only evidence and do not determine Mission Plan validity.
-- **Authority Boundary:** Commands derive actors from ordinary authenticated sessions, enforce active organization authority, and use actor-scoped idempotency keys. Restricted runtime receives EXECUTE only on thirteen Mission Plan commands/projections, no direct table or sequence authority, and no helper authority. `PUBLIC` receives none.
-- **Synthetic Evidence:** Deterministic fixtures add only `mission_plan.manage`, `mission_plan.read`, and `mission_plan.sensitive_read`; no Mission Plan, Job, Appointment, Workstream, contact selection, envelope, note, or event is fabricated by seed.
+- **Git Branch:** `platform-v2-p02-m08-a-media-asset-identity-lineage-r01`
+- **Workspace:** `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-P02-M08-A-Media-Asset-Identity-Lineage`
+- **Base Commit:** `43f1fc33963b8912599c872c82f276e9163fdd31`
+- **Base Tree:** `3d6754307c831bf1c5b2a4805008b4d4a06c0ba3`
+- **Migration:** `0011_media_asset_identity_and_lineage_foundation.sql` (final size and SHA-256 recorded in the frozen review manifest)
+- **Predecessor Law:** Migrations `0001` through `0010` remain byte-identical; accepted `0010` SHA-256 remains `2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3`.
+- **Logical Identity Law:** A logical media asset is organization-, Job-, and optionally Workstream-scoped. Its UUID is independent of filename, location, provider, machine, and current version.
+- **Version Law:** Every file state is a distinct immutable version. The first version is `ORIGINAL`; later originals are rejected; no version overwrites its predecessor.
+- **Lineage Law:** Source/derivative, parent/child, replacement, supersession, editor-return correction, and approved-final-source relationships remain append-only and inspectable.
+- **Capture Relationship Law:** HDR brackets, capture groups, JPEG/RAW pairs, drone JPEG/DNG pairs, related captures, and selected-media evidence relate distinct physical file versions without collapsing them.
+- **Storage Law:** Storage-object identity and observed locations are separate append-only evidence. Movement changes location evidence, not logical asset identity.
+- **Evidence Law:** Verification states, checksums, byte sizes, media types, movement attempts, failures, retries, conflicts, and receipts remain attributable and append-only.
+- **Approved Source Law:** `ACCEPTED_VERSION`, `FINAL_SOURCE`, `USE_ORIGINAL`, `SKIP_QUICK_EDIT`, and `REPLACEMENT_SOURCE` designations are append-only and may explicitly supersede earlier same-purpose designations.
+- **Manifest Law:** Versioned manifests use deterministic ordering, store canonical JSONB, preserve the full packet evidence graph, and verify SHA-256 after database readback. Credential-bearing JSON keys and signed provider-reference patterns are rejected.
+- **Authority Boundary:** Ordinary sessions derive the actor; actor-scoped idempotency protects commands. Restricted runtime receives EXECUTE only on twelve controlled media commands/projections, no direct table or sequence authority, and no helper authority. `PUBLIC` receives none.
+- **Synthetic Evidence:** Seed adds only `media_asset.manage` and `media_asset.read`; no media, ingest, storage, transfer, or manifest records are fabricated by seed.
+- **Isolated Test Environment:** Dedicated database `medialab_p02m08a_test`, roles `medialab_p02m08a_test_owner` / `medialab_p02m08a_test_app`, socket `/tmp/mlvs01-p02m08a-pg`, and port `55438`.
 - **Preserved Recovery Intent Law:** `START_FRESH records recovery intent for the same Person and Identity while preserving existing history`; it does not delete `memberships, contacts, orders, payments, historical evidence, or profile/preferences data`. `Actual profile/preferences reset behavior remains deferred until those models exist`.
-- **Excluded Capability:** No gear field, placeholder, table, relationship, or speculative extension exists. Capture Sessions, ingest, assets, billing, publication, delivery, UI, integrations, production configuration, deployment, dual-run, and cutover remain excluded.
+- **Excluded Capability:** No real media, ingest, scan, culling UI, editor workflow, Quick Edit execution, Desktop Engine, operational Drive flow, provider I/O, API route, web UI, delivery, publication, deployment, production configuration, or production migration exists in this candidate.

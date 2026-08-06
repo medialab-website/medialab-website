@@ -9,11 +9,11 @@ import {
   CURRENT_CATALOG_SOURCE_URL
 } from '../db/fixtures/current-real-estate-catalog-seed.js';
 
-const TEST_DB = 'medialab_p02m04a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
-const TEST_PORT = 55432;
+const TEST_DB = 'medialab_p02m08a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m08a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m08a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
+const TEST_PORT = 55438;
 const EFFECTIVE_AT = '2026-08-04T00:00:00.000Z';
 
 describe('P02-M03-B real current MediaLab real-estate catalog', () => {

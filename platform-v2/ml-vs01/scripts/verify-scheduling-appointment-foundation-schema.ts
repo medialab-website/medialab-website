@@ -4,16 +4,17 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
+import { P02_M08_A_ALLOWLIST } from './p02-m08-a-changed-files.js';
 
 console.log('Running verify-scheduling-appointment-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
-const TEST_PORT = 55432;
-const TEST_DB = 'medialab_p02m04a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
+const TEST_PORT = 55438;
+const TEST_DB = 'medialab_p02m08a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m08a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m08a_test_app';
 let errors = false;
 
 const predecessorMigrations = [
@@ -90,37 +91,7 @@ const packetTriggers = [
   ['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time']
 ];
 
-const allowedPaths = [
-  'platform-v2/ml-vs01/BUILD_STATE.md',
-  'platform-v2/ml-vs01/CHANGED_FILES.md',
-  'platform-v2/ml-vs01/db/fixtures/mission-plan-foundation-fixtures.ts',
-  'platform-v2/ml-vs01/db/migrate.ts',
-  'platform-v2/ml-vs01/db/migrations/0010_mission_plan_foundation.sql',
-  'platform-v2/ml-vs01/db/migrations/README.md',
-  'platform-v2/ml-vs01/db/reset-test-database.ts',
-  'platform-v2/ml-vs01/db/seed.ts',
-  'platform-v2/ml-vs01/package.json',
-  'platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts',
-  'platform-v2/ml-vs01/scripts/verify-job-service-workstream-foundation-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
-  'platform-v2/ml-vs01/scripts/verify-mission-plan-foundation-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-property-hub-foundation-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts',
-  'platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts',
-  'platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts',
-  'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
-  'platform-v2/ml-vs01/tests/job-service-workstream-foundation.test.ts',
-  'platform-v2/ml-vs01/tests/migration-engine.test.ts',
-  'platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts',
-  'platform-v2/ml-vs01/tests/order-foundation.test.ts',
-  'platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts',
-  'platform-v2/ml-vs01/tests/property-hub-foundation.test.ts',
-  'platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts',
-  'platform-v2/ml-vs01/tests/scheduling-appointment-foundation.test.ts',
-  'platform-v2/ml-vs01/tests/test-database-reset.test.ts'
-].sort();
+const allowedPaths = [...P02_M08_A_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -204,13 +175,13 @@ try {
   const expectedLedger = [
     ...predecessorMigrations.map(([filename, sha256]) => ({ filename, sha256 })),
     { filename: packetMigration, sha256: packetHash },
-    ...['0009_job_and_service_workstream_foundation.sql', '0010_mission_plan_foundation.sql'].map((filename) => ({
+    ...['0009_job_and_service_workstream_foundation.sql', '0010_mission_plan_foundation.sql', '0011_media_asset_identity_and_lineage_foundation.sql'].map((filename) => ({
       filename,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations', filename))).digest('hex')
     }))
   ];
   if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) {
-    fail(`Ten-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
+    fail(`Eleven-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
   }
 
   const tables = await client.query(

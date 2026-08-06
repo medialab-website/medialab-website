@@ -5,10 +5,10 @@ import crypto from 'crypto';
 
 describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m04a-pg',
-    port: 55432,
-    database: 'medialab_p02m04a_test',
-    user: 'medialab_p02m04a_test_owner'
+    host: '/tmp/mlvs01-p02m08a-pg',
+    port: 55438,
+    database: 'medialab_p02m08a_test',
+    user: 'medialab_p02m08a_test_owner'
   });
 
   afterAll(async () => {
@@ -19,7 +19,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(10);
+        expect(res.rows).toHaveLength(11);
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
         expect(res.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -42,6 +42,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         expect(res.rows[7].sha256).toMatch(/^[0-9a-f]{64}$/);
         expect(res.rows[8].filename).toBe('0009_job_and_service_workstream_foundation.sql');
         expect(res.rows[9].filename).toBe('0010_mission_plan_foundation.sql');
+        expect(res.rows[10].filename).toBe('0011_media_asset_identity_and_lineage_foundation.sql');
         expect(res.rows[8].sha256).toMatch(/^[0-9a-f]{64}$/);
       });
 
@@ -52,7 +53,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
           ORDER BY tablename
         `);
         expect(res.rows).toHaveLength(2);
-        const expectedOwner = env === 'test' ? 'medialab_p02m04a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m08a_test_owner' : 'medialab_p02m04a_owner';
         expect(res.rows[0].tableowner).toBe(expectedOwner);
         expect(res.rows[1].tableowner).toBe(expectedOwner);
       });
@@ -373,9 +374,9 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         people: 3,
         identities: 2,
         memberships: 3,
-        permissions: 16,
+        permissions: 18,
         permission_sets: 1,
-        permission_set_permissions: 16,
+        permission_set_permissions: 18,
         membership_permission_sets: 1,
         development_sessions: 1
       };

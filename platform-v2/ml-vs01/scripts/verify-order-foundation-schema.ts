@@ -4,17 +4,18 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
+import { P02_M08_A_ALLOWLIST } from './p02-m08-a-changed-files.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS, ORDER_FOUNDATION_SOURCE } from '../db/fixtures/order-foundation-fixtures.js';
 
 console.log('Running verify-order-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
-const TEST_PORT = 55432;
-const TEST_DB = 'medialab_p02m04a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
+const TEST_PORT = 55438;
+const TEST_DB = 'medialab_p02m08a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m08a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m08a_test_app';
 let errors = false;
 
 const expectedMigrations = [
@@ -55,33 +56,7 @@ const packetTriggers = [
   ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation']
 ];
 
-const allowedPaths = [
-  'platform-v2/ml-vs01/BUILD_STATE.md',
-  'platform-v2/ml-vs01/CHANGED_FILES.md',
-  'platform-v2/ml-vs01/db/fixtures/order-foundation-fixtures.ts',
-  'platform-v2/ml-vs01/db/migrate.ts',
-  'platform-v2/ml-vs01/db/migrations/0006_orders_and_immutable_commercial_evidence.sql',
-  'platform-v2/ml-vs01/db/migrations/README.md',
-  'platform-v2/ml-vs01/db/reset-test-database.ts',
-  'platform-v2/ml-vs01/db/seed.ts',
-  'platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-current-catalog-price-reconstruction-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-migration-engine.ts',
-  'platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts',
-  'platform-v2/ml-vs01/scripts/verify-runtime.ts',
-  'platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts',
-  'platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts',
-  'platform-v2/ml-vs01/tests/current-real-estate-catalog.test.ts',
-  'platform-v2/ml-vs01/tests/foundation-fixtures.test.ts',
-  'platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts',
-  'platform-v2/ml-vs01/tests/migration-engine.test.ts',
-  'platform-v2/ml-vs01/tests/order-foundation.test.ts',
-  'platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts',
-  'platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts',
-  'platform-v2/ml-vs01/tests/test-database-reset.test.ts'
-].sort();
+const allowedPaths = [...P02_M08_A_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);

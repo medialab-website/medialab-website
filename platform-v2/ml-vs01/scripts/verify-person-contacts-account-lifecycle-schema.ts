@@ -178,7 +178,8 @@ const migrationsDir = path.join(baseDir, 'db/migrations');
 const migrationFiles = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql')).sort();
 exactNames('Canonical migration inventory', migrationFiles, [
   ...expectedMigrations.map((entry) => entry.filename),
-  '0010_mission_plan_foundation.sql'
+  '0010_mission_plan_foundation.sql',
+  '0011_media_asset_identity_and_lineage_foundation.sql'
 ]);
 for (const expected of expectedMigrations) {
   const bytes = fs.readFileSync(path.join(migrationsDir, expected.filename));

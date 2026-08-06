@@ -6,11 +6,11 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_p02m04a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m04a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m04a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m04a-pg';
-const TEST_PORT = 55432;
+const TEST_DB = 'medialab_p02m08a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m08a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m08a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m08a-pg';
+const TEST_PORT = 55438;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -100,6 +100,21 @@ const MISSION_PLAN_APIS = [
   'revise_mission_plan_draft'
 ];
 
+const MEDIA_ASSET_APIS = [
+  'add_media_asset_version',
+  'create_media_asset',
+  'create_media_manifest',
+  'designate_media_approved_source',
+  'get_media_asset_record',
+  'get_media_manifest',
+  'record_media_capture_relationship',
+  'record_media_lineage',
+  'record_media_location_observation',
+  'record_media_storage_object',
+  'record_media_transfer_event',
+  'record_media_verification_event'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
@@ -108,7 +123,8 @@ const ALL_RUNTIME_APIS = [
   ...PROPERTY_HUB_APIS,
   ...SCHEDULING_APIS,
   ...JOB_SERVICE_APIS,
-  ...MISSION_PLAN_APIS
+  ...MISSION_PLAN_APIS,
+  ...MEDIA_ASSET_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -301,7 +317,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
     );
   }
 
-  it('1 & 2. fresh reset applies 0001 through 0010 and an identical rerun skips all ten', async () => {
+  it('1 & 2. fresh reset applies 0001 through 0011 and an identical rerun skips all eleven', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
     expect(ledger.rows.map((row) => row.filename)).toEqual([
       '0001_identity_and_tenancy.sql',
@@ -313,7 +329,8 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0007_property_hub_foundation.sql',
       '0008_scheduling_request_and_appointment_foundation.sql',
       '0009_job_and_service_workstream_foundation.sql',
-      '0010_mission_plan_foundation.sql'
+      '0010_mission_plan_foundation.sql',
+      '0011_media_asset_identity_and_lineage_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -332,7 +349,8 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       '0007_property_hub_foundation.sql',
       '0008_scheduling_request_and_appointment_foundation.sql',
       '0009_job_and_service_workstream_foundation.sql',
-      '0010_mission_plan_foundation.sql'
+      '0010_mission_plan_foundation.sql',
+      '0011_media_asset_identity_and_lineage_foundation.sql'
     ]);
   });
 
@@ -732,7 +750,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(113);
+      expect(searchPaths.rows).toHaveLength(128);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }
