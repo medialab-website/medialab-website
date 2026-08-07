@@ -6,11 +6,11 @@ import { IDENTITY_FIXTURES, ORGANIZATION_FIXTURE, PERMISSION_SET_FIXTURE } from 
 import { ORDER_FOUNDATION_ORDER_ID } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m12a_test';
-const OWNER_ROLE = 'medialab_p02m12a_test_owner';
-const RUNTIME_ROLE = 'medialab_p02m12a_test_app';
-const SOCKET = '/tmp/mlvs01-p02m12a-pg';
-const PORT = 55442;
+const TEST_DB = 'medialab_p02m13a_test';
+const OWNER_ROLE = 'medialab_p02m13a_test_owner';
+const RUNTIME_ROLE = 'medialab_p02m13a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m13a-pg';
+const PORT = 55443;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M10_A_TEST';
 const HASH_A = crypto.createHash('sha256').update('synthetic-capture-item-a').digest('hex');
@@ -109,7 +109,7 @@ describe('P02-M10-A Capture Session, ingest, and custody foundation', () => {
 
   it('replays thirteen migrations with exact controlled grants, zero PUBLIC authority, and permission-only fixtures', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(15);
+    expect(ledger.rows).toHaveLength(16);
     expect(ledger.rows[12].filename).toBe('0013_capture_session_ingest_custody_foundation.sql');
     const functions = await owner.query(
       `SELECT p.proname, has_function_privilege($1,p.oid,'EXECUTE') AS runtime_execute,

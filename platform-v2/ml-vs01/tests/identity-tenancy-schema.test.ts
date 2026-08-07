@@ -7,6 +7,27 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'admit_returned_review_item',
+  'apply_returned_review_decision',
+  'associate_quick_edit_corrected_version',
+  'associate_returned_revision',
+  'complete_returned_review_batch',
+  'create_returned_review_batch',
+  'current_returned_review_final_designation',
+  'get_returned_review_batch',
+  'get_returned_review_history',
+  'get_returned_review_lineage',
+  'link_returned_review_successor',
+  'list_returned_review_batches',
+  'record_returned_review_decision',
+  'recompute_returned_review_current',
+  'reject_returned_review_evidence_mutation',
+  'require_returned_review_permission',
+  'returned_review_final_purpose',
+  'seal_returned_review_inventory',
+  'supersede_returned_review_decision',
+  'validate_returned_review_safe_json',
+  'validate_returned_review_text',
   'complete_editor_handoff_returns',
   'create_editor_handoff_batch',
   'create_returned_media_intake_batch',
@@ -226,6 +247,15 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['returned_quick_edit_requests_immutability_guard', 'returned_quick_edit_requests', 'reject_returned_review_evidence_mutation'],
+  ['returned_quick_edit_version_links_immutability_guard', 'returned_quick_edit_version_links', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_batch_events_immutability_guard', 'returned_review_batch_events', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_batches_immutability_guard', 'returned_review_batches', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_decisions_immutability_guard', 'returned_review_decisions', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_items_immutability_guard', 'returned_review_items', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_successor_links_immutability_guard', 'returned_review_successor_links', 'reject_returned_review_evidence_mutation'],
+  ['returned_revision_requests_immutability_guard', 'returned_revision_requests', 'reject_returned_review_evidence_mutation'],
+  ['returned_revision_version_links_immutability_guard', 'returned_revision_version_links', 'reject_returned_review_evidence_mutation'],
   ['editor_handoff_batches_immutability_guard', 'editor_handoff_batches', 'reject_editor_handoff_evidence_mutation'],
   ['editor_handoff_events_immutability_guard', 'editor_handoff_events', 'reject_editor_handoff_evidence_mutation'],
   ['editor_handoff_items_immutability_guard', 'editor_handoff_items', 'reject_editor_handoff_evidence_mutation'],
@@ -366,10 +396,10 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m12a-pg',
-    port: 55442,
-    database: 'medialab_p02m12a_test',
-    user: 'medialab_p02m12a_test_owner'
+    host: '/tmp/mlvs01-p02m13a-pg',
+    port: 55443,
+    database: 'medialab_p02m13a_test',
+    user: 'medialab_p02m13a_test_owner'
   });
 
   beforeAll(async () => {
@@ -391,9 +421,9 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m12a_test',
-      user: 'medialab_p02m12a_test_owner',
-      runtimeUser: 'medialab_p02m12a_test_app'
+      database: 'medialab_p02m13a_test',
+      user: 'medialab_p02m13a_test_owner',
+      runtimeUser: 'medialab_p02m13a_test_app'
     });
 
     expect(outTest.applied).toEqual([]);
@@ -413,6 +443,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0013_capture_session_ingest_custody_foundation.sql'
       ,'0014_media_cull_workspace_selected_media_evidence_foundation.sql'
       ,'0015_editor_handoff_returned_media_intake_foundation.sql'
+      ,'0016_returned_editor_review_final_source_decision_foundation.sql'
     ]);
   });
 
@@ -436,7 +467,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m12a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m13a_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -449,7 +480,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m12a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m13a_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
@@ -907,9 +938,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 26,
+      permissions: 28,
       permission_sets: 1,
-      permission_set_permissions: 26,
+      permission_set_permissions: 28,
       membership_permission_sets: 1,
       development_sessions: 1
     };

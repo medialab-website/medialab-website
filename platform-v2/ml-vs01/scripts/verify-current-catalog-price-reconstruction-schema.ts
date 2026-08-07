@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M12_A_ALLOWLIST } from './p02-m12-a-changed-files.js';
+import { P02_M13_A_ALLOWLIST } from './p02-m13-a-changed-files.js';
 import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
@@ -16,11 +16,11 @@ const baseDir = path.resolve(__dirname, '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m12a-pg';
-const TEST_PORT = 55442;
-const TEST_DB = 'medialab_p02m12a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m12a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m12a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m13a-pg';
+const TEST_PORT = 55443;
+const TEST_DB = 'medialab_p02m13a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m13a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m13a_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
@@ -37,7 +37,8 @@ const expectedMigrations = [
   ['0012_durable_media_operations_reconciliation_foundation.sql', '37ae08918b3fdd38ee9fbe2eb24dad3e252c2a58fca0db4171c493a081bb7a8f'],
   ['0013_capture_session_ingest_custody_foundation.sql', 'fb90823b98c56242dcbe4d148f63440d061ae0d7efcc652652c9feafa9be29fa'],
   ['0014_media_cull_workspace_selected_media_evidence_foundation.sql', 'f406c7c329f863f0b34c8a1b99259386dc89c7f26934073de08d01057df8569f'],
-  ['0015_editor_handoff_returned_media_intake_foundation.sql', '42a4b5381cbb1b434b2f1871e91fd5cc460d756d16df632c35dfc68b752c31c5']
+  ['0015_editor_handoff_returned_media_intake_foundation.sql', '42a4b5381cbb1b434b2f1871e91fd5cc460d756d16df632c35dfc68b752c31c5'],
+  ['0016_returned_editor_review_final_source_decision_foundation.sql', '192bf59bd11acd39355ae4682c9ac25d5430468f23465bc90e1f58366a613b57']
 ] as const;
 
 const packetTables = [
@@ -76,16 +77,16 @@ const runtimeFunctions = packetFunctions.filter((name) => ![
   'require_catalog_permission'
 ].includes(name));
 
-const allowedPaths = [...P02_M12_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M13_A_ALLOWLIST].sort();
 
 const metadataDigests = {
   columns: ['157', '7d702e90254f03aeb86b34ac0df51761e70a1c8ec9b488b21e0289702676d4cc'],
   constraints: ['140', 'dd481681b65ad91f55a825d9f0b1e15bcc27c34da7a9c43d44d2752ba55dce8f'],
   indexes: ['36', '4d3eaadeb44e18f3a159a7f6857d0cb906ff07dd5c2b7d4a6133d66cc47e8295'],
-  functions: ['13', '276951cf01b5c73303c1878cf8639330389966e3d7ea6f73dca11386a0490fdd'],
+  functions: ['13', '5ac2f179525c1dea291e6dfcece3fd6bc96a5ad70a6a4abe1f8fdd323f9f0172'],
   triggers: ['12', '65c47cb994d63be2d00dc247e985e200e9ed49d80449a09d2347b29787c90585'],
-  tableGrants: ['77', '0ced3d41779356699e2ba7ce9c95a05d62b1b8dc00925c1ffe15d9918b62b2cd'],
-  routineGrants: ['23', '7f009379f6e960ddaad83831d6836a2dfec0b5298574978ff3aeb1a76e7f3d00']
+  tableGrants: ['77', '88de0daaa903bb034d37262ffd31b4814c700247207af1c9a6f8d54f4c3e4d04'],
+  routineGrants: ['23', 'd37114ad5698aeaf4f66993f5e693abc303cc779e9d9c5af9c12ca813d4a788d']
 } as const;
 
 function fail(message: string): void {
@@ -115,7 +116,7 @@ exact('Canonical migration inventory', migrationFiles, expectedMigrations.map(([
 
 const packageHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package.json'))).digest('hex');
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package-lock.json'))).digest('hex');
-if (packageHash !== '1c8594b1abe9596518b407f043b765c774c8df76532f425d96118906fe938efc') {
+if (packageHash !== '4a2d4115e10ebdfbe9f22b908e18619dcab2170cbcfa507d28ca3ee37c5a13af') {
   fail(`package.json SHA-256 mismatch: ${packageHash}`);
 }
 if (lockHash !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') {
@@ -274,7 +275,7 @@ async function verifyDatabase(): Promise<void> {
       const result = await client.query(`SELECT count(*)::int AS count FROM medialab_core.${table}`);
       const canonicalCount = CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS[table as keyof typeof CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS] ?? 0;
       const orderCount = ORDER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof ORDER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0;
-      const additivePermissionCount = table === 'permissions' || table === 'permission_set_permissions' ? 19 : 0;
+      const additivePermissionCount = table === 'permissions' || table === 'permission_set_permissions' ? 21 : 0;
       if (result.rows[0].count !== expectedCount + canonicalCount + orderCount + additivePermissionCount) fail(`${table} fixture count mismatch: ${result.rows[0].count}`);
     }
 

@@ -14,13 +14,35 @@ import { MEDIA_OPERATION_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/
 import { MEDIA_CAPTURE_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/capture-session-ingest-custody-fixtures.js';
 import { MEDIA_CULL_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media-cull-workspace-selected-media-fixtures.js';
 import { MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/editor-handoff-returned-media-fixtures.js';
+import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/returned-editor-review-final-source-fixtures.js';
 
-const TEST_DB = 'medialab_p02m12a_test';
-const TEST_ROLE = 'medialab_p02m12a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m12a-pg';
-const TEST_PORT = 55442;
+const TEST_DB = 'medialab_p02m13a_test';
+const TEST_ROLE = 'medialab_p02m13a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m13a-pg';
+const TEST_PORT = 55443;
 
 const EXACT_ROUTINE_NAMES = [
+  'admit_returned_review_item',
+  'apply_returned_review_decision',
+  'associate_quick_edit_corrected_version',
+  'associate_returned_revision',
+  'complete_returned_review_batch',
+  'create_returned_review_batch',
+  'current_returned_review_final_designation',
+  'get_returned_review_batch',
+  'get_returned_review_history',
+  'get_returned_review_lineage',
+  'link_returned_review_successor',
+  'list_returned_review_batches',
+  'record_returned_review_decision',
+  'recompute_returned_review_current',
+  'reject_returned_review_evidence_mutation',
+  'require_returned_review_permission',
+  'returned_review_final_purpose',
+  'seal_returned_review_inventory',
+  'supersede_returned_review_decision',
+  'validate_returned_review_safe_json',
+  'validate_returned_review_text',
   'complete_editor_handoff_returns', 'create_editor_handoff_batch', 'create_returned_media_intake_batch',
   'create_returned_version_for_match', 'get_editor_handoff_batch', 'get_returned_media_history',
   'list_editor_handoff_batches', 'record_editor_handoff_event', 'record_returned_media_item',
@@ -218,6 +240,15 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['returned_quick_edit_requests_immutability_guard', 'returned_quick_edit_requests', 'reject_returned_review_evidence_mutation'],
+  ['returned_quick_edit_version_links_immutability_guard', 'returned_quick_edit_version_links', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_batch_events_immutability_guard', 'returned_review_batch_events', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_batches_immutability_guard', 'returned_review_batches', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_decisions_immutability_guard', 'returned_review_decisions', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_items_immutability_guard', 'returned_review_items', 'reject_returned_review_evidence_mutation'],
+  ['returned_review_successor_links_immutability_guard', 'returned_review_successor_links', 'reject_returned_review_evidence_mutation'],
+  ['returned_revision_requests_immutability_guard', 'returned_revision_requests', 'reject_returned_review_evidence_mutation'],
+  ['returned_revision_version_links_immutability_guard', 'returned_revision_version_links', 'reject_returned_review_evidence_mutation'],
   ['editor_handoff_batches_immutability_guard', 'editor_handoff_batches', 'reject_editor_handoff_evidence_mutation'],
   ['editor_handoff_events_immutability_guard', 'editor_handoff_events', 'reject_editor_handoff_evidence_mutation'],
   ['editor_handoff_items_immutability_guard', 'editor_handoff_items', 'reject_editor_handoff_evidence_mutation'],
@@ -450,7 +481,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(15);
+    expect(ledgerRes.rows).toHaveLength(16);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -472,6 +503,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[12].filename).toBe('0013_capture_session_ingest_custody_foundation.sql');
     expect(ledgerRes.rows[13].filename).toBe('0014_media_cull_workspace_selected_media_evidence_foundation.sql');
     expect(ledgerRes.rows[14].filename).toBe('0015_editor_handoff_returned_media_intake_foundation.sql');
+    expect(ledgerRes.rows[15].filename).toBe('0016_returned_editor_review_final_source_decision_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -507,6 +539,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

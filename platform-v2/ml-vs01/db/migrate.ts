@@ -39,6 +39,7 @@ const MEDIA_OPERATION_PACKET_MIGRATION = '0012_durable_media_operations_reconcil
 const CAPTURE_SESSION_PACKET_MIGRATION = '0013_capture_session_ingest_custody_foundation.sql';
 const MEDIA_CULL_PACKET_MIGRATION = '0014_media_cull_workspace_selected_media_evidence_foundation.sql';
 const EDITOR_HANDOFF_PACKET_MIGRATION = '0015_editor_handoff_returned_media_intake_foundation.sql';
+const RETURNED_REVIEW_PACKET_MIGRATION = '0016_returned_editor_review_final_source_decision_foundation.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -208,6 +209,22 @@ const EDITOR_HANDOFF_PUBLIC_FUNCTIONS = [
   'medialab_core.get_returned_media_history(text, uuid)'
 ];
 
+const RETURNED_REVIEW_PUBLIC_FUNCTIONS = [
+  'medialab_core.create_returned_review_batch(text, text, uuid, integer, text, jsonb)',
+  'medialab_core.admit_returned_review_item(text, text, uuid, uuid, bigint, jsonb)',
+  'medialab_core.seal_returned_review_inventory(text, text, uuid, bigint, text)',
+  'medialab_core.record_returned_review_decision(text, text, uuid, text, text, text, bigint)',
+  'medialab_core.supersede_returned_review_decision(text, text, uuid, uuid, text, text, text, bigint)',
+  'medialab_core.complete_returned_review_batch(text, text, uuid, bigint, text)',
+  'medialab_core.link_returned_review_successor(text, text, uuid, uuid, text)',
+  'medialab_core.associate_returned_revision(text, text, uuid, uuid, text)',
+  'medialab_core.associate_quick_edit_corrected_version(text, text, uuid, uuid, text)',
+  'medialab_core.get_returned_review_batch(text, uuid)',
+  'medialab_core.get_returned_review_history(text, uuid)',
+  'medialab_core.list_returned_review_batches(text, uuid, text)',
+  'medialab_core.get_returned_review_lineage(text, uuid)'
+];
+
 export function validateMigrationFilenames(filenames: string[]): void {
   const filenameRegex = /^[0-9]{4}_[a-z0-9_]+\.sql$/;
   const prefixes = new Set<string>();
@@ -271,7 +288,8 @@ async function applyRuntimePrivilegePolicy(
   includeMediaOperationFunctions = false,
   includeCaptureSessionFunctions = false,
   includeMediaCullFunctions = false,
-  includeEditorHandoffFunctions = false
+  includeEditorHandoffFunctions = false,
+  includeReturnedReviewFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -299,7 +317,8 @@ async function applyRuntimePrivilegePolicy(
       ...(includeMediaOperationFunctions ? MEDIA_OPERATION_PUBLIC_FUNCTIONS : []),
       ...(includeCaptureSessionFunctions ? CAPTURE_SESSION_PUBLIC_FUNCTIONS : []),
       ...(includeMediaCullFunctions ? MEDIA_CULL_PUBLIC_FUNCTIONS : []),
-      ...(includeEditorHandoffFunctions ? EDITOR_HANDOFF_PUBLIC_FUNCTIONS : [])
+      ...(includeEditorHandoffFunctions ? EDITOR_HANDOFF_PUBLIC_FUNCTIONS : []),
+      ...(includeReturnedReviewFunctions ? RETURNED_REVIEW_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -344,9 +363,9 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
       throw new Error('PGUSER is required as the migration owner role');
     }
     client = new pg.Client({
-      host: options.host || process.env.PGHOST || '/tmp/mlvs01-p02m12a-pg',
-      port: options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55442),
-      database: options.database || process.env.PGDATABASE || 'medialab_p02m12a_test',
+      host: options.host || process.env.PGHOST || '/tmp/mlvs01-p02m13a-pg',
+      port: options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55443),
+      database: options.database || process.env.PGDATABASE || 'medialab_p02m13a_test',
       user: migrationUser,
       password: options.password || process.env.PGPASSWORD || undefined
     });
@@ -460,6 +479,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === RETURNED_REVIEW_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -494,7 +517,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           sqlFiles.includes(MEDIA_OPERATION_PACKET_MIGRATION),
           sqlFiles.includes(CAPTURE_SESSION_PACKET_MIGRATION),
           sqlFiles.includes(MEDIA_CULL_PACKET_MIGRATION),
-          sqlFiles.includes(EDITOR_HANDOFF_PACKET_MIGRATION)
+          sqlFiles.includes(EDITOR_HANDOFF_PACKET_MIGRATION),
+          sqlFiles.includes(RETURNED_REVIEW_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {
@@ -516,7 +540,7 @@ const currentPath = fileURLToPath(import.meta.url);
 const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 
 if (scriptPath && currentPath === scriptPath) {
-  const targetDb = process.env.PGDATABASE || 'medialab_p02m12a_test';
+  const targetDb = process.env.PGDATABASE || 'medialab_p02m13a_test';
   const targetUser = process.env.PGUSER;
   const runtimeUser = process.env.PGRUNTIMEUSER;
 

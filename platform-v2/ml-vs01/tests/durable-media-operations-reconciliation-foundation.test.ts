@@ -6,11 +6,11 @@ import { IDENTITY_FIXTURES, ORGANIZATION_FIXTURE, PEOPLE_FIXTURES } from '../db/
 import { ORDER_FOUNDATION_ORDER_ID, ORDER_ITEM_FIXTURES } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m12a_test';
-const OWNER_ROLE = 'medialab_p02m12a_test_owner';
-const RUNTIME_ROLE = 'medialab_p02m12a_test_app';
-const SOCKET = '/tmp/mlvs01-p02m12a-pg';
-const PORT = 55442;
+const TEST_DB = 'medialab_p02m13a_test';
+const OWNER_ROLE = 'medialab_p02m13a_test_owner';
+const RUNTIME_ROLE = 'medialab_p02m13a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m13a-pg';
+const PORT = 55443;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M09_A_TEST';
 const VERSION_HASH = crypto.createHash('sha256').update('synthetic-operation-target').digest('hex');
@@ -111,7 +111,7 @@ describe('P02-M09-A Durable Media Operations and Reconciliation foundation', () 
 
   it('replays thirteen migrations and exposes only exact controlled commands and safe projections', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(15);
+    expect(ledger.rows).toHaveLength(16);
     expect(ledger.rows[10]).toEqual({
       filename: '0011_media_asset_identity_and_lineage_foundation.sql',
       sha256: '1b9fbde392d801ffc8fb0a00a461447cac855bae0046f1d433ac0360b8c15c80'

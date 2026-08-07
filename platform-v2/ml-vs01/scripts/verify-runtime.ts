@@ -20,7 +20,7 @@ if (!fs.existsSync(pgBinary)) {
 console.log(`PostgreSQL binary verified: ${pgBinary}`);
 
 // 3. Verify PostgreSQL cluster directory
-const pgDataDir = '/tmp/mlvs01-p02m12a-data';
+const pgDataDir = '/tmp/mlvs01-p02m13a-data';
 if (!fs.existsSync(pgDataDir)) {
   console.error(`ERROR: PostgreSQL cluster data directory not found at ${pgDataDir}`);
   process.exit(1);
@@ -28,23 +28,25 @@ if (!fs.existsSync(pgDataDir)) {
 console.log(`PostgreSQL cluster data dir verified: ${pgDataDir}`);
 
 // 4. Verify socket directory
-const socketDir = '/tmp/mlvs01-p02m12a-pg';
+const socketDir = '/tmp/mlvs01-p02m13a-pg';
 if (!fs.existsSync(socketDir)) {
   console.error(`ERROR: Approved socket directory not found at ${socketDir}`);
   process.exit(1);
 }
 console.log(`PostgreSQL socket dir verified: ${socketDir}`);
 
-// 5. Verify the packet-specific PostgreSQL listener is the only process on this packet port.
+// 5. Verify the packet-specific Unix-socket listener and its exact isolated data/database identity.
 try {
-  const lsof = execSync('lsof -i :55442 || true', { encoding: 'utf-8' }).trim();
-  const lines = lsof.split('\n').filter((line) => line.trim().length > 0);
-  if (lines.length < 2 || lines.slice(1).some((line) => !line.startsWith('postgres '))) {
-    console.error(`ERROR: Port 55442 is not exclusively owned by packet PostgreSQL:\n${lsof}`);
+  execSync('/Applications/Postgres.app/Contents/Versions/latest/bin/pg_isready -h /tmp/mlvs01-p02m13a-pg -p 55443 -d medialab_p02m13a_test', { encoding: 'utf-8' });
+  const identity = execSync(
+    "/Applications/Postgres.app/Contents/Versions/latest/bin/psql -h /tmp/mlvs01-p02m13a-pg -p 55443 -U medialab_p02m13a_test_owner -d medialab_p02m13a_test -Atc \"SELECT current_database()||'|'||current_user||'|'||current_setting('data_directory')\"",
+    { encoding: 'utf-8' }
+  ).trim();
+  if (identity !== 'medialab_p02m13a_test|medialab_p02m13a_test_owner|/tmp/mlvs01-p02m13a-data') {
+    console.error(`ERROR: Packet PostgreSQL identity mismatch: ${identity}`);
     process.exit(1);
   }
-  execSync('/Applications/Postgres.app/Contents/Versions/latest/bin/pg_isready -h /tmp/mlvs01-p02m12a-pg -p 55442 -d medialab_p02m12a_test', { encoding: 'utf-8' });
-  console.log('Packet-specific PostgreSQL listener verified on socket and port 55442.');
+  console.log('Packet-specific PostgreSQL Unix socket, port, database, owner, and data directory verified.');
 } catch (e) {
   console.error(`ERROR: Failed to verify packet-specific PostgreSQL listener: ${e}`);
   process.exit(1);

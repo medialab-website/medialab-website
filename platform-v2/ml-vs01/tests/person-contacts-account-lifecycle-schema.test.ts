@@ -6,11 +6,11 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_p02m12a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m12a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m12a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m12a-pg';
-const TEST_PORT = 55442;
+const TEST_DB = 'medialab_p02m13a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m13a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m13a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m13a-pg';
+const TEST_PORT = 55443;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -177,6 +177,22 @@ const MEDIA_EDITOR_HANDOFF_APIS = [
   'resolve_returned_media_match'
 ];
 
+const MEDIA_RETURN_REVIEW_APIS = [
+  'admit_returned_review_item',
+  'associate_quick_edit_corrected_version',
+  'associate_returned_revision',
+  'complete_returned_review_batch',
+  'create_returned_review_batch',
+  'get_returned_review_batch',
+  'get_returned_review_history',
+  'get_returned_review_lineage',
+  'link_returned_review_successor',
+  'list_returned_review_batches',
+  'record_returned_review_decision',
+  'seal_returned_review_inventory',
+  'supersede_returned_review_decision'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
@@ -190,7 +206,8 @@ const ALL_RUNTIME_APIS = [
   ...MEDIA_OPERATION_APIS,
   ...MEDIA_CAPTURE_APIS,
   ...MEDIA_CULL_APIS,
-  ...MEDIA_EDITOR_HANDOFF_APIS
+  ...MEDIA_EDITOR_HANDOFF_APIS,
+  ...MEDIA_RETURN_REVIEW_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -401,6 +418,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0013_capture_session_ingest_custody_foundation.sql'
       ,'0014_media_cull_workspace_selected_media_evidence_foundation.sql'
       ,'0015_editor_handoff_returned_media_intake_foundation.sql'
+      ,'0016_returned_editor_review_final_source_decision_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -425,6 +443,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0013_capture_session_ingest_custody_foundation.sql'
       ,'0014_media_cull_workspace_selected_media_evidence_foundation.sql'
       ,'0015_editor_handoff_returned_media_intake_foundation.sql'
+      ,'0016_returned_editor_review_final_source_decision_foundation.sql'
     ]);
   });
 
@@ -824,7 +843,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(188);
+      expect(searchPaths.rows).toHaveLength(205);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }
