@@ -13,10 +13,10 @@ import {
 } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15a_test';
-const OWNER = 'medialab_p02m15a_test_owner';
-const RUNTIME = 'medialab_p02m15a_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15a-pg';
+const TEST_DB = 'medialab_p02m15b_test';
+const OWNER = 'medialab_p02m15b_test_owner';
+const RUNTIME = 'medialab_p02m15b_test_app';
+const SOCKET = '/tmp/mlvs01-p02m15b-pg';
 const PORT = 55443;
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const ADMIN = IDENTITY_FIXTURES[0].id;
@@ -144,15 +144,16 @@ describe('P02-M15-A Temporary Download Center and external-sharing foundation', 
   beforeEach(reset);
   afterAll(async () => { await runtime.end(); await owner.end(); await reset(); });
 
-  it('replays 0018 with exact objects, permissions, controlled grants, and no runtime activity writer', async () => {
+  it('preserves 0018 exact objects and permissions under the 0019 trusted gateway-writer boundary', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(18);
+    expect(ledger.rows).toHaveLength(19);
     expect(ledger.rows[17].filename).toBe('0018_temporary_download_center_external_sharing_foundation.sql');
+    expect(ledger.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect((await owner.query("SELECT code FROM medialab_core.permissions WHERE code LIKE 'temporary_download_center.%' ORDER BY code")).rows.map(row => row.code)).toEqual([
       'temporary_download_center.activity.read', 'temporary_download_center.create', 'temporary_download_center.manage', 'temporary_download_center.read'
     ]);
     const tables = await owner.query("SELECT tablename FROM pg_tables WHERE schemaname='medialab_core' AND tablename LIKE 'temporary_download_center%' ORDER BY tablename");
-    expect(tables.rows.map(row => row.tablename)).toHaveLength(7);
+    expect(tables.rows.map(row => row.tablename)).toHaveLength(11);
     const observations = await owner.query("SELECT has_table_privilege($1,'medialab_core.temporary_download_center_access_observations','INSERT') i,has_table_privilege($1,'medialab_core.temporary_download_center_access_observations','UPDATE') u,has_table_privilege($1,'medialab_core.temporary_download_center_access_observations','DELETE') d", [RUNTIME]);
     expect(observations.rows[0]).toEqual({ i: false, u: false, d: false });
     const writers = await owner.query("SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='medialab_core' AND proname LIKE 'temporary_download_center%' AND (proname LIKE '%observation%' OR proname LIKE '%writer%')");

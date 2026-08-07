@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_A_ALLOWLIST } from './p02-m15-a-changed-files.js';
+import { P02_M15_B_ALLOWLIST } from './p02-m15-b-changed-files.js';
 import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
@@ -16,11 +16,11 @@ const baseDir = path.resolve(__dirname, '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
 const TEST_PORT = 55443;
-const TEST_DB = 'medialab_p02m15a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15a_test_app';
+const TEST_DB = 'medialab_p02m15b_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15b_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15b_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
@@ -40,7 +40,8 @@ const expectedMigrations = [
   ['0015_editor_handoff_returned_media_intake_foundation.sql', '42a4b5381cbb1b434b2f1871e91fd5cc460d756d16df632c35dfc68b752c31c5'],
   ['0016_returned_editor_review_final_source_decision_foundation.sql', '192bf59bd11acd39355ae4682c9ac25d5430468f23465bc90e1f58366a613b57'],
   ['0017_publication_delivery_entitlement_foundation.sql', '1df90da711216cef0b591c7d1b1b9d1e2fb73b6d18f59fa5f566827d52c9fe5b'],
-  ['0018_temporary_download_center_external_sharing_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0018_temporary_download_center_external_sharing_foundation.sql'))).digest('hex')]
+  ['0018_temporary_download_center_external_sharing_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0018_temporary_download_center_external_sharing_foundation.sql'))).digest('hex')],
+  ['0019_temporary_download_center_access_credential_gateway_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0019_temporary_download_center_access_credential_gateway_foundation.sql'))).digest('hex')]
 ] as const;
 
 const packetTables = [
@@ -79,16 +80,16 @@ const runtimeFunctions = packetFunctions.filter((name) => ![
   'require_catalog_permission'
 ].includes(name));
 
-const allowedPaths = [...P02_M15_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M15_B_ALLOWLIST].sort();
 
 const metadataDigests = {
   columns: ['157', '7d702e90254f03aeb86b34ac0df51761e70a1c8ec9b488b21e0289702676d4cc'],
   constraints: ['140', 'dd481681b65ad91f55a825d9f0b1e15bcc27c34da7a9c43d44d2752ba55dce8f'],
   indexes: ['36', '4d3eaadeb44e18f3a159a7f6857d0cb906ff07dd5c2b7d4a6133d66cc47e8295'],
-  functions: ['13', '977fb6bc92e9f448b23fa3ab627d7e32b71e5c0ec8c3236c52f294f37c249d67'],
+  functions: ['13', 'c3fcf4a7802e5efaf3f2afc2f9b4c15c190253aa3b1a9d6a114d3998820501ff'],
   triggers: ['12', '65c47cb994d63be2d00dc247e985e200e9ed49d80449a09d2347b29787c90585'],
-  tableGrants: ['77', '1e78554d8d14fcb9d6849aa04fba8ab0ea8dcf7786bbcbe9e3b4bcee85e67184'],
-  routineGrants: ['23', '7c90e96e43654d81ff69f40058c0c9e2250aa5a6c0ed609bd8fdfd9500809d32']
+  tableGrants: ['77', '241d0a0217b30718d915328838e03618aceda9f18bc41f45a64eaec814dd06e2'],
+  routineGrants: ['23', '3afac715dc42311e5a2a054c853a62da28de694375e2aa51f7a93aa98ad6a711']
 } as const;
 
 function fail(message: string): void {
@@ -118,7 +119,7 @@ exact('Canonical migration inventory', migrationFiles, expectedMigrations.map(([
 
 const packageHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package.json'))).digest('hex');
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package-lock.json'))).digest('hex');
-if (packageHash !== '1b523743a00ad3fc163a0777f866da716ac4e6c2c091ddbb099afc2ebf43f5d0') {
+if (packageHash !== 'cae5e1f0c5c575ecebf127fbe9154534215add64e6306250f91a5fbe75d73c8c') {
   fail(`package.json SHA-256 mismatch: ${packageHash}`);
 }
 if (lockHash !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') {

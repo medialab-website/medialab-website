@@ -1,19 +1,19 @@
-# P02-M15-A Changed Files
+# P02-M15-B Changed Files
 
-The uncommitted and unstaged candidate contains exactly the 53 paths exported by `scripts/p02-m15-a-changed-files.ts`.
+The uncommitted and unstaged candidate contains exactly the 55 paths exported by `scripts/p02-m15-b-changed-files.ts`.
 
-The bounded inventory is limited to migration 0018, permission-only fixtures, deterministic migration/seed/reset integration, packet verifiers and tests, and additive predecessor inventory updates. No public credential, URL, recipient access, download execution, UI, Desktop, provider adapter, deployment, production, byte-processing, payment settlement, notification, cleanup, or later-packet path is included.
+The bounded inventory is limited to migration 0019, no-operational-data fixture policy, deterministic migration/seed/reset integration, packet verifiers and tests, and additive predecessor inventory updates. No public webpage/route, URL, storage adapter, actual download, real credential/recipient, Desktop, provider, deployment, production, payment, notification, cleanup, or later-packet path is included.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
-- platform-v2/ml-vs01/db/fixtures/temporary-download-center-external-sharing-fixtures.ts
+- platform-v2/ml-vs01/db/fixtures/temporary-download-center-access-credential-gateway-fixtures.ts
 - platform-v2/ml-vs01/db/migrate.ts
-- platform-v2/ml-vs01/db/migrations/0018_temporary_download_center_external_sharing_foundation.sql
+- platform-v2/ml-vs01/db/migrations/0019_temporary_download_center_access_credential_gateway_foundation.sql
 - platform-v2/ml-vs01/db/migrations/README.md
 - platform-v2/ml-vs01/db/reset-test-database.ts
 - platform-v2/ml-vs01/db/seed.ts
 - platform-v2/ml-vs01/package.json
-- platform-v2/ml-vs01/scripts/p02-m15-a-changed-files.ts
+- platform-v2/ml-vs01/scripts/p02-m15-b-changed-files.ts
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
 - platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-changed-files.ts
@@ -35,6 +35,7 @@ The bounded inventory is limited to migration 0018, permission-only fixtures, de
 - platform-v2/ml-vs01/scripts/verify-runtime.ts
 - platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-external-sharing-schema.ts
+- platform-v2/ml-vs01/scripts/verify-temporary-download-center-access-credential-gateway-schema.ts
 - platform-v2/ml-vs01/tests/capture-session-ingest-custody-foundation.test.ts
 - platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts
 - platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts
@@ -56,4 +57,5 @@ The bounded inventory is limited to migration 0018, permission-only fixtures, de
 - platform-v2/ml-vs01/tests/returned-editor-review-final-source-foundation.test.ts
 - platform-v2/ml-vs01/tests/scheduling-appointment-foundation.test.ts
 - platform-v2/ml-vs01/tests/temporary-download-center-external-sharing-foundation.test.ts
+- platform-v2/ml-vs01/tests/temporary-download-center-access-credential-gateway-foundation.test.ts
 - platform-v2/ml-vs01/tests/test-database-reset.test.ts

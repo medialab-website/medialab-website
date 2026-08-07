@@ -19,10 +19,14 @@ import {
   SESSION_ISSUED_AT,
   SESSION_EXPIRES_AT
 } from '../db/fixtures/identity-tenancy-fixtures.js';
+import {
+  TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FIXTURE_POLICY,
+  TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FOUNDATION_FIXTURE_TABLES
+} from '../db/fixtures/temporary-download-center-access-credential-gateway-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15a_test';
-const TEST_ROLE = 'medialab_p02m15a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
+const TEST_DB = 'medialab_p02m15b_test';
+const TEST_ROLE = 'medialab_p02m15b_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
 const TEST_PORT = 55443;
 
 describe('P01C Foundation Fixtures & Seed Tests', () => {
@@ -107,6 +111,9 @@ describe('P01C Foundation Fixtures & Seed Tests', () => {
     expect(EXPECTED_ROW_COUNTS.permission_set_permissions).toBe(3);
     expect(EXPECTED_ROW_COUNTS.membership_permission_sets).toBe(1);
     expect(EXPECTED_ROW_COUNTS.development_sessions).toBe(1);
+    expect(TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FIXTURE_POLICY.usableSecretBytes).toBe(32);
+    expect(TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FIXTURE_POLICY.verifierAlgorithm).toBe('SHA256-HEX-V1');
+    expect(TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FOUNDATION_FIXTURE_TABLES).toHaveLength(0);
   });
 
   it('2. seed inserts fixture rows and second seed is an idempotent no-op', async () => {

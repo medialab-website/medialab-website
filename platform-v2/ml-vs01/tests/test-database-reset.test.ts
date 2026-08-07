@@ -18,12 +18,24 @@ import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtu
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15a_test';
-const TEST_ROLE = 'medialab_p02m15a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
+const TEST_DB = 'medialab_p02m15b_test';
+const TEST_ROLE = 'medialab_p02m15b_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
 const TEST_PORT = 55443;
 
 const EXACT_ROUTINE_NAMES = [
+  'evaluate_temporary_download_center_gateway_access',
+  'get_temporary_download_center_access_credential_history',
+  'get_temporary_download_center_gateway_history',
+  'guard_tdc_access_credential_current_mutation',
+  'issue_temporary_download_center_access_credential',
+  'reject_tdc_access_credential_evidence_mutation',
+  'revoke_temporary_download_center_access_credential',
+  'rotate_temporary_download_center_access_credential',
+  'temporary_download_center_current_policy',
+  'validate_tdc_access_credential_scope',
+  'validate_temporary_download_center_gateway_json',
+  'validate_temporary_download_center_gateway_text',
   'create_temporary_download_center',
   'evaluate_temporary_download_center_policy',
   'get_temporary_download_center',
@@ -273,8 +285,13 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['tdc_access_credential_current_control_guard', 'temporary_download_center_access_credential_current', 'guard_tdc_access_credential_current_mutation'],
+  ['tdc_access_credential_events_immutability_guard', 'temporary_download_center_access_credential_events', 'reject_tdc_access_credential_evidence_mutation'],
+  ['tdc_access_credentials_immutability_guard', 'temporary_download_center_access_credentials', 'reject_tdc_access_credential_evidence_mutation'],
+  ['tdc_access_credentials_scope_guard', 'temporary_download_center_access_credentials', 'validate_tdc_access_credential_scope'],
   ['temporary_download_center_observations_immutability_guard', 'temporary_download_center_access_observations', 'reject_temporary_download_center_evidence_mutation'],
   ['temporary_download_center_events_immutability_guard', 'temporary_download_center_events', 'reject_temporary_download_center_evidence_mutation'],
+  ['tdc_gateway_evaluations_immutability_guard', 'temporary_download_center_gateway_evaluations', 'reject_tdc_access_credential_evidence_mutation'],
   ['temporary_download_center_items_immutability_guard', 'temporary_download_center_items', 'reject_temporary_download_center_evidence_mutation'],
   ['temporary_download_center_selections_immutability_guard', 'temporary_download_center_selections', 'reject_temporary_download_center_evidence_mutation'],
   ['temporary_download_center_versions_immutability_guard', 'temporary_download_center_versions', 'reject_temporary_download_center_evidence_mutation'],
@@ -527,7 +544,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(18);
+    expect(ledgerRes.rows).toHaveLength(19);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -552,6 +569,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[15].filename).toBe('0016_returned_editor_review_final_source_decision_foundation.sql');
     expect(ledgerRes.rows[16].filename).toBe('0017_publication_delivery_entitlement_foundation.sql');
     expect(ledgerRes.rows[17].filename).toBe('0018_temporary_download_center_external_sharing_foundation.sql');
+    expect(ledgerRes.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.

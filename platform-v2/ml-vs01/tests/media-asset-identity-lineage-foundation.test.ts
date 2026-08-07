@@ -6,10 +6,10 @@ import { IDENTITY_FIXTURES, ORGANIZATION_FIXTURE } from '../db/fixtures/identity
 import { ORDER_FOUNDATION_ORDER_ID, ORDER_ITEM_FIXTURES } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15a_test';
-const OWNER_ROLE = 'medialab_p02m15a_test_owner';
-const RUNTIME_ROLE = 'medialab_p02m15a_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15a-pg';
+const TEST_DB = 'medialab_p02m15b_test';
+const OWNER_ROLE = 'medialab_p02m15b_test_owner';
+const RUNTIME_ROLE = 'medialab_p02m15b_test_app';
+const SOCKET = '/tmp/mlvs01-p02m15b-pg';
 const PORT = 55443;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M08_A_TEST';
@@ -94,7 +94,7 @@ describe('P02-M08-A Media Asset Identity and Lineage foundation', () => {
 
   it('replays thirteen migrations, preserves 0010 and 0011, and exposes only the controlled runtime inventory', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(18);
+    expect(ledger.rows).toHaveLength(19);
     expect(ledger.rows[9]).toEqual({
       filename: '0010_mission_plan_foundation.sql',
       sha256: '2342a7935a27534a4e45233162d35b8b4200839ac0b3fb8394d19015521629c3'

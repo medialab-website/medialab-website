@@ -15,10 +15,10 @@ describe('Migration Engine Substantive Behavior', () => {
 
   beforeAll(async () => {
     client = new pg.Client({
-      host: '/tmp/mlvs01-p02m15a-pg',
+      host: '/tmp/mlvs01-p02m15b-pg',
       port: 55443,
-      database: 'medialab_p02m15a_test',
-      user: 'medialab_p02m15a_test_owner'
+      database: 'medialab_p02m15b_test',
+      user: 'medialab_p02m15b_test_owner'
     });
     await client.connect();
   });
@@ -207,13 +207,14 @@ describe('Migration Engine Substantive Behavior', () => {
       ,'0016_returned_editor_review_final_source_decision_foundation.sql'
       ,'0017_publication_delivery_entitlement_foundation.sql'
       ,'0018_temporary_download_center_external_sharing_foundation.sql'
+      ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
     ]);
   });
 
   it('11. verifies canonical test database contains ledger rows and domain tables', async () => {
     const devRes = await client.query('SELECT COUNT(*)::int AS cnt, MAX(filename) AS fname FROM medialab_meta.schema_migrations;');
-    expect(devRes.rows[0].cnt).toBe(18);
-    expect(devRes.rows[0].fname).toBe('0018_temporary_download_center_external_sharing_foundation.sql');
+    expect(devRes.rows[0].cnt).toBe(19);
+    expect(devRes.rows[0].fname).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
 
     const tablesRes = await client.query(
       "SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core' ORDER BY tablename;"

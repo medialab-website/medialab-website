@@ -16,10 +16,10 @@ import {
   PROPERTY_HUB_SECOND_ORDER_ITEM_FIXTURE
 } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
+const TEST_DB = 'medialab_p02m15b_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15b_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15b_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
 const TEST_PORT = 55443;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M06_A_TEST';
@@ -169,7 +169,7 @@ describe('P02-M06-A provider-neutral Job and Service Workstream foundation', () 
 
   it('1. applies ten immutable migrations while preserving the canonical 0009 predecessor', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(18);
+    expect(ledger.rows).toHaveLength(19);
     expect(ledger.rows[8]).toMatchObject({ filename: '0009_job_and_service_workstream_foundation.sql' });
     expect(ledger.rows[8].sha256).toMatch(/^[0-9a-f]{64}$/);
   });

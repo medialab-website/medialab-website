@@ -4,18 +4,18 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_A_ALLOWLIST } from './p02-m15-a-changed-files.js';
+import { P02_M15_B_ALLOWLIST } from './p02-m15-b-changed-files.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS, ORDER_FOUNDATION_SOURCE } from '../db/fixtures/order-foundation-fixtures.js';
 
 console.log('Running verify-order-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
 const TEST_PORT = 55443;
-const TEST_DB = 'medialab_p02m15a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15a_test_app';
+const TEST_DB = 'medialab_p02m15b_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15b_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15b_test_app';
 let errors = false;
 
 const expectedMigrations = [
@@ -36,7 +36,8 @@ const expectedMigrations = [
   ['0015_editor_handoff_returned_media_intake_foundation.sql', '42a4b5381cbb1b434b2f1871e91fd5cc460d756d16df632c35dfc68b752c31c5'],
   ['0016_returned_editor_review_final_source_decision_foundation.sql', '192bf59bd11acd39355ae4682c9ac25d5430468f23465bc90e1f58366a613b57'],
   ['0017_publication_delivery_entitlement_foundation.sql', '1df90da711216cef0b591c7d1b1b9d1e2fb73b6d18f59fa5f566827d52c9fe5b'],
-  ['0018_temporary_download_center_external_sharing_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0018_temporary_download_center_external_sharing_foundation.sql'))).digest('hex')]
+  ['0018_temporary_download_center_external_sharing_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0018_temporary_download_center_external_sharing_foundation.sql'))).digest('hex')],
+  ['0019_temporary_download_center_access_credential_gateway_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0019_temporary_download_center_access_credential_gateway_foundation.sql'))).digest('hex')]
 ] as const;
 
 const packetTables = [
@@ -68,7 +69,7 @@ const packetTriggers = [
   ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation']
 ];
 
-const allowedPaths = [...P02_M15_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M15_B_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -91,7 +92,7 @@ for (const [filename, expectedHash] of expectedMigrations) {
 
 const packageHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package.json'))).digest('hex');
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package-lock.json'))).digest('hex');
-if (packageHash !== '1b523743a00ad3fc163a0777f866da716ac4e6c2c091ddbb099afc2ebf43f5d0') fail(`package.json SHA-256 mismatch: ${packageHash}`);
+if (packageHash !== 'cae5e1f0c5c575ecebf127fbe9154534215add64e6306250f91a5fbe75d73c8c') fail(`package.json SHA-256 mismatch: ${packageHash}`);
 if (lockHash !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') fail(`package-lock.json SHA-256 mismatch: ${lockHash}`);
 
 const migrationText = fs.readFileSync(path.join(baseDir, 'db/migrations/0006_orders_and_immutable_commercial_evidence.sql'), 'utf8');
