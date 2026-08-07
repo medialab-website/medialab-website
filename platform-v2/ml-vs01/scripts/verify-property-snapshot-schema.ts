@@ -31,7 +31,7 @@ for (const relPath of requiredFiles) {
 const migrationsDir = path.join(baseDir, 'db/migrations');
 const migrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
 if (
-  migrations.length !== 19 ||
+  migrations.length !== 20 ||
   migrations[0] !== '0001_identity_and_tenancy.sql' ||
   migrations[1] !== '0002_property_identity_and_snapshots.sql' ||
   migrations[2] !== '0003_person_contacts_and_account_lifecycle.sql' ||
@@ -50,7 +50,8 @@ if (
   migrations[15] !== '0016_returned_editor_review_final_source_decision_foundation.sql' ||
   migrations[16] !== '0017_publication_delivery_entitlement_foundation.sql' ||
   migrations[17] !== '0018_temporary_download_center_external_sharing_foundation.sql' ||
-  migrations[18] !== '0019_temporary_download_center_access_credential_gateway_foundation.sql'
+  migrations[18] !== '0019_temporary_download_center_access_credential_gateway_foundation.sql' ||
+  migrations[19] !== '0020_disposable_delivery_surface_local_fixture_foundation.sql'
 ) {
   console.error(`ERROR: Unexpected migration inventory: ${migrations.join(', ')}`);
   errors = true;
@@ -75,7 +76,7 @@ if (m2Sha256 !== 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a
 const lockFile = path.join(baseDir, 'package-lock.json');
 const lockContent = fs.readFileSync(lockFile);
 const lockSha256 = crypto.createHash('sha256').update(lockContent).digest('hex').toLowerCase();
-if (lockSha256 !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') {
+if (lockSha256 !== '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a') {
   console.error(`ERROR: package-lock.json SHA256 mismatch. Got: ${lockSha256}`);
   errors = true;
 }

@@ -6,11 +6,11 @@ import {
   CURRENT_REAL_ESTATE_PRODUCTS_BY_CODE
 } from '../db/fixtures/current-real-estate-catalog-seed.js';
 
-const TEST_DB = 'medialab_p02m15b_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15b_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15b_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
-const TEST_PORT = 55443;
+const TEST_DB = 'medialab_p02m15c_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15c_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15c_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
+const TEST_PORT = 55444;
 const TEST_SOURCE = 'SYNTHETIC_P02_M03_B_TEST';
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
@@ -122,7 +122,7 @@ describe('P02-M03-B catalog administration lifecycle', () => {
 
   it('1. applies the exact nine-migration ledger while preserving the accepted 0004 hash', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(19);
+    expect(ledger.rows).toHaveLength(20);
     expect(ledger.rows[3]).toEqual({
       filename: '0004_current_catalog_and_price_snapshots.sql',
       sha256: 'e9ee756cd27df247c163829f81ff43db72317d3df243d218015c69558d3da876'

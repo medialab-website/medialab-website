@@ -16,6 +16,7 @@ const fifthSuccessorMigration = '0016_returned_editor_review_final_source_decisi
 const sixthSuccessorMigration = '0017_publication_delivery_entitlement_foundation.sql';
 const seventhSuccessorMigration = '0018_temporary_download_center_external_sharing_foundation.sql';
 const eighthSuccessorMigration = '0019_temporary_download_center_access_credential_gateway_foundation.sql';
+const ninthSuccessorMigration = '0020_disposable_delivery_surface_local_fixture_foundation.sql';
 const predecessorMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
   ['0002_property_identity_and_snapshots.sql', 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83'],
@@ -49,7 +50,7 @@ for (const [filename, expected] of predecessorMigrations) {
   if (actual !== expected) fail(`${filename} predecessor SHA-256 mismatch`);
 }
 const migrationFiles = fs.readdirSync(migrationDir).filter((name) => name.endsWith('.sql')).sort();
-exact('Migration inventory', migrationFiles, [...predecessorMigrations.map(([name]) => name), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration, fifthSuccessorMigration, sixthSuccessorMigration, seventhSuccessorMigration, eighthSuccessorMigration]);
+exact('Migration inventory', migrationFiles, [...predecessorMigrations.map(([name]) => name), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration, fifthSuccessorMigration, sixthSuccessorMigration, seventhSuccessorMigration, eighthSuccessorMigration, ninthSuccessorMigration]);
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
 const packetHash = crypto.createHash('sha256').update(packetBytes).digest('hex');
 const successorHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, successorMigration))).digest('hex');
@@ -60,6 +61,7 @@ const fifthSuccessorHash = crypto.createHash('sha256').update(fs.readFileSync(pa
 const sixthSuccessorHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, sixthSuccessorMigration))).digest('hex');
 const seventhSuccessorHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, seventhSuccessorMigration))).digest('hex');
 const eighthSuccessorHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, eighthSuccessorMigration))).digest('hex');
+const ninthSuccessorHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, ninthSuccessorMigration))).digest('hex');
 const sql = packetBytes.toString('utf8');
 exact('Packet table inventory', [...sql.matchAll(/CREATE TABLE medialab_core\.([a-z0-9_]+)/g)].map((m) => m[1]), tables);
 exact('Packet function inventory', [...sql.matchAll(/CREATE OR REPLACE FUNCTION medialab_core\.([a-z0-9_]+)/g)].map((m) => m[1]), [...publicFunctions, ...helperFunctions]);
@@ -75,8 +77,8 @@ for (const prohibited of ['ON DELETE CASCADE', 'CREATE TABLE medialab_core.captu
   'CREATE TABLE medialab_core.publications', 'drive.googleapis.com', 'aws_secret_access_key']) {
   if (sql.includes(prohibited)) fail(`Migration 0011 contains prohibited evidence: ${prohibited}`);
 }
-const client = new pg.Client({ host: '/tmp/mlvs01-p02m15b-pg', port: 55443,
-  database: 'medialab_p02m15b_test', user: 'medialab_p02m15b_test_owner' });
+const client = new pg.Client({ host: '/tmp/mlvs01-p02m15c-pg', port: 55444,
+  database: 'medialab_p02m15c_test', user: 'medialab_p02m15c_test_owner' });
 try {
   await client.connect();
   const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
@@ -88,24 +90,25 @@ try {
     { filename: fifthSuccessorMigration, sha256: fifthSuccessorHash },
     { filename: sixthSuccessorMigration, sha256: sixthSuccessorHash },
     { filename: seventhSuccessorMigration, sha256: seventhSuccessorHash },
-    { filename: eighthSuccessorMigration, sha256: eighthSuccessorHash }];
-  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Eighteen-row migration ledger mismatch');
+    { filename: eighthSuccessorMigration, sha256: eighthSuccessorHash },
+    { filename: ninthSuccessorMigration, sha256: ninthSuccessorHash }];
+  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Twenty-row migration ledger mismatch');
   const dbTables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core'
       AND tablename = ANY($1::text[]) ORDER BY tablename`, [tables]
   );
   exact('Database table inventory', dbTables.rows.map((row) => row.tablename), tables);
-  if (dbTables.rows.some((row) => row.tableowner !== 'medialab_p02m15b_test_owner')) fail('Packet table ownership mismatch');
+  if (dbTables.rows.some((row) => row.tableowner !== 'medialab_p02m15c_test_owner')) fail('Packet table ownership mismatch');
   const dbFunctions = await client.query(
     `SELECT p.proname, pg_get_userbyid(p.proowner) AS owner, p.prosecdef, p.proconfig,
             has_function_privilege($1, p.oid, 'EXECUTE') AS runtime_execute,
             has_function_privilege('public', p.oid, 'EXECUTE') AS public_execute
        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'medialab_core' AND p.proname = ANY($2::text[]) ORDER BY p.proname`,
-    ['medialab_p02m15b_test_app', [...publicFunctions, ...helperFunctions]]
+    ['medialab_p02m15c_test_app', [...publicFunctions, ...helperFunctions]]
   );
   exact('Database function inventory', dbFunctions.rows.map((row) => row.proname), [...publicFunctions, ...helperFunctions]);
-  if (dbFunctions.rows.some((row) => row.owner !== 'medialab_p02m15b_test_owner')) fail('Packet function ownership mismatch');
+  if (dbFunctions.rows.some((row) => row.owner !== 'medialab_p02m15c_test_owner')) fail('Packet function ownership mismatch');
   if (dbFunctions.rows.some((row) => row.public_execute)) fail('PUBLIC can execute a packet function');
   if (dbFunctions.rows.some((row) => publicFunctions.includes(row.proname) !== row.runtime_execute)) fail('Runtime function grant inventory mismatch');
   if (dbFunctions.rows.some((row) => row.prosecdef && JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp']))) {
@@ -116,7 +119,7 @@ try {
             has_table_privilege('public', c.oid, 'SELECT,INSERT,UPDATE,DELETE') AS public_access
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'medialab_core' AND c.relname = ANY($2::text[])`,
-    ['medialab_p02m15b_test_app', tables]
+    ['medialab_p02m15c_test_app', tables]
   );
   if (privileges.rows.some((row) => row.runtime_access || row.public_access)) fail('Direct table privilege boundary mismatch');
 } catch (error: any) {

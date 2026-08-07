@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
-import { P02_M15_B_ALLOWLIST } from './p02-m15-b-changed-files.js';
+import { P02_M15_C_ALLOWLIST } from './p02-m15-c-changed-files.js';
 
 console.log('Running verify-foundation-closeout.ts...');
 
@@ -14,8 +14,8 @@ const worktreeRoot = path.resolve(baseDir, '../../');
 
 let errors = false;
 
-// 1. P02-M15-B bounded changed-file allowlist
-const ALLOWLIST = [...P02_M15_B_ALLOWLIST];
+// 1. P02-M15-C bounded changed-file allowlist
+const ALLOWLIST = [...P02_M15_C_ALLOWLIST];
 
 // 2. Determine actual changed-path set from Git status
 const gitStatusRaw = execSync('git status --porcelain -uall platform-v2/ml-vs01', {
@@ -38,7 +38,7 @@ for (const line of lines) {
 
   // Every changed path must be contained in the allowlist
   if (!ALLOWLIST.includes(gitPath)) {
-    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M15-B allowlist.`);
+    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M15-C allowlist.`);
     errors = true;
   }
 
@@ -103,7 +103,7 @@ if (!fs.existsSync(migrationFile2)) {
 const lockFile = path.join(baseDir, 'package-lock.json');
 const lockContent = fs.readFileSync(lockFile);
 const lockSha256 = crypto.createHash('sha256').update(lockContent).digest('hex').toLowerCase();
-const expectedLockSha256 = '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258';
+const expectedLockSha256 = '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a';
 if (lockSha256 !== expectedLockSha256) {
   console.error(`ERROR: package-lock.json SHA256 mismatch. Expected ${expectedLockSha256}, got ${lockSha256}`);
   errors = true;

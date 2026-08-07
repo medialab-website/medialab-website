@@ -56,7 +56,8 @@ describe('Workspace Foundation P01A & P01B Boundaries', () => {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
 
     expect(pkg.dependencies).toEqual({
-      pg: '8.22.0'
+      pg: '8.22.0',
+      fastify: '5.11.2'
     });
 
     expect(pkg.devDependencies).toEqual({

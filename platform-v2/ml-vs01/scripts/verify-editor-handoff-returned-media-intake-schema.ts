@@ -11,6 +11,7 @@ const successorMigration='0016_returned_editor_review_final_source_decision_foun
 const secondSuccessorMigration='0017_publication_delivery_entitlement_foundation.sql';
 const thirdSuccessorMigration='0018_temporary_download_center_external_sharing_foundation.sql';
 const fourthSuccessorMigration='0019_temporary_download_center_access_credential_gateway_foundation.sql';
+const fifthSuccessorMigration='0020_disposable_delivery_surface_local_fixture_foundation.sql';
 const predecessors=[
   ['0001_identity_and_tenancy.sql','29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
   ['0002_property_identity_and_snapshots.sql','d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83'],
@@ -49,7 +50,7 @@ for(const [name,sha] of predecessors){
 const bytes=fs.readFileSync(path.join(migrationDir,packetMigration));
 const packetHash=crypto.createHash('sha256').update(bytes).digest('hex');
 const sql=bytes.toString('utf8');
-exact('Migration inventory',fs.readdirSync(migrationDir).filter(x=>x.endsWith('.sql')),[...predecessors.map(x=>x[0]),packetMigration,successorMigration,secondSuccessorMigration,thirdSuccessorMigration,fourthSuccessorMigration]);
+exact('Migration inventory',fs.readdirSync(migrationDir).filter(x=>x.endsWith('.sql')),[...predecessors.map(x=>x[0]),packetMigration,successorMigration,secondSuccessorMigration,thirdSuccessorMigration,fourthSuccessorMigration,fifthSuccessorMigration]);
 exact('Packet tables',[...sql.matchAll(/CREATE TABLE medialab_core\.([a-z0-9_]+)/g)].map(x=>x[1]),tables);
 exact('Packet functions',[...sql.matchAll(/CREATE OR REPLACE FUNCTION medialab_core\.([a-z0-9_]+)/g)].map(x=>x[1]),[...publicFunctions,...helpers]);
 for(const required of ['PHOTO','VIDEO','EDITOR_HANDOFF','EDITOR_RETURN','REVISION_RETURN','ORIGINAL_TO_EDITOR_RETURN',
@@ -59,7 +60,7 @@ for(const required of ['PHOTO','VIDEO','EDITOR_HANDOFF','EDITOR_RETURN','REVISIO
 for(const prohibited of ['ON DELETE CASCADE','CREATE TABLE medialab_core.media_assets','CREATE TABLE medialab_core.media_operations',
   'CREATE TABLE medialab_core.media_storage_objects','drive.googleapis.com','pixelmob.com','aws_secret_access_key'])
   if(sql.includes(prohibited))fail(`Prohibited migration evidence ${prohibited}`);
-const client=new pg.Client({host:'/tmp/mlvs01-p02m15b-pg',port:55443,database:'medialab_p02m15b_test',user:'medialab_p02m15b_test_owner'});
+const client=new pg.Client({host:'/tmp/mlvs01-p02m15c-pg',port:55444,database:'medialab_p02m15c_test',user:'medialab_p02m15c_test_owner'});
 try{
   await client.connect();
   const ledger=await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
@@ -67,18 +68,19 @@ try{
   const secondSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,secondSuccessorMigration))).digest('hex');
   const thirdSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,thirdSuccessorMigration))).digest('hex');
   const fourthSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,fourthSuccessorMigration))).digest('hex');
-  const expected=[...predecessors.map(([filename,sha256])=>({filename,sha256})),{filename:packetMigration,sha256:packetHash},{filename:successorMigration,sha256:successorHash},{filename:secondSuccessorMigration,sha256:secondSuccessorHash},{filename:thirdSuccessorMigration,sha256:thirdSuccessorHash},{filename:fourthSuccessorMigration,sha256:fourthSuccessorHash}];
-  if(JSON.stringify(ledger.rows)!==JSON.stringify(expected))fail('Eighteen-row migration ledger mismatch');
+  const fifthSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,fifthSuccessorMigration))).digest('hex');
+  const expected=[...predecessors.map(([filename,sha256])=>({filename,sha256})),{filename:packetMigration,sha256:packetHash},{filename:successorMigration,sha256:successorHash},{filename:secondSuccessorMigration,sha256:secondSuccessorHash},{filename:thirdSuccessorMigration,sha256:thirdSuccessorHash},{filename:fourthSuccessorMigration,sha256:fourthSuccessorHash},{filename:fifthSuccessorMigration,sha256:fifthSuccessorHash}];
+  if(JSON.stringify(ledger.rows)!==JSON.stringify(expected))fail('Twenty-row migration ledger mismatch');
   const dbTables=await client.query(`SELECT tablename,tableowner FROM pg_tables WHERE schemaname='medialab_core'
     AND (tablename LIKE 'editor_handoff_%' OR tablename LIKE 'returned_media_%') ORDER BY tablename`);
   exact('Database tables',dbTables.rows.map(r=>r.tablename),tables);
-  if(dbTables.rows.some(r=>r.tableowner!=='medialab_p02m15b_test_owner'))fail('Packet table ownership mismatch');
+  if(dbTables.rows.some(r=>r.tableowner!=='medialab_p02m15c_test_owner'))fail('Packet table ownership mismatch');
   const dbFunctions=await client.query(`SELECT p.proname,pg_get_userbyid(p.proowner) owner,p.prosecdef,p.proconfig,
     has_function_privilege($1,p.oid,'EXECUTE') runtime,has_function_privilege('public',p.oid,'EXECUTE') public
     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='medialab_core'
-    AND p.proname=ANY($2::text[]) ORDER BY p.proname`,['medialab_p02m15b_test_app',[...publicFunctions,...helpers]]);
+    AND p.proname=ANY($2::text[]) ORDER BY p.proname`,['medialab_p02m15c_test_app',[...publicFunctions,...helpers]]);
   exact('Database functions',dbFunctions.rows.map(r=>r.proname),[...publicFunctions,...helpers]);
-  if(dbFunctions.rows.some(r=>r.owner!=='medialab_p02m15b_test_owner'||r.public||publicFunctions.includes(r.proname)!==r.runtime))
+  if(dbFunctions.rows.some(r=>r.owner!=='medialab_p02m15c_test_owner'||r.public||publicFunctions.includes(r.proname)!==r.runtime))
     fail('Function ownership or grant mismatch');
   if(dbFunctions.rows.some(r=>r.prosecdef&&JSON.stringify(r.proconfig)!==JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp'])))
     fail('Unsafe SECURITY DEFINER search_path');
@@ -88,7 +90,7 @@ try{
   exact('Append-only triggers',triggers.rows.map(r=>r.relname),triggerTables);
   const authority=await client.query(`SELECT count(*)::int n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname='medialab_core' AND (c.relname LIKE 'editor_handoff_%' OR c.relname LIKE 'returned_media_%') AND
-    (has_table_privilege($1,c.oid,'SELECT,INSERT,UPDATE,DELETE') OR has_table_privilege('public',c.oid,'SELECT,INSERT,UPDATE,DELETE'))`,['medialab_p02m15b_test_app']);
+    (has_table_privilege($1,c.oid,'SELECT,INSERT,UPDATE,DELETE') OR has_table_privilege('public',c.oid,'SELECT,INSERT,UPDATE,DELETE'))`,['medialab_p02m15c_test_app']);
   if(authority.rows[0].n!==0)fail('Runtime or PUBLIC has direct packet-table authority');
   const schema=await client.query("SELECT has_schema_privilege('public','medialab_core','USAGE') u,has_schema_privilege('public','medialab_core','CREATE') c");
   if(schema.rows[0].u||schema.rows[0].c)fail('PUBLIC has packet schema authority');

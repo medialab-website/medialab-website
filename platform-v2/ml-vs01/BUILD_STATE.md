@@ -1,26 +1,27 @@
-# P02-M15-B Build State
+# P02-M15-C Build State
 
-- Packet: P02-M15-B — Temporary Download Center Access Credential & Gateway Foundation
+- Packet: P02-M15-C — Disposable Delivery Surface & Local Fixture Download Proof
 - Candidate state: uncommitted, unstaged, nonproduction review candidate
-- Base commit: `e25d19af7a5897f79c6814cd74b91d4ce0b743fa`
-- Base tree: `e3c69e6aeeb6f7cb743edbca31d403c1e3d6df88`
+- Base commit: `9ff83290b3715ab6140676f1c03a0b9cd82abd52`
+- Base tree: `89f2b4a4daefa6b36d6b1ef474277a446bc747a5`
 - Production/default main evidence: `b72c3f2115fe00c217a7cda2eca699c404c312f8`
-- Local branch: `platform-v2-p02-m15-b-tdc-access-credential-gateway-r01`
-- Migration: `db/migrations/0019_temporary_download_center_access_credential_gateway_foundation.sql`
-- Database: `medialab_p02m15b_test`
-- Owner role: `medialab_p02m15b_test_owner`
-- Restricted runtime role: `medialab_p02m15b_test_app`
-- Socket and port: `/tmp/mlvs01-p02m15b-pg`, `55443`
-- Disposable cluster data directory: `/tmp/mlvs01-p02m15b-data`
-- Accepted predecessor migrations: 0001 through 0018, byte-identical
-- Seed boundary: no credential, verifier, gateway attempt, or access-observation rows; synthetic secrets exist only in disposable test variables
-- Credential boundary: issue and rotation generate 32 random bytes server-side, return the 64-character lowercase hexadecimal secret once, and persist only a SHA-256 verifier with immutable identity/lifecycle evidence
-- Lifecycle boundary: rotation creates a sequential immutable generation, invalidates the predecessor immediately, preserves center expiration, and revocation preserves attributed history
-- Gateway boundary: the only sessionless packet API requires restricted-runtime EXECUTE, exact secret possession, current credential generation, current M15-A policy eligibility, and an exact current item for DOWNLOAD
-- Policy boundary: authenticated and anonymous evaluation reuse one owner-only M15-A current-policy helper covering center lifecycle/expiry, creator authority, publication state, PAY_NOW evidence, APPROVED_TERMS, and multi-Order locking
-- Observation boundary: the gateway is the sole new trusted runtime writer and records bounded append-only OPEN/DOWNLOAD observations; the runtime retains zero direct table DML
-- Disclosure boundary: anonymous denials are generic; history/read APIs omit usable secrets, verifier hashes, request fingerprints, URLs, paths, provider payloads, and bytes
-- Public/provider boundary: no webpage, HTTP/API route, public/signed URL, storage adapter, file transfer, actual download, notification, payment, provider, customer, production, or deployment mechanism exists
+- Local branch: `platform-v2-p02-m15-c-disposable-delivery-surface-local-fixture-r01`
+- Migration: `db/migrations/0020_disposable_delivery_surface_local_fixture_foundation.sql`
+- Database: `medialab_p02m15c_test`
+- Owner role: `medialab_p02m15c_test_owner`
+- Restricted runtime role: `medialab_p02m15c_test_app`
+- Socket and port: `/tmp/mlvs01-p02m15c-pg`, `55444`
+- Disposable cluster data directory: `/tmp/mlvs01-p02m15c-data`
+- Accepted predecessor migrations: 0001 through 0019, byte-identical
+- Runtime dependency boundary: Fastify `5.11.2` is the only new, exact-pinned runtime dependency
+- Network boundary: the delivery server binds only to IPv4 loopback `127.0.0.1`; non-loopback hosts are rejected before resources are opened
+- Credential boundary: the usable M15-B secret enters through the URL fragment, is removed immediately with `history.replaceState`, remains only in browser memory, and is sent only in same-origin POST bodies
+- Shell boundary: `GET /d/:credentialId` is secretless and loads only the same-origin `/assets/disposable-delivery.js` asset under a deny-by-default CSP and no-store headers
+- Manifest boundary: `get_temporary_download_center_delivery_manifest` reuses the exact M15-B OPEN gateway and projects only bounded expiry, stakeholder label, categories, item labels, ordinals, and item IDs
+- Download boundary: every POST download attempt re-runs the exact M15-B DOWNLOAD gateway for one exact current-version item and returns only small deterministic synthetic fixture bytes
+- Evidence boundary: OPEN and DOWNLOAD decisions retain M15-B idempotency, generic denial, policy reevaluation, and append-only observation behavior
+- Disclosure boundary: no secret, verifier, organization/property/order/publication/media identity, provider payload, local/storage path, public/signed URL, real media, or executable provider command is returned
+- Operational boundary: no provider operation, customer data, real recipient access, payment, notification, Desktop change, deployment, production, dual-run, cutover, cleanup, or later-packet work exists
 - Preserved recovery intent law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history; it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data. Actual profile/preferences reset behavior remains deferred until those models exist.
 - Commit, push, remote branch, platform advancement, and main mutation: none
 

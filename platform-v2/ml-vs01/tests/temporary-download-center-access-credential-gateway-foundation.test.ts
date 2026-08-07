@@ -13,18 +13,21 @@ import {
 } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FIXTURE_POLICY } from '../db/fixtures/temporary-download-center-access-credential-gateway-fixtures.js';
+import { buildDisposableDeliveryApp } from '../src/disposable-delivery/app.js';
+import { createDisposableDeliveryDatabase } from '../src/disposable-delivery/database.js';
+import { createSyntheticFixtureDownload } from '../src/disposable-delivery/fixture-download.js';
 
-const TEST_DB = 'medialab_p02m15b_test';
-const OWNER = 'medialab_p02m15b_test_owner';
-const RUNTIME = 'medialab_p02m15b_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15b-pg';
-const PORT = 55443;
+const TEST_DB = 'medialab_p02m15c_test';
+const OWNER = 'medialab_p02m15c_test_owner';
+const RUNTIME = 'medialab_p02m15c_test_app';
+const SOCKET = '/tmp/mlvs01-p02m15c-pg';
+const PORT = 55444;
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const ADMIN = IDENTITY_FIXTURES[0].id;
 const SOURCE = 'SYNTHETIC_P02_M15_B_TEST';
 const digest = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 
-describe('P02-M15-B Temporary Download Center access credential and gateway foundation', () => {
+describe('P02-M15-C Temporary Download Center access credential and gateway foundation', () => {
   let owner: pg.Client;
   let runtime: pg.Client;
   const reset = () => resetTestDatabase({ host: SOCKET, port: PORT, database: TEST_DB, user: OWNER, runtimeUser: RUNTIME, confirm: TEST_DB });
@@ -171,8 +174,9 @@ describe('P02-M15-B Temporary Download Center access credential and gateway foun
 
   it('applies 0019 with exact controlled objects, strong one-time secret issuance, and no durable or read-path secret exposure', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(19);
+    expect(ledger.rows).toHaveLength(20);
     expect(ledger.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
+    expect(ledger.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');
     expect(TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FIXTURE_POLICY).toMatchObject({ verifierAlgorithm: 'SHA256-HEX-V1', usableSecretBytes: 32 });
     const state = await ready(true, 'one-time-stable');
     expect(state.issued.access_secret).toMatch(/^[0-9a-f]{64}$/);
@@ -326,5 +330,64 @@ describe('P02-M15-B Temporary Download Center access credential and gateway foun
     const direct = await owner.query(`SELECT c.relname,has_table_privilege($1,c.oid,'INSERT') i,has_table_privilege($1,c.oid,'UPDATE') u,has_table_privilege($1,c.oid,'DELETE') d FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='medialab_core' AND c.relname=ANY($2::text[]) ORDER BY c.relname`, [RUNTIME, ['temporary_download_center_access_credentials','temporary_download_center_access_credential_events','temporary_download_center_access_credential_current','temporary_download_center_gateway_evaluations','temporary_download_center_access_observations']]);
     expect(direct.rows.every(row => !row.i && !row.u && !row.d)).toBe(true);
     expect((await owner.query(`SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='medialab_core' AND p.proname LIKE '%temporary_download_center%' AND has_function_privilege('public',p.oid,'EXECUTE')`)).rows[0].n).toBe(0);
+  });
+
+  it('serves a loopback-only secretless shell and authorizes manifest and deterministic synthetic fixture download through fresh M15-B gateway evaluations', async () => {
+    const state = await ready();
+    const deliveryDatabase = createDisposableDeliveryDatabase({ host: SOCKET, port: PORT, database: TEST_DB, user: RUNTIME });
+    const app = buildDisposableDeliveryApp(deliveryDatabase);
+    const address = await app.listen({ host: '127.0.0.1', port: 0 });
+    try {
+      const shell = await fetch(`${address}/d/${state.issued.credential_id}#${state.issued.access_secret}`, { redirect: 'error' });
+      const shellText = await shell.text();
+      expect(shell.status).toBe(200);
+      expect(shellText).toContain('Temporary Download Center');
+      expect(shellText).not.toContain(state.issued.access_secret);
+      expect(shell.headers.get('content-security-policy')).toContain("default-src 'none'");
+      expect(shell.headers.get('cache-control')).toContain('no-store');
+
+      const script = await (await fetch(`${address}/assets/disposable-delivery.js`)).text();
+      expect(script).toContain("location.hash.startsWith('#')");
+      expect(script).toContain("history.replaceState(null, '', location.pathname)");
+      expect(script).not.toMatch(/localStorage|sessionStorage|indexedDB|document\.cookie|console\./);
+
+      const openReference = `M15C.OPEN.${crypto.randomUUID().toUpperCase()}`;
+      const openPayload = { credentialId: state.issued.credential_id, secret: state.issued.access_secret, accessEventReference: openReference };
+      const open = await fetch(`${address}/api/disposable-delivery/open`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(openPayload)
+      });
+      const manifest = await open.json() as any;
+      expect(open.status).toBe(200);
+      expect(manifest).toMatchObject({ status: 'AVAILABLE', stakeholderLabel: 'Synthetic stakeholder' });
+      expect(manifest.categories).toHaveLength(1);
+      expect(manifest.categories[0]).toMatchObject({ code: 'PHOTOS', label: 'Photos' });
+      expect(manifest.categories[0].items[0].id).toBe(state.item.id);
+      expect(JSON.stringify(manifest)).not.toMatch(/secret|verifier|organization|property_hub|source_order|media_asset|https?:|file:|provider|path|bytes/i);
+
+      const replay = await fetch(`${address}/api/disposable-delivery/open`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(openPayload)
+      });
+      expect(replay.status).toBe(200);
+      expect((await owner.query('SELECT count(*)::int n FROM medialab_core.temporary_download_center_access_observations WHERE access_event_reference=$1', [openReference])).rows[0].n).toBe(1);
+
+      const downloadReference = `M15C.DOWNLOAD.${crypto.randomUUID().toUpperCase()}`;
+      const download = await fetch(`${address}/api/disposable-delivery/download`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...openPayload, itemId: state.item.id, accessEventReference: downloadReference })
+      });
+      const expectedFixture = createSyntheticFixtureDownload(state.item.id);
+      expect(download.status).toBe(200);
+      expect(download.headers.get('content-type')).toContain('application/octet-stream');
+      expect(download.headers.get('x-content-sha256')).toBe(expectedFixture.sha256);
+      expect(Buffer.from(await download.arrayBuffer()).equals(expectedFixture.bytes)).toBe(true);
+
+      const wrongSecret = await fetch(`${address}/api/disposable-delivery/open`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...openPayload, secret: '0'.repeat(64), accessEventReference: `M15C.OPEN.${crypto.randomUUID().toUpperCase()}` })
+      });
+      expect(wrongSecret.status).toBe(404);
+      expect(await wrongSecret.json()).toEqual({ status: 'UNAVAILABLE' });
+      expect((await owner.query('SELECT count(*)::int n FROM medialab_core.temporary_download_center_access_observations WHERE access_event_reference=$1', [downloadReference])).rows[0].n).toBe(1);
+    } finally {
+      await app.close();
+    }
   });
 });

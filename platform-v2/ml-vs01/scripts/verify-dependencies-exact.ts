@@ -15,8 +15,10 @@ if (!fs.existsSync(pkgPath) || !fs.existsSync(lockPath)) {
 }
 
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+const lock = JSON.parse(fs.readFileSync(lockPath, 'utf-8'));
 
 const requiredDependencies: Record<string, string> = {
+  'fastify': '5.11.2',
   'pg': '8.22.0'
 };
 
@@ -46,10 +48,27 @@ for (const [dep, version] of Object.entries(requiredDevDependencies)) {
 
 const totalDeps = Object.keys(pkg.dependencies || {}).length;
 const totalDevDeps = Object.keys(pkg.devDependencies || {}).length;
+const totalOptionalDeps = Object.keys(pkg.optionalDependencies || {}).length;
 
-if (totalDeps !== 1 || totalDevDeps !== 5) {
-  console.error(`ERROR: Unexpected number of dependencies: deps=${totalDeps} (expected 1), devDeps=${totalDevDeps} (expected 5)`);
+if (totalDeps !== 2 || totalDevDeps !== 5 || totalOptionalDeps !== 0) {
+  console.error(`ERROR: Unexpected number of dependencies: deps=${totalDeps} (expected 2), devDeps=${totalDevDeps} (expected 5), optionalDeps=${totalOptionalDeps} (expected 0)`);
   errors = true;
+}
+
+const lockRoot = lock.packages?.[''] || {};
+if (JSON.stringify(lockRoot.dependencies || {}) !== JSON.stringify(requiredDependencies)) {
+  console.error(`ERROR: Lockfile root dependencies must be exactly ${JSON.stringify(requiredDependencies)}, got ${JSON.stringify(lockRoot.dependencies || {})}`);
+  errors = true;
+}
+if (Object.keys(lockRoot.optionalDependencies || {}).length !== 0) {
+  console.error('ERROR: Lockfile optional runtime dependencies are not allowed');
+  errors = true;
+}
+for (const [dep, version] of Object.entries(requiredDependencies)) {
+  if (lock.packages?.[`node_modules/${dep}`]?.version !== version) {
+    console.error(`ERROR: Lockfile package ${dep} must resolve exactly to ${version}, got ${lock.packages?.[`node_modules/${dep}`]?.version}`);
+    errors = true;
+  }
 }
 
 if (errors) {

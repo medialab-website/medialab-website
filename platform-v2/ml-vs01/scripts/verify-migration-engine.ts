@@ -33,7 +33,7 @@ if (fs.existsSync(canonicalDir)) {
   const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort();
 
   if (
-    sqlFiles.length !== 19 ||
+    sqlFiles.length !== 20 ||
     sqlFiles[0] !== '0001_identity_and_tenancy.sql' ||
     sqlFiles[1] !== '0002_property_identity_and_snapshots.sql' ||
     sqlFiles[2] !== '0003_person_contacts_and_account_lifecycle.sql' ||
@@ -52,9 +52,10 @@ if (fs.existsSync(canonicalDir)) {
     sqlFiles[15] !== '0016_returned_editor_review_final_source_decision_foundation.sql' ||
     sqlFiles[16] !== '0017_publication_delivery_entitlement_foundation.sql' ||
     sqlFiles[17] !== '0018_temporary_download_center_external_sharing_foundation.sql' ||
-    sqlFiles[18] !== '0019_temporary_download_center_access_credential_gateway_foundation.sql'
+    sqlFiles[18] !== '0019_temporary_download_center_access_credential_gateway_foundation.sql' ||
+    sqlFiles[19] !== '0020_disposable_delivery_surface_local_fixture_foundation.sql'
   ) {
-    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0019. Found: ${sqlFiles.join(', ')}`);
+    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0020. Found: ${sqlFiles.join(', ')}`);
     errors = true;
   }
 
@@ -77,7 +78,7 @@ const lockPath = path.join(baseDir, 'package-lock.json');
 if (fs.existsSync(lockPath)) {
   const lockBytes = fs.readFileSync(lockPath);
   const lockHash = crypto.createHash('sha256').update(lockBytes).digest('hex').toLowerCase();
-  const expectedHash = '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258';
+  const expectedHash = '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a';
 
   if (lockHash !== expectedHash) {
     console.error(`ERROR: package-lock.json SHA-256 changed! Expected: ${expectedHash}, Got: ${lockHash}`);
@@ -126,6 +127,7 @@ const allowedCanonical16 = path.join(baseDir, 'db/migrations/0016_returned_edito
 const allowedCanonical17 = path.join(baseDir, 'db/migrations/0017_publication_delivery_entitlement_foundation.sql');
 const allowedCanonical18 = path.join(baseDir, 'db/migrations/0018_temporary_download_center_external_sharing_foundation.sql');
 const allowedCanonical19 = path.join(baseDir, 'db/migrations/0019_temporary_download_center_access_credential_gateway_foundation.sql');
+const allowedCanonical20 = path.join(baseDir, 'db/migrations/0020_disposable_delivery_surface_local_fixture_foundation.sql');
 
 for (const sqlFile of allSqlFiles) {
   if (
@@ -148,7 +150,8 @@ for (const sqlFile of allSqlFiles) {
     sqlFile !== allowedCanonical16 &&
     sqlFile !== allowedCanonical17 &&
     sqlFile !== allowedCanonical18 &&
-    sqlFile !== allowedCanonical19
+    sqlFile !== allowedCanonical19 &&
+    sqlFile !== allowedCanonical20
   ) {
     console.error(`ERROR: SQL file outside isolated test-fixture directory: ${sqlFile}`);
     errors = true;

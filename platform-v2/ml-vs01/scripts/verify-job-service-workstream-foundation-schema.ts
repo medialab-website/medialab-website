@@ -19,11 +19,12 @@ const seventhSuccessorMigration = '0016_returned_editor_review_final_source_deci
 const eighthSuccessorMigration = '0017_publication_delivery_entitlement_foundation.sql';
 const ninthSuccessorMigration = '0018_temporary_download_center_external_sharing_foundation.sql';
 const tenthSuccessorMigration = '0019_temporary_download_center_access_credential_gateway_foundation.sql';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
-const TEST_PORT = 55443;
-const TEST_DB = 'medialab_p02m15b_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15b_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15b_test_app';
+const eleventhSuccessorMigration = '0020_disposable_delivery_surface_local_fixture_foundation.sql';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
+const TEST_PORT = 55444;
+const TEST_DB = 'medialab_p02m15c_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15c_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15c_test_app';
 let errors = false;
 
 const predecessorMigrations = [
@@ -84,7 +85,7 @@ for (const [filename, expectedHash] of predecessorMigrations) {
 }
 
 const migrationFiles = fs.readdirSync(migrationDir).filter((filename) => filename.endsWith('.sql')).sort();
-exact('Canonical migration inventory', migrationFiles, [...predecessorMigrations.map(([filename]) => filename), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration, fifthSuccessorMigration, sixthSuccessorMigration, seventhSuccessorMigration, eighthSuccessorMigration, ninthSuccessorMigration, tenthSuccessorMigration]);
+exact('Canonical migration inventory', migrationFiles, [...predecessorMigrations.map(([filename]) => filename), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration, fifthSuccessorMigration, sixthSuccessorMigration, seventhSuccessorMigration, eighthSuccessorMigration, ninthSuccessorMigration, tenthSuccessorMigration, eleventhSuccessorMigration]);
 
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
 const packetHash = crypto.createHash('sha256').update(packetBytes).digest('hex');
@@ -175,9 +176,13 @@ try {
     {
       filename: tenthSuccessorMigration,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, tenthSuccessorMigration))).digest('hex')
+    },
+    {
+      filename: eleventhSuccessorMigration,
+      sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, eleventhSuccessorMigration))).digest('hex')
     }
   ];
-  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Seventeen-row migration ledger mismatch');
+  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail('Twenty-row migration ledger mismatch');
 
   const tables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables

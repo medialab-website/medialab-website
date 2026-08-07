@@ -17,7 +17,7 @@
     "verify:placeholders": "tsx scripts/verify-no-placeholders.ts",
     "verify:changed-files": "tsx scripts/verify-changed-files.ts",
     "verify:migration-engine": "tsx scripts/verify-migration-engine.ts",
-    "verify:identity-tenancy-schema": "tsx scripts/verify-identity-tenancy-schema.ts",
+    "verify:identity-tenancy-schema": "tsx scripts/verify-person-contacts-account-lifecycle-schema.ts",
     "verify:property-snapshot-schema": "tsx scripts/verify-property-snapshot-schema.ts",
     "verify:person-contacts-account-lifecycle-schema": "tsx scripts/verify-person-contacts-account-lifecycle-schema.ts",
     "verify:property-hub-foundation-schema": "tsx scripts/verify-property-hub-foundation-schema.ts",
@@ -33,10 +33,12 @@
     "verify:publication-delivery-entitlement-schema": "tsx scripts/verify-publication-delivery-entitlement-schema.ts",
     "verify:temporary-download-center-external-sharing-schema": "tsx scripts/verify-temporary-download-center-external-sharing-schema.ts",
     "verify:temporary-download-center-access-credential-gateway-schema": "tsx scripts/verify-temporary-download-center-access-credential-gateway-schema.ts",
+    "verify:disposable-delivery-surface-local-fixture": "tsx scripts/verify-disposable-delivery-surface-local-fixture.ts",
     "verify:foundation-closeout": "tsx scripts/verify-foundation-closeout.ts",
-    "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files && npm run verify:migration-engine && npm run verify:identity-tenancy-schema && npm run verify:property-snapshot-schema && npm run verify:person-contacts-account-lifecycle-schema && npm run verify:property-hub-foundation-schema && npm run verify:scheduling-appointment-foundation-schema && npm run verify:job-service-workstream-foundation-schema && npm run verify:mission-plan-foundation-schema && npm run verify:media-asset-identity-lineage-schema && npm run verify:durable-media-operations-reconciliation-schema && npm run verify:capture-session-ingest-custody-schema && npm run verify:media-cull-workspace-selected-media-schema && npm run verify:editor-handoff-returned-media-intake-schema && npm run verify:returned-editor-review-final-source-schema && npm run verify:publication-delivery-entitlement-schema && npm run verify:temporary-download-center-external-sharing-schema && npm run verify:temporary-download-center-access-credential-gateway-schema && npm run verify:foundation-closeout"
+    "verify:all": "npm run typecheck && npm run test && npm run verify:runtime && npm run verify:dependencies && npm run verify:placeholders && npm run verify:changed-files && npm run verify:migration-engine && npm run verify:identity-tenancy-schema && npm run verify:property-snapshot-schema && npm run verify:person-contacts-account-lifecycle-schema && npm run verify:property-hub-foundation-schema && npm run verify:scheduling-appointment-foundation-schema && npm run verify:job-service-workstream-foundation-schema && npm run verify:mission-plan-foundation-schema && npm run verify:media-asset-identity-lineage-schema && npm run verify:durable-media-operations-reconciliation-schema && npm run verify:capture-session-ingest-custody-schema && npm run verify:media-cull-workspace-selected-media-schema && npm run verify:editor-handoff-returned-media-intake-schema && npm run verify:returned-editor-review-final-source-schema && npm run verify:publication-delivery-entitlement-schema && npm run verify:temporary-download-center-external-sharing-schema && npm run verify:temporary-download-center-access-credential-gateway-schema && npm run verify:disposable-delivery-surface-local-fixture && npm run verify:foundation-closeout"
   },
   "dependencies": {
+    "fastify": "5.11.2",
     "pg": "8.22.0"
   },
   "devDependencies": {

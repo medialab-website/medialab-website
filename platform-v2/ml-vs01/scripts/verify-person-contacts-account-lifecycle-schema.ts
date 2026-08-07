@@ -188,6 +188,7 @@ exactNames('Canonical migration inventory', migrationFiles, [
   ,'0017_publication_delivery_entitlement_foundation.sql'
   ,'0018_temporary_download_center_external_sharing_foundation.sql'
   ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
+  ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
 ]);
 for (const expected of expectedMigrations) {
   const bytes = fs.readFileSync(path.join(migrationsDir, expected.filename));
@@ -197,7 +198,7 @@ for (const expected of expectedMigrations) {
 
 const lockBytes = fs.readFileSync(path.join(baseDir, 'package-lock.json'));
 const lockHash = crypto.createHash('sha256').update(lockBytes).digest('hex').toLowerCase();
-if (lockHash !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') {
+if (lockHash !== '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a') {
   fail(`package-lock.json SHA-256 mismatch. Got ${lockHash}`);
 }
 

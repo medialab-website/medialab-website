@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_B_ALLOWLIST } from './p02-m15-b-changed-files.js';
+import { P02_M15_C_ALLOWLIST } from './p02-m15-c-changed-files.js';
 import {
   PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS,
   PROPERTY_HUB_ID,
@@ -15,11 +15,11 @@ console.log('Running verify-property-hub-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m15b-pg';
-const TEST_PORT = 55443;
-const TEST_DB = 'medialab_p02m15b_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15b_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15b_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
+const TEST_PORT = 55444;
+const TEST_DB = 'medialab_p02m15c_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15c_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15c_test_app';
 let errors = false;
 
 const expectedMigrations = [
@@ -57,7 +57,7 @@ const packetTriggers = [
   ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation']
 ];
 
-const allowedPaths = [...P02_M15_B_ALLOWLIST].sort();
+const allowedPaths = [...P02_M15_C_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -79,7 +79,7 @@ for (const [filename, expectedHash] of expectedMigrations) {
 }
 
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package-lock.json'))).digest('hex');
-if (lockHash !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') {
+if (lockHash !== '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a') {
   fail(`package-lock.json SHA-256 mismatch: ${lockHash}`);
 }
 
@@ -175,6 +175,7 @@ try {
       ,'0017_publication_delivery_entitlement_foundation.sql'
       ,'0018_temporary_download_center_external_sharing_foundation.sql'
       ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
+      ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
     ].map((filename) => ({
       filename,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations', filename))).digest('hex')
