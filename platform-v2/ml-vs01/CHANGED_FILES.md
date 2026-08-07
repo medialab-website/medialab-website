@@ -1,19 +1,19 @@
-# P02-M13-A Changed Files
+# P02-M14-A Changed Files
 
-The uncommitted and unstaged candidate contains exactly the 49 paths exported by `scripts/p02-m13-a-changed-files.ts`.
+The uncommitted and unstaged candidate contains exactly the 51 paths exported by `scripts/p02-m14-a-changed-files.ts`.
 
-The bounded inventory is limited to migration 0016, permission-only fixtures, deterministic migration/seed/reset integration, packet verifiers and tests, and additive predecessor inventory updates. No UI, API, Desktop, provider, deployment, production, byte-processing, publication, delivery, cleanup, or later-packet path is included.
+The bounded inventory is limited to migration 0017, permission-only fixtures, deterministic migration/seed/reset integration, packet verifiers and tests, and additive predecessor inventory updates. No UI, API, Desktop, provider adapter, deployment, production, byte-processing, actual publication, actual delivery, payment settlement, notification, cleanup, or later-packet path is included.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
-- platform-v2/ml-vs01/db/fixtures/returned-editor-review-final-source-fixtures.ts
+- platform-v2/ml-vs01/db/fixtures/publication-delivery-entitlement-fixtures.ts
 - platform-v2/ml-vs01/db/migrate.ts
-- platform-v2/ml-vs01/db/migrations/0016_returned_editor_review_final_source_decision_foundation.sql
+- platform-v2/ml-vs01/db/migrations/0017_publication_delivery_entitlement_foundation.sql
 - platform-v2/ml-vs01/db/migrations/README.md
 - platform-v2/ml-vs01/db/reset-test-database.ts
 - platform-v2/ml-vs01/db/seed.ts
 - platform-v2/ml-vs01/package.json
-- platform-v2/ml-vs01/scripts/p02-m13-a-changed-files.ts
+- platform-v2/ml-vs01/scripts/p02-m14-a-changed-files.ts
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
 - platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-changed-files.ts
@@ -30,6 +30,7 @@ The bounded inventory is limited to migration 0016, permission-only fixtures, de
 - platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-property-hub-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts
+- platform-v2/ml-vs01/scripts/verify-publication-delivery-entitlement-schema.ts
 - platform-v2/ml-vs01/scripts/verify-returned-editor-review-final-source-schema.ts
 - platform-v2/ml-vs01/scripts/verify-runtime.ts
 - platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts
@@ -50,6 +51,7 @@ The bounded inventory is limited to migration 0016, permission-only fixtures, de
 - platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts
 - platform-v2/ml-vs01/tests/property-hub-foundation.test.ts
 - platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts
+- platform-v2/ml-vs01/tests/publication-delivery-entitlement-foundation.test.ts
 - platform-v2/ml-vs01/tests/returned-editor-review-final-source-foundation.test.ts
 - platform-v2/ml-vs01/tests/scheduling-appointment-foundation.test.ts
 - platform-v2/ml-vs01/tests/test-database-reset.test.ts

@@ -20,9 +20,9 @@ import {
   SESSION_EXPIRES_AT
 } from '../db/fixtures/identity-tenancy-fixtures.js';
 
-const TEST_DB = 'medialab_p02m13a_test';
-const TEST_ROLE = 'medialab_p02m13a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m13a-pg';
+const TEST_DB = 'medialab_p02m14a_test';
+const TEST_ROLE = 'medialab_p02m14a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m14a-pg';
 const TEST_PORT = 55443;
 
 describe('P01C Foundation Fixtures & Seed Tests', () => {

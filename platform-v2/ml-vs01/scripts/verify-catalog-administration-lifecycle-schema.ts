@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M13_A_ALLOWLIST } from './p02-m13-a-changed-files.js';
+import { P02_M14_A_ALLOWLIST } from './p02-m14-a-changed-files.js';
 import {
   CURRENT_CATALOG_EFFECTIVE_AT,
   CURRENT_CATALOG_SEED_EFFECTIVE_DATE,
@@ -20,11 +20,11 @@ const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m13a-pg';
+const TEST_SOCKET = '/tmp/mlvs01-p02m14a-pg';
 const TEST_PORT = 55443;
-const TEST_DB = 'medialab_p02m13a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m13a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m13a_test_app';
+const TEST_DB = 'medialab_p02m14a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m14a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m14a_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
@@ -42,7 +42,8 @@ const expectedMigrations = [
   ['0013_capture_session_ingest_custody_foundation.sql', 'fb90823b98c56242dcbe4d148f63440d061ae0d7efcc652652c9feafa9be29fa'],
   ['0014_media_cull_workspace_selected_media_evidence_foundation.sql', 'f406c7c329f863f0b34c8a1b99259386dc89c7f26934073de08d01057df8569f'],
   ['0015_editor_handoff_returned_media_intake_foundation.sql', '42a4b5381cbb1b434b2f1871e91fd5cc460d756d16df632c35dfc68b752c31c5'],
-  ['0016_returned_editor_review_final_source_decision_foundation.sql', '192bf59bd11acd39355ae4682c9ac25d5430468f23465bc90e1f58366a613b57']
+  ['0016_returned_editor_review_final_source_decision_foundation.sql', '192bf59bd11acd39355ae4682c9ac25d5430468f23465bc90e1f58366a613b57'],
+  ['0017_publication_delivery_entitlement_foundation.sql', '1df90da711216cef0b591c7d1b1b9d1e2fb73b6d18f59fa5f566827d52c9fe5b']
 ] as const;
 
 const packetFunctions = [
@@ -140,7 +141,7 @@ const packetIndexes = [
   'catalog_products_duplicate_source_idx'
 ];
 
-const allowedPaths = [...P02_M13_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M14_A_ALLOWLIST].sort();
 
 const exactPrices: Record<string, number> = {
   ADDITIONAL_AERIAL_EXTERIOR_PHOTO: 1500,
@@ -180,7 +181,7 @@ for (const [filename, expectedHash] of expectedMigrations) {
 
 const packageHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package.json'))).digest('hex');
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package-lock.json'))).digest('hex');
-if (packageHash !== '4a2d4115e10ebdfbe9f22b908e18619dcab2170cbcfa507d28ca3ee37c5a13af') fail(`package.json SHA-256 mismatch: ${packageHash}`);
+if (packageHash !== '237f0fa3593fb300919855fc800fb97c323b88835a4bc872a25aa33a25b71844') fail(`package.json SHA-256 mismatch: ${packageHash}`);
 if (lockHash !== '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258') fail(`package-lock.json SHA-256 mismatch: ${lockHash}`);
 
 const migrationText = fs.readFileSync(path.join(baseDir, 'db/migrations/0005_catalog_administration_lifecycle.sql'), 'utf8');
@@ -242,7 +243,7 @@ async function verifyDatabase(): Promise<void> {
   try {
     const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
     const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Sixteen-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
+    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Seventeen-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
 
     const owner = await client.query(`SELECT tableowner FROM pg_tables WHERE schemaname = 'medialab_core' AND tablename = 'catalog_administration_events'`);
     if (owner.rows[0]?.tableowner !== TEST_OWNER_ROLE) fail(`Catalog administration event owner mismatch: ${owner.rows[0]?.tableowner}`);
