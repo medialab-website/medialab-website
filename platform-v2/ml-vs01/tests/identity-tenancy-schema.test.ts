@@ -7,6 +7,19 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'create_temporary_download_center',
+  'evaluate_temporary_download_center_policy',
+  'get_temporary_download_center',
+  'get_temporary_download_center_activity',
+  'materialize_temporary_download_center_version',
+  'normalize_temporary_download_center_selections',
+  'reject_temporary_download_center_evidence_mutation',
+  'replace_temporary_download_center',
+  'revoke_temporary_download_center',
+  'temporary_download_center_hub_authority',
+  'update_temporary_download_center_selection',
+  'validate_temporary_download_center_json',
+  'validate_temporary_download_center_text',
   'activate_media_publication',
   'add_media_publication_item',
   'create_media_publication',
@@ -265,6 +278,12 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['temporary_download_center_observations_immutability_guard', 'temporary_download_center_access_observations', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_events_immutability_guard', 'temporary_download_center_events', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_items_immutability_guard', 'temporary_download_center_items', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_selections_immutability_guard', 'temporary_download_center_selections', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_versions_immutability_guard', 'temporary_download_center_versions', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_centers_immutability_guard', 'temporary_download_centers', 'reject_temporary_download_center_evidence_mutation'],
   ['delivery_evaluations_immutability_guard', 'delivery_entitlement_evaluations', 'reject_publication_delivery_evidence_mutation'],
   ['delivery_financial_evidence_immutability_guard', 'delivery_financial_eligibility_evidence', 'reject_publication_delivery_evidence_mutation'],
   ['delivery_grant_events_immutability_guard', 'delivery_grant_events', 'reject_publication_delivery_evidence_mutation'],
@@ -421,10 +440,10 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m14a-pg',
+    host: '/tmp/mlvs01-p02m15a-pg',
     port: 55443,
-    database: 'medialab_p02m14a_test',
-    user: 'medialab_p02m14a_test_owner'
+    database: 'medialab_p02m15a_test',
+    user: 'medialab_p02m15a_test_owner'
   });
 
   beforeAll(async () => {
@@ -446,9 +465,9 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m14a_test',
-      user: 'medialab_p02m14a_test_owner',
-      runtimeUser: 'medialab_p02m14a_test_app'
+      database: 'medialab_p02m15a_test',
+      user: 'medialab_p02m15a_test_owner',
+      runtimeUser: 'medialab_p02m15a_test_app'
     });
 
     expect(outTest.applied).toEqual([]);
@@ -470,6 +489,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0015_editor_handoff_returned_media_intake_foundation.sql'
       ,'0016_returned_editor_review_final_source_decision_foundation.sql'
       ,'0017_publication_delivery_entitlement_foundation.sql'
+      ,'0018_temporary_download_center_external_sharing_foundation.sql'
     ]);
   });
 
@@ -493,7 +513,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m14a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m15a_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -506,7 +526,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m14a_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m15a_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }
@@ -964,9 +984,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 34,
+      permissions: 38,
       permission_sets: 1,
-      permission_set_permissions: 34,
+      permission_set_permissions: 38,
       membership_permission_sets: 1,
       development_sessions: 1
     };

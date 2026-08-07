@@ -22,10 +22,10 @@ import {
   PROPERTY_HUB_SOURCE
 } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m14a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m14a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m14a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m14a-pg';
+const TEST_DB = 'medialab_p02m15a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
 const TEST_PORT = 55443;
 const OWNER_IDENTITY_ID = IDENTITY_FIXTURES[0].id;
 const OPERATOR_MEMBERSHIP_ID = MEMBERSHIP_FIXTURES[1].id;
@@ -139,7 +139,7 @@ describe('P02-M04-B provider-neutral Property Hub foundation', () => {
 
   it('1. records the exact nine-migration ledger and preserves all predecessor checksums', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(17);
+    expect(ledger.rows).toHaveLength(18);
     expect(ledger.rows.slice(0, 6)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },
@@ -171,7 +171,7 @@ describe('P02-M04-B provider-neutral Property Hub foundation', () => {
     const deferred = await owner.query(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core'
         AND (tablename LIKE 'payment%' OR tablename LIKE 'invoice%'
-          OR tablename LIKE 'temporary_download%' OR tablename LIKE 'notification%')`
+          OR tablename LIKE 'temporary_download_token%' OR tablename LIKE 'notification%')`
     );
     expect(deferred.rows).toEqual([]);
   });

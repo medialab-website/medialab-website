@@ -20,6 +20,7 @@ import { MEDIA_CULL_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/media-cul
 import { MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/editor-handoff-returned-media-fixtures.js';
 import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/returned-editor-review-final-source-fixtures.js';
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/publication-delivery-entitlement-fixtures.js';
+import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/temporary-download-center-external-sharing-fixtures.js';
 
 const EXPECTED_RESET_ROW_COUNTS: Record<string, number> = {
   ...EXPECTED_ROW_COUNTS,
@@ -64,6 +65,9 @@ for (const [table, count] of Object.entries(MEDIA_RETURN_REVIEW_FOUNDATION_ROW_C
 for (const [table, count] of Object.entries(PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS)) {
   EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
 }
+for (const [table, count] of Object.entries(TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+  EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
+}
 
 export interface ResetTestDatabaseOptions {
   host?: string;
@@ -76,26 +80,26 @@ export interface ResetTestDatabaseOptions {
 }
 
 export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}): Promise<void> {
-  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m14a-pg';
+  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m15a-pg';
   const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55443);
-  const database = options.database || process.env.PGDATABASE || 'medialab_p02m14a_test';
+  const database = options.database || process.env.PGDATABASE || 'medialab_p02m15a_test';
   const confirm = options.confirm || process.env.CONFIRM_DATABASE || '';
-  const user = options.user || process.env.PGUSER || 'medialab_p02m14a_test_owner';
-  const runtimeUser = options.runtimeUser || process.env.PGRUNTIMEUSER || 'medialab_p02m14a_test_app';
+  const user = options.user || process.env.PGUSER || 'medialab_p02m15a_test_owner';
+  const runtimeUser = options.runtimeUser || process.env.PGRUNTIMEUSER || 'medialab_p02m15a_test_app';
 
   // Guard 1: Strict target database check
-  if (database !== 'medialab_p02m14a_test') {
-    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Target database '${database}' is not the approved test database 'medialab_p02m14a_test'.`);
+  if (database !== 'medialab_p02m15a_test') {
+    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Target database '${database}' is not the approved test database 'medialab_p02m15a_test'.`);
   }
 
   // Guard 2: Explicit confirmation check
-  if (confirm !== 'medialab_p02m14a_test') {
-    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Missing or invalid confirmation '${confirm}'. Expected 'medialab_p02m14a_test'.`);
+  if (confirm !== 'medialab_p02m15a_test') {
+    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Missing or invalid confirmation '${confirm}'. Expected 'medialab_p02m15a_test'.`);
   }
 
   // Guard 3: Connection host & port check
-  if (host !== '/tmp/mlvs01-p02m14a-pg') {
-    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved host '${host}'. Reset must use Unix socket '/tmp/mlvs01-p02m14a-pg'.`);
+  if (host !== '/tmp/mlvs01-p02m15a-pg') {
+    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved host '${host}'. Reset must use Unix socket '/tmp/mlvs01-p02m15a-pg'.`);
   }
 
   if (port !== 55443) {
@@ -103,17 +107,17 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
   }
 
   // Guard 4: Role check
-  if (user !== 'medialab_p02m14a_test_owner') {
-    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved user '${user}'. Reset must use owner role 'medialab_p02m14a_test_owner'.`);
+  if (user !== 'medialab_p02m15a_test_owner') {
+    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved user '${user}'. Reset must use owner role 'medialab_p02m15a_test_owner'.`);
   }
-  if (runtimeUser !== 'medialab_p02m14a_test_app') {
-    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved runtime role '${runtimeUser}'. Expected 'medialab_p02m14a_test_app'.`);
+  if (runtimeUser !== 'medialab_p02m15a_test_app') {
+    throw new Error(`TEST_RESET_GUARD_FAILURE: Reset refused. Unapproved runtime role '${runtimeUser}'. Expected 'medialab_p02m15a_test_app'.`);
   }
 
   const client = new pg.Client({
     host,
     port,
-    database: 'medialab_p02m14a_test',
+    database: 'medialab_p02m15a_test',
     user,
     password: options.password
   });
@@ -134,7 +138,7 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
 
   await runMigrations({
     migrationsDir,
-    database: 'medialab_p02m14a_test',
+    database: 'medialab_p02m15a_test',
     user,
     runtimeUser,
     host,
@@ -143,7 +147,7 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
 
   // Rerun deterministic seed
   await runSeed({
-    database: 'medialab_p02m14a_test',
+    database: 'medialab_p02m15a_test',
     user,
     host,
     port
@@ -153,7 +157,7 @@ export async function resetTestDatabase(options: ResetTestDatabaseOptions = {}):
   const verifyClient = new pg.Client({
     host,
     port,
-    database: 'medialab_p02m14a_test',
+    database: 'medialab_p02m15a_test',
     user
   });
 
@@ -215,7 +219,7 @@ if (scriptPath && currentPath === scriptPath) {
     confirm: confirmArg
   })
     .then(() => {
-      console.log('Test database reset and seed completed successfully for medialab_p02m14a_test.');
+      console.log('Test database reset and seed completed successfully for medialab_p02m15a_test.');
       process.exit(0);
     })
     .catch((err) => {

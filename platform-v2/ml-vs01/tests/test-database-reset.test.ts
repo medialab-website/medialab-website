@@ -16,13 +16,27 @@ import { MEDIA_CULL_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/media
 import { MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/editor-handoff-returned-media-fixtures.js';
 import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/returned-editor-review-final-source-fixtures.js';
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
+import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
 
-const TEST_DB = 'medialab_p02m14a_test';
-const TEST_ROLE = 'medialab_p02m14a_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m14a-pg';
+const TEST_DB = 'medialab_p02m15a_test';
+const TEST_ROLE = 'medialab_p02m15a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
 const TEST_PORT = 55443;
 
 const EXACT_ROUTINE_NAMES = [
+  'create_temporary_download_center',
+  'evaluate_temporary_download_center_policy',
+  'get_temporary_download_center',
+  'get_temporary_download_center_activity',
+  'materialize_temporary_download_center_version',
+  'normalize_temporary_download_center_selections',
+  'reject_temporary_download_center_evidence_mutation',
+  'replace_temporary_download_center',
+  'revoke_temporary_download_center',
+  'temporary_download_center_hub_authority',
+  'update_temporary_download_center_selection',
+  'validate_temporary_download_center_json',
+  'validate_temporary_download_center_text',
   'activate_media_publication',
   'add_media_publication_item',
   'create_media_publication',
@@ -259,6 +273,12 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['temporary_download_center_observations_immutability_guard', 'temporary_download_center_access_observations', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_events_immutability_guard', 'temporary_download_center_events', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_items_immutability_guard', 'temporary_download_center_items', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_selections_immutability_guard', 'temporary_download_center_selections', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_center_versions_immutability_guard', 'temporary_download_center_versions', 'reject_temporary_download_center_evidence_mutation'],
+  ['temporary_download_centers_immutability_guard', 'temporary_download_centers', 'reject_temporary_download_center_evidence_mutation'],
   ['delivery_evaluations_immutability_guard', 'delivery_entitlement_evaluations', 'reject_publication_delivery_evidence_mutation'],
   ['delivery_financial_evidence_immutability_guard', 'delivery_financial_eligibility_evidence', 'reject_publication_delivery_evidence_mutation'],
   ['delivery_grant_events_immutability_guard', 'delivery_grant_events', 'reject_publication_delivery_evidence_mutation'],
@@ -507,7 +527,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(17);
+    expect(ledgerRes.rows).toHaveLength(18);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -531,6 +551,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[14].filename).toBe('0015_editor_handoff_returned_media_intake_foundation.sql');
     expect(ledgerRes.rows[15].filename).toBe('0016_returned_editor_review_final_source_decision_foundation.sql');
     expect(ledgerRes.rows[16].filename).toBe('0017_publication_delivery_entitlement_foundation.sql');
+    expect(ledgerRes.rows[17].filename).toBe('0018_temporary_download_center_external_sharing_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.
@@ -572,6 +593,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

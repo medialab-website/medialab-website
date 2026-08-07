@@ -9,10 +9,10 @@ import {
   CURRENT_CATALOG_SOURCE_URL
 } from '../db/fixtures/current-real-estate-catalog-seed.js';
 
-const TEST_DB = 'medialab_p02m14a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m14a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m14a_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m14a-pg';
+const TEST_DB = 'medialab_p02m15a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
 const TEST_PORT = 55443;
 const EFFECTIVE_AT = '2026-08-04T00:00:00.000Z';
 

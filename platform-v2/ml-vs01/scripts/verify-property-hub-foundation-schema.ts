@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M14_A_ALLOWLIST } from './p02-m14-a-changed-files.js';
+import { P02_M15_A_ALLOWLIST } from './p02-m15-a-changed-files.js';
 import {
   PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS,
   PROPERTY_HUB_ID,
@@ -15,11 +15,11 @@ console.log('Running verify-property-hub-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m14a-pg';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15a-pg';
 const TEST_PORT = 55443;
-const TEST_DB = 'medialab_p02m14a_test';
-const TEST_OWNER_ROLE = 'medialab_p02m14a_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m14a_test_app';
+const TEST_DB = 'medialab_p02m15a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15a_test_app';
 let errors = false;
 
 const expectedMigrations = [
@@ -57,7 +57,7 @@ const packetTriggers = [
   ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation']
 ];
 
-const allowedPaths = [...P02_M14_A_ALLOWLIST].sort();
+const allowedPaths = [...P02_M15_A_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -173,6 +173,7 @@ try {
       ,'0015_editor_handoff_returned_media_intake_foundation.sql'
       ,'0016_returned_editor_review_final_source_decision_foundation.sql'
       ,'0017_publication_delivery_entitlement_foundation.sql'
+      ,'0018_temporary_download_center_external_sharing_foundation.sql'
     ].map((filename) => ({
       filename,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations', filename))).digest('hex')
