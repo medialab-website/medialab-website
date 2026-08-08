@@ -1,14 +1,14 @@
 import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import type { AddressInfo } from 'node:net';
 import { createDisposableDeliveryDatabase, type DisposableDeliveryDatabase } from './database.js';
-import { createSyntheticFixtureDownload } from './fixture-download.js';
+import { createLocalFileAdapter, type DeliveryByteSource } from './local-file-adapter.js';
 import { DISPOSABLE_DELIVERY_CSP, DISPOSABLE_DELIVERY_HTML, DISPOSABLE_DELIVERY_JAVASCRIPT } from './page.js';
 
 const LOOPBACK_HOST = '127.0.0.1';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SECRET_PATTERN = /^[0-9a-f]{64}$/;
 const EVENT_REFERENCE_PATTERN = /^[A-Z0-9][A-Z0-9_.:-]{2,199}$/;
-const EVIDENCE = Object.freeze({ surface: 'LOCAL_FIXTURE_M15_C', transport: 'LOOPBACK_FASTIFY' });
+const EVIDENCE = Object.freeze({ surface: 'LOCAL_FILE_M15_D', transport: 'LOOPBACK_FASTIFY' });
 
 interface OpenBody { credentialId: string; secret: string; accessEventReference: string }
 interface DownloadBody extends OpenBody { itemId: string }
@@ -50,7 +50,7 @@ function applySecurityHeaders(reply: { header(name: string, value: string): unkn
   reply.header('x-robots-tag', 'noindex, nofollow');
 }
 
-export function buildDisposableDeliveryApp(database: DisposableDeliveryDatabase): FastifyInstance {
+export function buildDisposableDeliveryApp(database: DisposableDeliveryDatabase, byteSource: DeliveryByteSource): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 2048, logController: new LogController({ disableRequestLogging: true }) });
   app.addHook('onSend', async (_request, reply) => { applySecurityHeaders(reply); });
   app.setErrorHandler(async (_error, request, reply) => {
@@ -91,17 +91,15 @@ export function buildDisposableDeliveryApp(database: DisposableDeliveryDatabase)
     const input = parseDownloadBody(request.body);
     if (!input) return reply.code(404).send({ status: 'UNAVAILABLE' });
     try {
-      const decision = await database.authorizeDownload({ ...input, evidence: EVIDENCE });
-      if (decision.decision !== 'ALLOW' || decision.item_id !== input.itemId) {
-        return reply.code(404).send({ status: 'UNAVAILABLE' });
-      }
-      const fixture = createSyntheticFixtureDownload(input.itemId);
+      const descriptor = await database.resolveDownloadSource({ ...input, evidence: EVIDENCE });
+      if (!descriptor || descriptor.item_id !== input.itemId) return reply.code(404).send({ status: 'UNAVAILABLE' });
+      const delivery = await byteSource.read(descriptor);
       return reply
-        .header('content-disposition', `attachment; filename="${fixture.filename}"`)
-        .header('x-medialab-fixture-filename', fixture.filename)
-        .header('x-content-sha256', fixture.sha256)
-        .type(fixture.contentType)
-        .send(fixture.bytes);
+        .header('content-disposition', `attachment; filename="${delivery.filename}"`)
+        .header('x-medialab-fixture-filename', delivery.filename)
+        .header('x-content-sha256', delivery.sha256)
+        .type(delivery.contentType)
+        .send(delivery.bytes);
     } catch {
       return reply.code(404).send({ status: 'UNAVAILABLE' });
     }
@@ -111,16 +109,17 @@ export function buildDisposableDeliveryApp(database: DisposableDeliveryDatabase)
   return app;
 }
 
-export async function startDisposableDeliveryServer(options: { host?: string; port?: number } = {}): Promise<{ app: FastifyInstance; url: string }> {
+export async function startDisposableDeliveryServer(options: { host?: string; port?: number; storageRoot?: string } = {}): Promise<{ app: FastifyInstance; url: string }> {
   const host = options.host ?? LOOPBACK_HOST;
   if (host !== LOOPBACK_HOST) throw new Error('Disposable delivery may bind only to 127.0.0.1');
   const database = createDisposableDeliveryDatabase({
-    host: process.env.PGHOST || '/tmp/mlvs01-p02m15c-pg',
-    port: process.env.PGPORT ? Number(process.env.PGPORT) : 55444,
-    database: process.env.PGDATABASE || 'medialab_p02m15c_test',
-    user: process.env.PGRUNTIMEUSER || 'medialab_p02m15c_test_app'
+    host: process.env.PGHOST || '/tmp/mlvs01-p02m15d-pg',
+    port: process.env.PGPORT ? Number(process.env.PGPORT) : 55445,
+    database: process.env.PGDATABASE || 'medialab_p02m15d_test',
+    user: process.env.PGRUNTIMEUSER || 'medialab_p02m15d_test_app'
   });
-  const app = buildDisposableDeliveryApp(database);
+  const byteSource = createLocalFileAdapter(options.storageRoot ?? process.env.ML_DISPOSABLE_DELIVERY_STORAGE_ROOT ?? '/tmp/mlvs01-p02m15d-storage');
+  const app = buildDisposableDeliveryApp(database, byteSource);
   const address = await app.listen({ host, port: options.port ?? 0 });
   const port = (app.server.address() as AddressInfo).port;
   return { app, url: address.replace(/:\d+$/, `:${port}`) };

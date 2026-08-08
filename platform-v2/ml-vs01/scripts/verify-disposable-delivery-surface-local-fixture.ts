@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { fileURLToPath } from 'node:url';
-import { P02_M15_C_ALLOWLIST } from './p02-m15-c-changed-files.js';
+import { P02_M15_D_ALLOWLIST } from './p02-m15-d-changed-files.js';
 import { createSyntheticFixtureDownload } from '../src/disposable-delivery/fixture-download.js';
 import { DISPOSABLE_DELIVERY_CSP, DISPOSABLE_DELIVERY_HTML, DISPOSABLE_DELIVERY_JAVASCRIPT } from '../src/disposable-delivery/page.js';
 
@@ -20,7 +20,7 @@ function fail(message: string): never {
   throw new Error(`DISPOSABLE_DELIVERY_SURFACE_LOCAL_FIXTURE_VERIFICATION_FAILED: ${message}`);
 }
 
-if (P02_M15_C_ALLOWLIST.length !== 64 || new Set(P02_M15_C_ALLOWLIST).size !== 64) fail('changed-path allowlist is not exactly 64 unique paths');
+if (P02_M15_D_ALLOWLIST.length !== 61 || new Set(P02_M15_D_ALLOWLIST).size !== 61) fail('changed-path allowlist is not exactly 61 unique paths');
 if (packageJson.dependencies?.fastify !== '5.11.2') fail('Fastify is not pinned exactly to 5.11.2 as a required packet-owned runtime dependency');
 if (JSON.stringify(Object.keys(packageJson.dependencies).sort()) !== JSON.stringify(['fastify', 'pg']) ||
     Object.keys(packageJson.optionalDependencies ?? {}).length !== 0) fail('unexpected or optional runtime dependency detected');
@@ -43,32 +43,32 @@ if (!fixtureA.bytes.equals(fixtureB.bytes) || fixtureA.bytes.length > 512 || fix
 if (!migrationSql.includes('evaluate_temporary_download_center_gateway_access') || /CREATE TABLE/i.test(migrationSql)) fail('manifest projection does not narrowly reuse M15-B or creates an unauthorized table');
 
 const client = new pg.Client({
-  host: '/tmp/mlvs01-p02m15c-pg',
-  port: 55444,
-  database: 'medialab_p02m15c_test',
-  user: 'medialab_p02m15c_test_owner'
+  host: '/tmp/mlvs01-p02m15d-pg',
+  port: 55445,
+  database: 'medialab_p02m15d_test',
+  user: 'medialab_p02m15d_test_owner'
 });
 
 await client.connect();
 try {
   const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-  if (ledger.rows.length !== 20 || ledger.rows[19].filename !== migration || ledger.rows[19].sha256 !== migrationHash) fail('migration ledger identity mismatch');
+  if (ledger.rows.length !== 21 || ledger.rows[19].filename !== migration || ledger.rows[19].sha256 !== migrationHash || ledger.rows[20].filename !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql') fail('migration ledger identity mismatch');
 
   const fn = await client.query(`SELECT p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner,
       pg_get_function_identity_arguments(p.oid) arguments,pg_get_functiondef(p.oid) definition,
       has_function_privilege($1,p.oid,'EXECUTE') runtime,has_function_privilege('public',p.oid,'EXECUTE') public
     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='medialab_core' AND p.proname='get_temporary_download_center_delivery_manifest'`, ['medialab_p02m15c_test_app']);
+    WHERE n.nspname='medialab_core' AND p.proname='get_temporary_download_center_delivery_manifest'`, ['medialab_p02m15d_test_app']);
   if (fn.rows.length !== 1) fail('safe manifest function inventory mismatch');
   const row = fn.rows[0];
-  if (!row.prosecdef || row.owner !== 'medialab_p02m15c_test_owner' || !row.runtime || row.public ||
+  if (!row.prosecdef || row.owner !== 'medialab_p02m15d_test_owner' || !row.runtime || row.public ||
       JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp'])) fail('manifest function owner/security/privilege mismatch');
   if (row.arguments !== 'p_credential uuid, p_presented_secret text, p_access_event_reference text, p_evidence jsonb') fail('manifest function signature mismatch');
   if (!row.definition.includes('evaluate_temporary_download_center_gateway_access')) fail('manifest function does not reuse the accepted gateway');
   if (/verifier_sha256|media_asset_version_id|source_order_id|organization_id|property_hub_id/.test(row.definition.split("jsonb_build_object(\n    'status'")[1] ?? '')) fail('manifest return projection exposes internal evidence');
 
   const runtimeTables = await client.query(`SELECT count(*)::int n FROM information_schema.role_table_grants
-    WHERE grantee=$1 AND table_schema='medialab_core' AND privilege_type IN ('INSERT','UPDATE','DELETE')`, ['medialab_p02m15c_test_app']);
+    WHERE grantee=$1 AND table_schema='medialab_core' AND privilege_type IN ('INSERT','UPDATE','DELETE')`, ['medialab_p02m15d_test_app']);
   if (runtimeTables.rows[0].n !== 0) fail('restricted runtime has direct table DML');
   const publicFunctions = await client.query(`SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='medialab_core' AND has_function_privilege('public',p.oid,'EXECUTE')`);
@@ -82,7 +82,7 @@ console.log(JSON.stringify({
   migration,
   migrationSize: migrationBytes.length,
   migrationSha256: migrationHash,
-  changedPathBoundary: P02_M15_C_ALLOWLIST.length,
+  changedPathBoundary: P02_M15_D_ALLOWLIST.length,
   fastify: packageJson.dependencies.fastify,
   bind: '127.0.0.1',
   syntheticFixtureSize: fixtureA.bytes.length,

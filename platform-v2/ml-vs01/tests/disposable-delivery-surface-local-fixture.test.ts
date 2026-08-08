@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildDisposableDeliveryApp, startDisposableDeliveryServer } from '../src/disposable-delivery/app.js';
 import type { DisposableDeliveryDatabase } from '../src/disposable-delivery/database.js';
 import { createSyntheticFixtureDownload } from '../src/disposable-delivery/fixture-download.js';
+import type { DeliveryByteSource } from '../src/disposable-delivery/local-file-adapter.js';
 
 const CREDENTIAL = '11111111-1111-4111-8111-111111111111';
 const ITEM = '22222222-2222-4222-8222-222222222222';
@@ -24,16 +25,34 @@ describe('P02-M15-C disposable delivery surface and local fixture', () => {
           categories: [{ category_code: 'PHOTOS', category_label: 'Photos', items: [{ item_id: ITEM, label: 'Photos 1', ordinal: 1 }] }]
         };
       },
-      async authorizeDownload(input) {
-        return { decision: 'ALLOW', reason_code: 'GATEWAY_ALLOWED', item_id: input.itemId, access_event_reference: input.accessEventReference, replayed: false };
+      async resolveDownloadSource(input) {
+        const fixture = createSyntheticFixtureDownload(input.itemId);
+        return {
+          item_id: input.itemId,
+          media_asset_id: '33333333-3333-4333-8333-333333333333',
+          media_asset_version_id: '44444444-4444-4444-8444-444444444444',
+          storage_object_id: '55555555-5555-4555-8555-555555555555',
+          provider: 'LOCAL_FIXTURE',
+          storage_namespace: 'M15D_DELIVERY',
+          provider_object_identifier: 'predecessor/synthetic.txt',
+          checksum_sha256: fixture.sha256,
+          byte_size: fixture.bytes.length,
+          media_type: fixture.contentType
+        };
       },
       async close() {},
       ...overrides
     };
   }
 
+  const byteSource: DeliveryByteSource = {
+    async read(descriptor) {
+      return createSyntheticFixtureDownload(descriptor.item_id);
+    }
+  };
+
   it('serves only a secretless shell and same-origin asset with strict no-store security headers', async () => {
-    app = buildDisposableDeliveryApp(database());
+    app = buildDisposableDeliveryApp(database(), byteSource);
     const shell = await app.inject({ method: 'GET', url: `/d/${CREDENTIAL}` });
     expect(shell.statusCode).toBe(200);
     expect(shell.body).toContain('Temporary Download Center');
@@ -53,7 +72,7 @@ describe('P02-M15-C disposable delivery surface and local fixture', () => {
   });
 
   it('returns only the safe manifest and a deterministic bounded synthetic fixture after gateway allow', async () => {
-    app = buildDisposableDeliveryApp(database());
+    app = buildDisposableDeliveryApp(database(), byteSource);
     const opened = await app.inject({ method: 'POST', url: '/api/disposable-delivery/open', payload: { credentialId: CREDENTIAL, secret: SECRET, accessEventReference: OPEN_REFERENCE } });
     expect(opened.statusCode).toBe(200);
     expect(opened.headers['x-robots-tag']).toBe('noindex, nofollow');
@@ -77,8 +96,8 @@ describe('P02-M15-C disposable delivery surface and local fixture', () => {
     let manifestCalls = 0;
     app = buildDisposableDeliveryApp(database({
       async getManifest() { manifestCalls += 1; return null; },
-      async authorizeDownload(input) { return { decision: 'DENY', reason_code: 'ACCESS_DENIED', item_id: null, access_event_reference: input.accessEventReference, replayed: false }; }
-    }));
+      async resolveDownloadSource() { return null; }
+    }), byteSource);
     const unavailable = { status: 'UNAVAILABLE' };
     const deniedOpen = await app.inject({ method: 'POST', url: '/api/disposable-delivery/open', payload: { credentialId: CREDENTIAL, secret: '0'.repeat(64), accessEventReference: OPEN_REFERENCE } });
     expect(deniedOpen.statusCode).toBe(404);

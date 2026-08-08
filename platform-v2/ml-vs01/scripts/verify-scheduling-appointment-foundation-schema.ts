@@ -4,17 +4,17 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_C_ALLOWLIST } from './p02-m15-c-changed-files.js';
+import { P02_M15_D_ALLOWLIST } from './p02-m15-d-changed-files.js';
 
 console.log('Running verify-scheduling-appointment-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
-const TEST_PORT = 55444;
-const TEST_DB = 'medialab_p02m15c_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15c_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15c_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
+const TEST_PORT = 55445;
+const TEST_DB = 'medialab_p02m15d_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15d_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15d_test_app';
 let errors = false;
 
 const predecessorMigrations = [
@@ -91,7 +91,7 @@ const packetTriggers = [
   ['scheduling_windows_time_guard', 'scheduling_windows', 'guard_scheduling_window_time']
 ];
 
-const allowedPaths = [...P02_M15_C_ALLOWLIST].sort();
+const allowedPaths = [...P02_M15_D_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -175,7 +175,7 @@ try {
   const expectedLedger = [
     ...predecessorMigrations.map(([filename, sha256]) => ({ filename, sha256 })),
     { filename: packetMigration, sha256: packetHash },
-    ...['0009_job_and_service_workstream_foundation.sql', '0010_mission_plan_foundation.sql', '0011_media_asset_identity_and_lineage_foundation.sql', '0012_durable_media_operations_reconciliation_foundation.sql', '0013_capture_session_ingest_custody_foundation.sql', '0014_media_cull_workspace_selected_media_evidence_foundation.sql', '0015_editor_handoff_returned_media_intake_foundation.sql', '0016_returned_editor_review_final_source_decision_foundation.sql', '0017_publication_delivery_entitlement_foundation.sql', '0018_temporary_download_center_external_sharing_foundation.sql', '0019_temporary_download_center_access_credential_gateway_foundation.sql', '0020_disposable_delivery_surface_local_fixture_foundation.sql'].map((filename) => ({
+    ...['0009_job_and_service_workstream_foundation.sql', '0010_mission_plan_foundation.sql', '0011_media_asset_identity_and_lineage_foundation.sql', '0012_durable_media_operations_reconciliation_foundation.sql', '0013_capture_session_ingest_custody_foundation.sql', '0014_media_cull_workspace_selected_media_evidence_foundation.sql', '0015_editor_handoff_returned_media_intake_foundation.sql', '0016_returned_editor_review_final_source_decision_foundation.sql', '0017_publication_delivery_entitlement_foundation.sql', '0018_temporary_download_center_external_sharing_foundation.sql', '0019_temporary_download_center_access_credential_gateway_foundation.sql', '0020_disposable_delivery_surface_local_fixture_foundation.sql', '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'].map((filename) => ({
       filename,
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations', filename))).digest('hex')
     }))

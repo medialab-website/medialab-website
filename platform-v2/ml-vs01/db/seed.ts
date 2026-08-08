@@ -43,13 +43,13 @@ export interface SeedResult {
   verified: number;
 }
 
-const APPROVED_DATABASES = ['medialab_p02m15c_test'];
+const APPROVED_DATABASES = ['medialab_p02m15d_test'];
 
 export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
-  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m15c-pg';
-  const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55444);
-  const database = options.database || process.env.PGDATABASE || 'medialab_p02m15c_test';
-  const user = options.user || process.env.PGUSER || 'medialab_p02m15c_test_owner';
+  const host = options.host || process.env.PGHOST || '/tmp/mlvs01-p02m15d-pg';
+  const port = options.port || (process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 55445);
+  const database = options.database || process.env.PGDATABASE || 'medialab_p02m15d_test';
+  const user = options.user || process.env.PGUSER || 'medialab_p02m15d_test_owner';
 
   // Guard 1: Database name restriction
   if (!APPROVED_DATABASES.includes(database)) {
@@ -57,16 +57,16 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
   }
 
   // Guard 2: Exact packet socket restriction, with no TCP or predecessor-cluster fallback
-  if (host !== '/tmp/mlvs01-p02m15c-pg') {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m15c-pg'.`);
+  if (host !== '/tmp/mlvs01-p02m15d-pg') {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved connection host '${host}'. Seed must use Unix socket '/tmp/mlvs01-p02m15d-pg'.`);
   }
 
-  if (port !== 55444) {
-    throw new Error(`SEED_SAFETY_FAILURE: Unapproved port ${port}. Must be 55444.`);
+  if (port !== 55445) {
+    throw new Error(`SEED_SAFETY_FAILURE: Unapproved port ${port}. Must be 55445.`);
   }
 
   // Guard 3: User role validation
-  const expectedUser = 'medialab_p02m15c_test_owner';
+  const expectedUser = 'medialab_p02m15d_test_owner';
   if (user !== expectedUser) {
     throw new Error(`SEED_SAFETY_FAILURE: Role mismatch for database '${database}'. Expected role '${expectedUser}', got '${user}'.`);
   }
@@ -554,7 +554,7 @@ const currentPath = fileURLToPath(import.meta.url);
 const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
 
 if (scriptPath && currentPath === scriptPath) {
-  const targetDb = process.env.PGDATABASE || 'medialab_p02m15c_test';
+  const targetDb = process.env.PGDATABASE || 'medialab_p02m15d_test';
   const targetUser = process.env.PGUSER;
 
   if (!targetUser) {

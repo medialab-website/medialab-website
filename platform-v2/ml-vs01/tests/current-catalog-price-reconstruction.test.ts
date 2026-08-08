@@ -34,11 +34,11 @@ import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtu
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15c_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15c_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15c_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
-const TEST_PORT = 55444;
+const TEST_DB = 'medialab_p02m15d_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15d_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15d_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
+const TEST_PORT = 55445;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -157,7 +157,7 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     const ledger = await owner.query(
       'SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename'
     );
-    expect(ledger.rows).toHaveLength(20);
+    expect(ledger.rows).toHaveLength(21);
     expect(ledger.rows.slice(0, 3)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },

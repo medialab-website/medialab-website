@@ -5,10 +5,10 @@ import crypto from 'crypto';
 
 describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m15c-pg',
-    port: 55444,
-    database: 'medialab_p02m15c_test',
-    user: 'medialab_p02m15c_test_owner'
+    host: '/tmp/mlvs01-p02m15d-pg',
+    port: 55445,
+    database: 'medialab_p02m15d_test',
+    user: 'medialab_p02m15d_test_owner'
   });
 
   afterAll(async () => {
@@ -19,7 +19,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(20);
+        expect(res.rows).toHaveLength(21);
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
         expect(res.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -53,7 +53,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
           ORDER BY tablename
         `);
         expect(res.rows).toHaveLength(2);
-        const expectedOwner = env === 'test' ? 'medialab_p02m15c_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m15d_test_owner' : 'medialab_p02m04a_owner';
         expect(res.rows[0].tableowner).toBe(expectedOwner);
         expect(res.rows[1].tableowner).toBe(expectedOwner);
       });

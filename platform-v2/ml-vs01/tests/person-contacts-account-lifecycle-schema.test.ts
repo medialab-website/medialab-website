@@ -6,11 +6,11 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_p02m15c_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15c_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15c_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
-const TEST_PORT = 55444;
+const TEST_DB = 'medialab_p02m15d_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15d_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15d_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
+const TEST_PORT = 55445;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -219,6 +219,7 @@ const TEMPORARY_DOWNLOAD_CENTER_APIS = [
   'get_temporary_download_center_gateway_history',
   'issue_temporary_download_center_access_credential',
   'replace_temporary_download_center',
+  'resolve_temporary_download_center_delivery_source',
   'revoke_temporary_download_center',
   'revoke_temporary_download_center_access_credential',
   'rotate_temporary_download_center_access_credential',
@@ -457,6 +458,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0018_temporary_download_center_external_sharing_foundation.sql'
       ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
+      ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -486,6 +488,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0018_temporary_download_center_external_sharing_foundation.sql'
       ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
+      ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
     ]);
   });
 
@@ -885,7 +888,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(237);
+      expect(searchPaths.rows).toHaveLength(238);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

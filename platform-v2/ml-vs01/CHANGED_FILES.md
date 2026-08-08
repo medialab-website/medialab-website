@@ -1,8 +1,8 @@
-# P02-M15-C Changed Files
+# P02-M15-D Changed Files
 
-The uncommitted and unstaged candidate contains exactly the 64 unique paths exported by `scripts/p02-m15-c-changed-files.ts`, including the Architect-authorized canonical dependency gate repair in `scripts/verify-dependencies-exact.ts` and the reconciled required-dependency assertion in `tests/workspace-foundation.test.ts`.
+The uncommitted and unstaged candidate contains exactly the 61 unique paths exported by `scripts/p02-m15-d-changed-files.ts`.
 
-The bounded inventory is limited to migration 0020, the loopback-only Fastify delivery surface, deterministic synthetic fixture generation, exact runtime dependency lock, migration/seed/reset integration, packet verification/tests, and additive predecessor inventory updates. No real media, provider/storage operation, public deployment, production, payment, notification, Desktop, cleanup, or later-packet path is included.
+The bounded inventory is limited to migration 0021, the internal provider-neutral delivery-source resolver, the `LOCAL_FIXTURE` local-file adapter, the exact browser/API integration, disposable-database migration/seed/reset wiring, regression updates, and packet verification/tests. The lockfile and every explicit immutable predecessor input remain unchanged.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
@@ -11,12 +11,9 @@ The bounded inventory is limited to migration 0020, the loopback-only Fastify de
 - platform-v2/ml-vs01/db/reset-test-database.ts
 - platform-v2/ml-vs01/db/seed.ts
 - platform-v2/ml-vs01/package.json
-- platform-v2/ml-vs01/package-lock.json
-- platform-v2/ml-vs01/tsconfig.json
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
 - platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-changed-files.ts
-- platform-v2/ml-vs01/scripts/verify-dependencies-exact.ts
 - platform-v2/ml-vs01/scripts/verify-current-catalog-price-reconstruction-schema.ts
 - platform-v2/ml-vs01/scripts/verify-durable-media-operations-reconciliation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-editor-handoff-returned-media-intake-schema.ts
@@ -59,12 +56,12 @@ The bounded inventory is limited to migration 0020, the loopback-only Fastify de
 - platform-v2/ml-vs01/tests/temporary-download-center-external-sharing-foundation.test.ts
 - platform-v2/ml-vs01/tests/temporary-download-center-access-credential-gateway-foundation.test.ts
 - platform-v2/ml-vs01/tests/test-database-reset.test.ts
-- platform-v2/ml-vs01/tests/workspace-foundation.test.ts
-- platform-v2/ml-vs01/db/migrations/0020_disposable_delivery_surface_local_fixture_foundation.sql
-- platform-v2/ml-vs01/scripts/p02-m15-c-changed-files.ts
 - platform-v2/ml-vs01/scripts/verify-disposable-delivery-surface-local-fixture.ts
 - platform-v2/ml-vs01/tests/disposable-delivery-surface-local-fixture.test.ts
 - platform-v2/ml-vs01/src/disposable-delivery/app.ts
 - platform-v2/ml-vs01/src/disposable-delivery/database.ts
-- platform-v2/ml-vs01/src/disposable-delivery/page.ts
-- platform-v2/ml-vs01/src/disposable-delivery/fixture-download.ts
+- platform-v2/ml-vs01/db/migrations/0021_provider_neutral_file_backed_disposable_delivery_foundation.sql
+- platform-v2/ml-vs01/scripts/p02-m15-d-changed-files.ts
+- platform-v2/ml-vs01/scripts/verify-provider-neutral-file-backed-delivery.ts
+- platform-v2/ml-vs01/tests/provider-neutral-file-backed-delivery.test.ts
+- platform-v2/ml-vs01/src/disposable-delivery/local-file-adapter.ts

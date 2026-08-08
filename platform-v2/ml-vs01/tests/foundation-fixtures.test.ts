@@ -24,10 +24,10 @@ import {
   TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FOUNDATION_FIXTURE_TABLES
 } from '../db/fixtures/temporary-download-center-access-credential-gateway-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15c_test';
-const TEST_ROLE = 'medialab_p02m15c_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
-const TEST_PORT = 55444;
+const TEST_DB = 'medialab_p02m15d_test';
+const TEST_ROLE = 'medialab_p02m15d_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
+const TEST_PORT = 55445;
 
 describe('P01C Foundation Fixtures & Seed Tests', () => {
   let client: pg.Client;

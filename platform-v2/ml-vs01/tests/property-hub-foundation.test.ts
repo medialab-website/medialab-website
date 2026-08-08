@@ -22,11 +22,11 @@ import {
   PROPERTY_HUB_SOURCE
 } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15c_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15c_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15c_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
-const TEST_PORT = 55444;
+const TEST_DB = 'medialab_p02m15d_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15d_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15d_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
+const TEST_PORT = 55445;
 const OWNER_IDENTITY_ID = IDENTITY_FIXTURES[0].id;
 const OPERATOR_MEMBERSHIP_ID = MEMBERSHIP_FIXTURES[1].id;
 const OWNER_MEMBERSHIP_ID = MEMBERSHIP_FIXTURES[0].id;
@@ -139,7 +139,7 @@ describe('P02-M04-B provider-neutral Property Hub foundation', () => {
 
   it('1. records the exact nine-migration ledger and preserves all predecessor checksums', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(20);
+    expect(ledger.rows).toHaveLength(21);
     expect(ledger.rows.slice(0, 6)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
       { filename: '0002_property_identity_and_snapshots.sql', sha256: 'd3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83' },

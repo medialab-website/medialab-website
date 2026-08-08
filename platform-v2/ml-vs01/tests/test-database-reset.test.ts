@@ -18,15 +18,16 @@ import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtu
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15c_test';
-const TEST_ROLE = 'medialab_p02m15c_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15c-pg';
-const TEST_PORT = 55444;
+const TEST_DB = 'medialab_p02m15d_test';
+const TEST_ROLE = 'medialab_p02m15d_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
+const TEST_PORT = 55445;
 
 const EXACT_ROUTINE_NAMES = [
   'evaluate_temporary_download_center_gateway_access',
   'get_temporary_download_center_access_credential_history',
   'get_temporary_download_center_delivery_manifest',
+  'resolve_temporary_download_center_delivery_source',
   'get_temporary_download_center_gateway_history',
   'guard_tdc_access_credential_current_mutation',
   'issue_temporary_download_center_access_credential',
@@ -545,7 +546,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(20);
+    expect(ledgerRes.rows).toHaveLength(21);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -572,6 +573,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[17].filename).toBe('0018_temporary_download_center_external_sharing_foundation.sql');
     expect(ledgerRes.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect(ledgerRes.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');
+    expect(ledgerRes.rows[20].filename).toBe('0021_provider_neutral_file_backed_disposable_delivery_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.

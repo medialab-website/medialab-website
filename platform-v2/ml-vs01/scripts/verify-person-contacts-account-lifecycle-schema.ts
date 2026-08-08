@@ -189,6 +189,7 @@ exactNames('Canonical migration inventory', migrationFiles, [
   ,'0018_temporary_download_center_external_sharing_foundation.sql'
   ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
   ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
+  ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
 ]);
 for (const expected of expectedMigrations) {
   const bytes = fs.readFileSync(path.join(migrationsDir, expected.filename));

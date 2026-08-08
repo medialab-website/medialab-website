@@ -16,12 +16,13 @@ import { TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FIXTURE_POLICY } fr
 import { buildDisposableDeliveryApp } from '../src/disposable-delivery/app.js';
 import { createDisposableDeliveryDatabase } from '../src/disposable-delivery/database.js';
 import { createSyntheticFixtureDownload } from '../src/disposable-delivery/fixture-download.js';
+import type { DeliveryByteSource } from '../src/disposable-delivery/local-file-adapter.js';
 
-const TEST_DB = 'medialab_p02m15c_test';
-const OWNER = 'medialab_p02m15c_test_owner';
-const RUNTIME = 'medialab_p02m15c_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15c-pg';
-const PORT = 55444;
+const TEST_DB = 'medialab_p02m15d_test';
+const OWNER = 'medialab_p02m15d_test_owner';
+const RUNTIME = 'medialab_p02m15d_test_app';
+const SOCKET = '/tmp/mlvs01-p02m15d-pg';
+const PORT = 55445;
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const ADMIN = IDENTITY_FIXTURES[0].id;
 const SOURCE = 'SYNTHETIC_P02_M15_B_TEST';
@@ -174,9 +175,10 @@ describe('P02-M15-C Temporary Download Center access credential and gateway foun
 
   it('applies 0019 with exact controlled objects, strong one-time secret issuance, and no durable or read-path secret exposure', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(20);
+    expect(ledger.rows).toHaveLength(21);
     expect(ledger.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect(ledger.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');
+    expect(ledger.rows[20].filename).toBe('0021_provider_neutral_file_backed_disposable_delivery_foundation.sql');
     expect(TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FIXTURE_POLICY).toMatchObject({ verifierAlgorithm: 'SHA256-HEX-V1', usableSecretBytes: 32 });
     const state = await ready(true, 'one-time-stable');
     expect(state.issued.access_secret).toMatch(/^[0-9a-f]{64}$/);
@@ -334,8 +336,30 @@ describe('P02-M15-C Temporary Download Center access credential and gateway foun
 
   it('serves a loopback-only secretless shell and authorizes manifest and deterministic synthetic fixture download through fresh M15-B gateway evaluations', async () => {
     const state = await ready();
-    const deliveryDatabase = createDisposableDeliveryDatabase({ host: SOCKET, port: PORT, database: TEST_DB, user: RUNTIME });
-    const app = buildDisposableDeliveryApp(deliveryDatabase);
+    const postgresDatabase = createDisposableDeliveryDatabase({ host: SOCKET, port: PORT, database: TEST_DB, user: RUNTIME });
+    const deliveryDatabase = {
+      getManifest: postgresDatabase.getManifest,
+      async resolveDownloadSource(input: any) {
+        const decision = await gateway(input.credentialId, input.secret, 'DOWNLOAD', input.accessEventReference, input.itemId, input.evidence);
+        if (decision.decision !== 'ALLOW') return null;
+        const fixture = createSyntheticFixtureDownload(input.itemId);
+        return {
+          item_id: input.itemId,
+          media_asset_id: crypto.randomUUID(),
+          media_asset_version_id: crypto.randomUUID(),
+          storage_object_id: crypto.randomUUID(),
+          provider: 'LOCAL_FIXTURE',
+          storage_namespace: 'M15D_DELIVERY',
+          provider_object_identifier: 'predecessor/synthetic.bin',
+          checksum_sha256: fixture.sha256,
+          byte_size: fixture.bytes.length,
+          media_type: fixture.contentType
+        };
+      },
+      close: postgresDatabase.close
+    };
+    const byteSource: DeliveryByteSource = { async read(descriptor) { return createSyntheticFixtureDownload(descriptor.item_id); } };
+    const app = buildDisposableDeliveryApp(deliveryDatabase, byteSource);
     const address = await app.listen({ host: '127.0.0.1', port: 0 });
     try {
       const shell = await fetch(`${address}/d/${state.issued.credential_id}#${state.issued.access_secret}`, { redirect: 'error' });
