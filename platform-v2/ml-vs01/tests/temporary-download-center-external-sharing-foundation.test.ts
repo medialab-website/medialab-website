@@ -13,11 +13,11 @@ import {
 } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15d_test';
-const OWNER = 'medialab_p02m15d_test_owner';
-const RUNTIME = 'medialab_p02m15d_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15d-pg';
-const PORT = 55445;
+const TEST_DB = 'medialab_p02m15e_test';
+const OWNER = 'medialab_p02m15e_test_owner';
+const RUNTIME = 'medialab_p02m15e_test_app';
+const SOCKET = '/tmp/mlvs01-p02m15e-pg';
+const PORT = 55446;
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const ADMIN = IDENTITY_FIXTURES[0].id;
 const SOURCE = 'SYNTHETIC_P02_M15_A_TEST';
@@ -146,7 +146,7 @@ describe('P02-M15-A Temporary Download Center and external-sharing foundation', 
 
   it('preserves 0018 exact objects and permissions under the 0019 trusted gateway-writer boundary', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(21);
+    expect(ledger.rows).toHaveLength(22);
     expect(ledger.rows[17].filename).toBe('0018_temporary_download_center_external_sharing_foundation.sql');
     expect(ledger.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect(ledger.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');

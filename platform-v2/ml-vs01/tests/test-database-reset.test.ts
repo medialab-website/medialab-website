@@ -18,12 +18,21 @@ import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtu
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15d_test';
-const TEST_ROLE = 'medialab_p02m15d_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
-const TEST_PORT = 55445;
+const TEST_DB = 'medialab_p02m15e_test';
+const TEST_ROLE = 'medialab_p02m15e_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
+const TEST_PORT = 55446;
 
 const EXACT_ROUTINE_NAMES = [
+  'classify_organization_record_order',
+  'create_organization_record_export_snapshot',
+  'get_internal_organization_records_projection',
+  'get_organization_record_export_snapshot',
+  'organization_record_projection_rows',
+  'reject_organization_record_evidence_mutation',
+  'revoke_personal_order_summary',
+  'share_personal_order_summary',
+  'validate_organization_record_text',
   'evaluate_temporary_download_center_gateway_access',
   'get_temporary_download_center_access_credential_history',
   'get_temporary_download_center_delivery_manifest',
@@ -287,6 +296,11 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['organization_record_access_events_immutability_guard', 'organization_record_access_events', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_export_items_immutability_guard', 'organization_record_export_items', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_exports_immutability_guard', 'organization_record_export_snapshots', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_revocations_immutability_guard', 'organization_record_personal_summary_revocations', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_shares_immutability_guard', 'organization_record_personal_summary_shares', 'reject_organization_record_evidence_mutation'],
   ['tdc_access_credential_current_control_guard', 'temporary_download_center_access_credential_current', 'guard_tdc_access_credential_current_mutation'],
   ['tdc_access_credential_events_immutability_guard', 'temporary_download_center_access_credential_events', 'reject_tdc_access_credential_evidence_mutation'],
   ['tdc_access_credentials_immutability_guard', 'temporary_download_center_access_credentials', 'reject_tdc_access_credential_evidence_mutation'],
@@ -546,7 +560,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(21);
+    expect(ledgerRes.rows).toHaveLength(22);
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');
@@ -574,6 +588,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect(ledgerRes.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');
     expect(ledgerRes.rows[20].filename).toBe('0021_provider_neutral_file_backed_disposable_delivery_foundation.sql');
+    expect(ledgerRes.rows[21].filename).toBe('0022_organization_records_dashboard_audited_export_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.

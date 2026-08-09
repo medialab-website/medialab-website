@@ -18,11 +18,11 @@ import { createDisposableDeliveryDatabase } from '../src/disposable-delivery/dat
 import { createSyntheticFixtureDownload } from '../src/disposable-delivery/fixture-download.js';
 import type { DeliveryByteSource } from '../src/disposable-delivery/local-file-adapter.js';
 
-const TEST_DB = 'medialab_p02m15d_test';
-const OWNER = 'medialab_p02m15d_test_owner';
-const RUNTIME = 'medialab_p02m15d_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15d-pg';
-const PORT = 55445;
+const TEST_DB = 'medialab_p02m15e_test';
+const OWNER = 'medialab_p02m15e_test_owner';
+const RUNTIME = 'medialab_p02m15e_test_app';
+const SOCKET = '/tmp/mlvs01-p02m15e-pg';
+const PORT = 55446;
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const ADMIN = IDENTITY_FIXTURES[0].id;
 const SOURCE = 'SYNTHETIC_P02_M15_B_TEST';
@@ -175,7 +175,7 @@ describe('P02-M15-C Temporary Download Center access credential and gateway foun
 
   it('applies 0019 with exact controlled objects, strong one-time secret issuance, and no durable or read-path secret exposure', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(21);
+    expect(ledger.rows).toHaveLength(22);
     expect(ledger.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect(ledger.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');
     expect(ledger.rows[20].filename).toBe('0021_provider_neutral_file_backed_disposable_delivery_foundation.sql');

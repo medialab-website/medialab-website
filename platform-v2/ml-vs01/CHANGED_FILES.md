@@ -1,20 +1,24 @@
-# P02-M15-D Changed Files
+# P02-M15-E Changed Files
 
-The uncommitted and unstaged candidate contains exactly the 61 unique paths exported by `scripts/p02-m15-d-changed-files.ts`.
+The uncommitted and unstaged candidate contains exactly this 60-path subset of the 61-path maximum allowlist exported by `scripts/p02-m15-e-changed-files.ts`.
 
-The bounded inventory is limited to migration 0021, the internal provider-neutral delivery-source resolver, the `LOCAL_FIXTURE` local-file adapter, the exact browser/API integration, disposable-database migration/seed/reset wiring, regression updates, and packet verification/tests. The lockfile and every explicit immutable predecessor input remain unchanged.
+The bounded inventory is limited to migration 0022, organization-record classification, personal-summary share/revoke evidence, deterministic internal projection, immutable audited export snapshots, disposable database wiring, predecessor regression boundary updates, and packet verification/tests. `package-lock.json`, migrations `0001`–`0021`, the existing disposable-delivery source files, and predecessor packet allowlist scripts remain unchanged.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
+- platform-v2/ml-vs01/db/fixtures/organization-records-dashboard-audited-export-fixtures.ts
 - platform-v2/ml-vs01/db/migrate.ts
+- platform-v2/ml-vs01/db/migrations/0022_organization_records_dashboard_audited_export_foundation.sql
 - platform-v2/ml-vs01/db/migrations/README.md
 - platform-v2/ml-vs01/db/reset-test-database.ts
 - platform-v2/ml-vs01/db/seed.ts
 - platform-v2/ml-vs01/package.json
+- platform-v2/ml-vs01/scripts/p02-m15-e-changed-files.ts
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
 - platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-changed-files.ts
 - platform-v2/ml-vs01/scripts/verify-current-catalog-price-reconstruction-schema.ts
+- platform-v2/ml-vs01/scripts/verify-disposable-delivery-surface-local-fixture.ts
 - platform-v2/ml-vs01/scripts/verify-durable-media-operations-reconciliation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-editor-handoff-returned-media-intake-schema.ts
 - platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts
@@ -24,15 +28,17 @@ The bounded inventory is limited to migration 0021, the internal provider-neutra
 - platform-v2/ml-vs01/scripts/verify-migration-engine.ts
 - platform-v2/ml-vs01/scripts/verify-mission-plan-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts
+- platform-v2/ml-vs01/scripts/verify-organization-records-dashboard-audited-export.ts
 - platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-property-hub-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts
+- platform-v2/ml-vs01/scripts/verify-provider-neutral-file-backed-delivery.ts
 - platform-v2/ml-vs01/scripts/verify-publication-delivery-entitlement-schema.ts
 - platform-v2/ml-vs01/scripts/verify-returned-editor-review-final-source-schema.ts
 - platform-v2/ml-vs01/scripts/verify-runtime.ts
 - platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts
-- platform-v2/ml-vs01/scripts/verify-temporary-download-center-external-sharing-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-access-credential-gateway-schema.ts
+- platform-v2/ml-vs01/scripts/verify-temporary-download-center-external-sharing-schema.ts
 - platform-v2/ml-vs01/tests/capture-session-ingest-custody-foundation.test.ts
 - platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts
 - platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts
@@ -47,21 +53,14 @@ The bounded inventory is limited to migration 0021, the internal provider-neutra
 - platform-v2/ml-vs01/tests/migration-engine.test.ts
 - platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts
 - platform-v2/ml-vs01/tests/order-foundation.test.ts
+- platform-v2/ml-vs01/tests/organization-records-dashboard-audited-export-foundation.test.ts
 - platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts
 - platform-v2/ml-vs01/tests/property-hub-foundation.test.ts
 - platform-v2/ml-vs01/tests/property-snapshot-schema.test.ts
+- platform-v2/ml-vs01/tests/provider-neutral-file-backed-delivery.test.ts
 - platform-v2/ml-vs01/tests/publication-delivery-entitlement-foundation.test.ts
 - platform-v2/ml-vs01/tests/returned-editor-review-final-source-foundation.test.ts
 - platform-v2/ml-vs01/tests/scheduling-appointment-foundation.test.ts
-- platform-v2/ml-vs01/tests/temporary-download-center-external-sharing-foundation.test.ts
 - platform-v2/ml-vs01/tests/temporary-download-center-access-credential-gateway-foundation.test.ts
+- platform-v2/ml-vs01/tests/temporary-download-center-external-sharing-foundation.test.ts
 - platform-v2/ml-vs01/tests/test-database-reset.test.ts
-- platform-v2/ml-vs01/scripts/verify-disposable-delivery-surface-local-fixture.ts
-- platform-v2/ml-vs01/tests/disposable-delivery-surface-local-fixture.test.ts
-- platform-v2/ml-vs01/src/disposable-delivery/app.ts
-- platform-v2/ml-vs01/src/disposable-delivery/database.ts
-- platform-v2/ml-vs01/db/migrations/0021_provider_neutral_file_backed_disposable_delivery_foundation.sql
-- platform-v2/ml-vs01/scripts/p02-m15-d-changed-files.ts
-- platform-v2/ml-vs01/scripts/verify-provider-neutral-file-backed-delivery.ts
-- platform-v2/ml-vs01/tests/provider-neutral-file-backed-delivery.test.ts
-- platform-v2/ml-vs01/src/disposable-delivery/local-file-adapter.ts

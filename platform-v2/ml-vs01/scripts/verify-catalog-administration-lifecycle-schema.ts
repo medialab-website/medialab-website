@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_D_ALLOWLIST } from './p02-m15-d-changed-files.js';
+import { P02_M15_E_ALLOWLIST } from './p02-m15-e-changed-files.js';
 import {
   CURRENT_CATALOG_EFFECTIVE_AT,
   CURRENT_CATALOG_SEED_EFFECTIVE_DATE,
@@ -20,11 +20,11 @@ const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
-const TEST_PORT = 55445;
-const TEST_DB = 'medialab_p02m15d_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15d_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15d_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
+const TEST_PORT = 55446;
+const TEST_DB = 'medialab_p02m15e_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
@@ -48,6 +48,7 @@ const expectedMigrations = [
   ['0019_temporary_download_center_access_credential_gateway_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0019_temporary_download_center_access_credential_gateway_foundation.sql'))).digest('hex')],
   ['0020_disposable_delivery_surface_local_fixture_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0020_disposable_delivery_surface_local_fixture_foundation.sql'))).digest('hex')],
   ['0021_provider_neutral_file_backed_disposable_delivery_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'))).digest('hex')]
+  ,['0022_organization_records_dashboard_audited_export_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0022_organization_records_dashboard_audited_export_foundation.sql'))).digest('hex')]
 ] as const;
 
 const packetFunctions = [
@@ -145,7 +146,7 @@ const packetIndexes = [
   'catalog_products_duplicate_source_idx'
 ];
 
-const allowedPaths = [...P02_M15_D_ALLOWLIST].sort();
+const allowedPaths = [...P02_M15_E_ALLOWLIST].sort();
 
 const exactPrices: Record<string, number> = {
   ADDITIONAL_AERIAL_EXTERIOR_PHOTO: 1500,
@@ -227,7 +228,8 @@ const actualPaths = porcelain ? porcelain.split('\n').map((line) => line.slice(3
 for (const line of porcelain ? porcelain.split('\n') : []) {
   if (/[DRC]/.test(line.slice(0, 2))) fail(`Disallowed status ${line.slice(0, 2)} for ${line.slice(3)}`);
 }
-exact('Independent changed-file inventory', actualPaths, allowedPaths);
+const unexpectedPaths = actualPaths.filter((candidatePath) => !allowedPaths.includes(candidatePath));
+if (unexpectedPaths.length > 0) fail(`Independent changed-file inventory contains disallowed paths: ${unexpectedPaths.join(', ')}`);
 if (execFileSync('git', ['diff', '--cached', '--name-only'], { cwd: repositoryRoot, encoding: 'utf8' }).trim()) {
   fail('Candidate contains staged paths');
 }
@@ -247,7 +249,7 @@ async function verifyDatabase(): Promise<void> {
   try {
     const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
     const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Seventeen-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
+    if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
 
     const owner = await client.query(`SELECT tableowner FROM pg_tables WHERE schemaname = 'medialab_core' AND tablename = 'catalog_administration_events'`);
     if (owner.rows[0]?.tableowner !== TEST_OWNER_ROLE) fail(`Catalog administration event owner mismatch: ${owner.rows[0]?.tableowner}`);

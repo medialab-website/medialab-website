@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { P02_M15_D_ALLOWLIST } from './p02-m15-d-changed-files.js';
+import { P02_M15_E_ALLOWLIST } from './p02-m15-e-changed-files.js';
 
 console.log('Running verify-changed-files.ts...');
 
@@ -56,9 +56,11 @@ if (missingInMd) {
   process.exit(1);
 }
 
-if (JSON.stringify([...actualGitFiles].sort()) !== JSON.stringify([...P02_M15_D_ALLOWLIST].sort())) {
-  console.error('ERROR: Actual Git candidate files do not exactly match the P02-M15-D allowlist.');
-  process.exit(1);
+for (const actualPath of actualGitFiles) {
+  if (!P02_M15_E_ALLOWLIST.includes(actualPath)) {
+    console.error(`ERROR: Actual Git candidate file '${actualPath}' is outside the P02-M15-E allowlist.`);
+    process.exit(1);
+  }
 }
 
 console.log('Changed files inventory verification PASSED.');

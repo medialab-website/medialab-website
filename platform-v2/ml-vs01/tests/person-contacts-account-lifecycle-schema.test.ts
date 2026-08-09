@@ -6,11 +6,11 @@ import pg from 'pg';
 import { resetTestDatabase } from '../db/reset-test-database.js';
 import { runMigrations } from '../db/migrate.js';
 
-const TEST_DB = 'medialab_p02m15d_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15d_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15d_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
-const TEST_PORT = 55445;
+const TEST_DB = 'medialab_p02m15e_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
+const TEST_PORT = 55446;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';
@@ -226,6 +226,11 @@ const TEMPORARY_DOWNLOAD_CENTER_APIS = [
   'update_temporary_download_center_selection'
 ];
 
+const ORGANIZATION_RECORD_APIS = [
+  'revoke_personal_order_summary',
+  'share_personal_order_summary'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
@@ -242,7 +247,8 @@ const ALL_RUNTIME_APIS = [
   ...MEDIA_EDITOR_HANDOFF_APIS,
   ...MEDIA_RETURN_REVIEW_APIS,
   ...PUBLICATION_DELIVERY_APIS,
-  ...TEMPORARY_DOWNLOAD_CENTER_APIS
+  ...TEMPORARY_DOWNLOAD_CENTER_APIS,
+  ...ORGANIZATION_RECORD_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -459,6 +465,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
       ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
+      ,'0022_organization_records_dashboard_audited_export_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -489,6 +496,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
       ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
+      ,'0022_organization_records_dashboard_audited_export_foundation.sql'
     ]);
   });
 
@@ -888,7 +896,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(238);
+      expect(searchPaths.rows).toHaveLength(243);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

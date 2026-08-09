@@ -11,12 +11,12 @@ import { buildDisposableDeliveryApp } from '../src/disposable-delivery/app.js';
 import { createDisposableDeliveryDatabase, type DeliverySourceDescriptor } from '../src/disposable-delivery/database.js';
 import { createLocalFileAdapter } from '../src/disposable-delivery/local-file-adapter.js';
 
-const TEST_DB = 'medialab_p02m15d_test';
-const OWNER = 'medialab_p02m15d_test_owner';
-const RUNTIME = 'medialab_p02m15d_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15d-pg';
-const PORT = 55445;
-const STORAGE_ROOT = '/tmp/mlvs01-p02m15d-storage';
+const TEST_DB = 'medialab_p02m15e_test';
+const OWNER = 'medialab_p02m15e_test_owner';
+const RUNTIME = 'medialab_p02m15e_test_app';
+const SOCKET = '/tmp/mlvs01-p02m15e-pg';
+const PORT = 55446;
+const STORAGE_ROOT = '/tmp/mlvs01-p02m15e-storage';
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M15_D_TEST';
 const FIXTURE_BYTES = Buffer.from('MediaLab P02-M15-D controlled local file-backed delivery proof.\n', 'utf8');
@@ -169,7 +169,7 @@ describe('P02-M15-D provider-neutral file-backed delivery and local storage proo
 
   it('applies 0021 as one locked SECURITY DEFINER resolver with only restricted-runtime EXECUTE', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(21);
+    expect(ledger.rows).toHaveLength(22);
     expect(ledger.rows[20].filename).toBe('0021_provider_neutral_file_backed_disposable_delivery_foundation.sql');
     const fn = await owner.query(`SELECT p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner,
         pg_get_function_identity_arguments(p.oid) arguments,pg_get_functiondef(p.oid) definition,

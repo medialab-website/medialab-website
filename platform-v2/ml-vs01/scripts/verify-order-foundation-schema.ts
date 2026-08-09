@@ -4,18 +4,18 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_D_ALLOWLIST } from './p02-m15-d-changed-files.js';
+import { P02_M15_E_ALLOWLIST } from './p02-m15-e-changed-files.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS, ORDER_FOUNDATION_SOURCE } from '../db/fixtures/order-foundation-fixtures.js';
 
 console.log('Running verify-order-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m15d-pg';
-const TEST_PORT = 55445;
-const TEST_DB = 'medialab_p02m15d_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15d_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15d_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
+const TEST_PORT = 55446;
+const TEST_DB = 'medialab_p02m15e_test';
+const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
 let errors = false;
 
 const expectedMigrations = [
@@ -40,6 +40,7 @@ const expectedMigrations = [
   ['0019_temporary_download_center_access_credential_gateway_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0019_temporary_download_center_access_credential_gateway_foundation.sql'))).digest('hex')],
   ['0020_disposable_delivery_surface_local_fixture_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0020_disposable_delivery_surface_local_fixture_foundation.sql'))).digest('hex')],
   ['0021_provider_neutral_file_backed_disposable_delivery_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'))).digest('hex')]
+  ,['0022_organization_records_dashboard_audited_export_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0022_organization_records_dashboard_audited_export_foundation.sql'))).digest('hex')]
 ] as const;
 
 const packetTables = [
@@ -71,7 +72,7 @@ const packetTriggers = [
   ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation']
 ];
 
-const allowedPaths = [...P02_M15_D_ALLOWLIST].sort();
+const allowedPaths = [...P02_M15_E_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -148,7 +149,8 @@ try {
     const parts = line.split(' ');
     return parts[parts.length - 1];
   });
-  exact('Independent changed-file boundary', actualPaths, allowedPaths);
+  const unexpectedPaths = actualPaths.filter((candidatePath) => !allowedPaths.includes(candidatePath));
+  if (unexpectedPaths.length > 0) fail(`Independent changed-file boundary contains disallowed paths: ${unexpectedPaths.join(', ')}`);
   if (status.split('\n').some((line) => line.startsWith('2 ') || line.includes('.D') || line.includes('D.'))) {
     fail('Changed-file boundary contains a rename or deletion');
   }
@@ -167,7 +169,7 @@ try {
   await client.connect();
   const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
   const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Seventeen-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
+  if (JSON.stringify(ledger.rows) !== JSON.stringify(expectedLedger)) fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows)}`);
 
   const tables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables

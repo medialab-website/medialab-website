@@ -7,6 +7,15 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'classify_organization_record_order',
+  'create_organization_record_export_snapshot',
+  'get_internal_organization_records_projection',
+  'get_organization_record_export_snapshot',
+  'organization_record_projection_rows',
+  'reject_organization_record_evidence_mutation',
+  'revoke_personal_order_summary',
+  'share_personal_order_summary',
+  'validate_organization_record_text',
   'evaluate_temporary_download_center_gateway_access',
   'get_temporary_download_center_access_credential_history',
   'get_temporary_download_center_delivery_manifest',
@@ -292,6 +301,11 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['organization_record_access_events_immutability_guard', 'organization_record_access_events', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_export_items_immutability_guard', 'organization_record_export_items', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_exports_immutability_guard', 'organization_record_export_snapshots', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_revocations_immutability_guard', 'organization_record_personal_summary_revocations', 'reject_organization_record_evidence_mutation'],
+  ['organization_record_shares_immutability_guard', 'organization_record_personal_summary_shares', 'reject_organization_record_evidence_mutation'],
   ['tdc_access_credential_current_control_guard', 'temporary_download_center_access_credential_current', 'guard_tdc_access_credential_current_mutation'],
   ['tdc_access_credential_events_immutability_guard', 'temporary_download_center_access_credential_events', 'reject_tdc_access_credential_evidence_mutation'],
   ['tdc_access_credentials_immutability_guard', 'temporary_download_center_access_credentials', 'reject_tdc_access_credential_evidence_mutation'],
@@ -459,10 +473,10 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m15d-pg',
-    port: 55445,
-    database: 'medialab_p02m15d_test',
-    user: 'medialab_p02m15d_test_owner'
+    host: '/tmp/mlvs01-p02m15e-pg',
+    port: 55446,
+    database: 'medialab_p02m15e_test',
+    user: 'medialab_p02m15e_test_owner'
   });
 
   beforeAll(async () => {
@@ -484,9 +498,9 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m15d_test',
-      user: 'medialab_p02m15d_test_owner',
-      runtimeUser: 'medialab_p02m15d_test_app'
+      database: 'medialab_p02m15e_test',
+      user: 'medialab_p02m15e_test_owner',
+      runtimeUser: 'medialab_p02m15e_test_app'
     });
 
     expect(outTest.applied).toEqual([]);
@@ -512,6 +526,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0019_temporary_download_center_access_credential_gateway_foundation.sql'
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
       ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
+      ,'0022_organization_records_dashboard_audited_export_foundation.sql'
     ]);
   });
 
@@ -535,7 +550,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m15d_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m15e_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -548,7 +563,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m15d_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m15e_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }

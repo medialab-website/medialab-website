@@ -43,32 +43,32 @@ if (!fixtureA.bytes.equals(fixtureB.bytes) || fixtureA.bytes.length > 512 || fix
 if (!migrationSql.includes('evaluate_temporary_download_center_gateway_access') || /CREATE TABLE/i.test(migrationSql)) fail('manifest projection does not narrowly reuse M15-B or creates an unauthorized table');
 
 const client = new pg.Client({
-  host: '/tmp/mlvs01-p02m15d-pg',
-  port: 55445,
-  database: 'medialab_p02m15d_test',
-  user: 'medialab_p02m15d_test_owner'
+  host: '/tmp/mlvs01-p02m15e-pg',
+  port: 55446,
+  database: 'medialab_p02m15e_test',
+  user: 'medialab_p02m15e_test_owner'
 });
 
 await client.connect();
 try {
   const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-  if (ledger.rows.length !== 21 || ledger.rows[19].filename !== migration || ledger.rows[19].sha256 !== migrationHash || ledger.rows[20].filename !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql') fail('migration ledger identity mismatch');
+  if (ledger.rows.length !== 22 || ledger.rows[19].filename !== migration || ledger.rows[19].sha256 !== migrationHash || ledger.rows[20].filename !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql') fail('migration ledger identity mismatch');
 
   const fn = await client.query(`SELECT p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner,
       pg_get_function_identity_arguments(p.oid) arguments,pg_get_functiondef(p.oid) definition,
       has_function_privilege($1,p.oid,'EXECUTE') runtime,has_function_privilege('public',p.oid,'EXECUTE') public
     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='medialab_core' AND p.proname='get_temporary_download_center_delivery_manifest'`, ['medialab_p02m15d_test_app']);
+    WHERE n.nspname='medialab_core' AND p.proname='get_temporary_download_center_delivery_manifest'`, ['medialab_p02m15e_test_app']);
   if (fn.rows.length !== 1) fail('safe manifest function inventory mismatch');
   const row = fn.rows[0];
-  if (!row.prosecdef || row.owner !== 'medialab_p02m15d_test_owner' || !row.runtime || row.public ||
+  if (!row.prosecdef || row.owner !== 'medialab_p02m15e_test_owner' || !row.runtime || row.public ||
       JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp'])) fail('manifest function owner/security/privilege mismatch');
   if (row.arguments !== 'p_credential uuid, p_presented_secret text, p_access_event_reference text, p_evidence jsonb') fail('manifest function signature mismatch');
   if (!row.definition.includes('evaluate_temporary_download_center_gateway_access')) fail('manifest function does not reuse the accepted gateway');
   if (/verifier_sha256|media_asset_version_id|source_order_id|organization_id|property_hub_id/.test(row.definition.split("jsonb_build_object(\n    'status'")[1] ?? '')) fail('manifest return projection exposes internal evidence');
 
   const runtimeTables = await client.query(`SELECT count(*)::int n FROM information_schema.role_table_grants
-    WHERE grantee=$1 AND table_schema='medialab_core' AND privilege_type IN ('INSERT','UPDATE','DELETE')`, ['medialab_p02m15d_test_app']);
+    WHERE grantee=$1 AND table_schema='medialab_core' AND privilege_type IN ('INSERT','UPDATE','DELETE')`, ['medialab_p02m15e_test_app']);
   if (runtimeTables.rows[0].n !== 0) fail('restricted runtime has direct table DML');
   const publicFunctions = await client.query(`SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='medialab_core' AND has_function_privilege('public',p.oid,'EXECUTE')`);
