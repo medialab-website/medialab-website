@@ -13,11 +13,11 @@ import {
 } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const OWNER = 'medialab_p02m15e_test_owner';
-const RUNTIME = 'medialab_p02m15e_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const OWNER = 'medialab_p02m16a_test_owner';
+const RUNTIME = 'medialab_p02m16a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const PORT = 55447;
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const ADMIN = IDENTITY_FIXTURES[0].id;
 const SOURCE = 'SYNTHETIC_P02_M15_A_TEST';

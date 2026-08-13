@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { runMigrations } from '../db/migrate.js';
+import { resetTestDatabase } from '../db/reset-test-database.js';
 import pkg from 'pg';
 const { Pool } = pkg;
 import crypto from 'crypto';
@@ -473,15 +474,18 @@ const EXACT_TRIGGERS = [
 
 describe('M02 Identity and Tenancy Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m15e-pg',
-    port: 55446,
-    database: 'medialab_p02m15e_test',
-    user: 'medialab_p02m15e_test_owner'
+    host: '/tmp/mlvs01-p02m16a-pg',
+    port: 55447,
+    database: 'medialab_p02m16a_test',
+    user: 'medialab_p02m16a_test_owner'
   });
 
   beforeAll(async () => {
-    // Let the tests run without clearing DB initially
-  });
+    await resetTestDatabase({
+      host: '/tmp/mlvs01-p02m16a-pg', port: 55447, database: 'medialab_p02m16a_test',
+      user: 'medialab_p02m16a_test_owner', runtimeUser: 'medialab_p02m16a_test_app', confirm: 'medialab_p02m16a_test'
+    });
+  }, 30_000);
 
   afterAll(async () => {
     await poolTest.end();
@@ -498,9 +502,11 @@ describe('M02 Identity and Tenancy Schema', () => {
 
     const outTest = await runMigrations({
       migrationsDir,
-      database: 'medialab_p02m15e_test',
-      user: 'medialab_p02m15e_test_owner',
-      runtimeUser: 'medialab_p02m15e_test_app'
+      host: '/tmp/mlvs01-p02m16a-pg',
+      port: 55447,
+      database: 'medialab_p02m16a_test',
+      user: 'medialab_p02m16a_test_owner',
+      runtimeUser: 'medialab_p02m16a_test_app'
     });
 
     expect(outTest.applied).toEqual([]);
@@ -550,7 +556,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           FROM pg_namespace WHERE nspname = 'medialab_core'
         `);
         expect(resSchema.rows).toHaveLength(1);
-        const expectedOwner = env === 'test' ? 'medialab_p02m15e_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m16a_test_owner' : 'medialab_p02m04a_owner';
         expect(resSchema.rows[0].owner).toBe(expectedOwner);
       });
 
@@ -563,7 +569,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           expect(tables).toContain(table);
         }
 
-        const expectedOwner = env === 'test' ? 'medialab_p02m15e_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m16a_test_owner' : 'medialab_p02m04a_owner';
         for (const row of resTables.rows) {
           expect(row.tableowner).toBe(expectedOwner);
         }

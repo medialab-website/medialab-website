@@ -34,11 +34,11 @@ import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtu
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const TEST_PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m16a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m16a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const TEST_PORT = 55447;
 
 const OWNER_PERSON_ID = '034a2b54-4665-5917-90a6-ae40adb3c8aa';
 const OWNER_IDENTITY_ID = 'e69ced56-a63e-57bf-a6b5-26d5fe6cc5c5';

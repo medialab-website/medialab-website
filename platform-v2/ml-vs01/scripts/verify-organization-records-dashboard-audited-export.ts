@@ -65,13 +65,13 @@ async function main(): Promise<void> {
     assert(actual === expected, `immutable predecessor ${filename} changed`);
   }
 
-  const host = process.env.PGHOST || '/tmp/mlvs01-p02m15e-pg';
-  const port = process.env.PGPORT ? Number(process.env.PGPORT) : 55446;
-  const database = process.env.PGDATABASE || 'medialab_p02m15e_test';
-  const user = process.env.PGUSER || 'medialab_p02m15e_test_owner';
-  const runtime = process.env.PGRUNTIMEUSER || 'medialab_p02m15e_test_app';
-  assert(host === '/tmp/mlvs01-p02m15e-pg' && port === 55446 && database === 'medialab_p02m15e_test', 'unsafe database target');
-  assert(user === 'medialab_p02m15e_test_owner' && runtime === 'medialab_p02m15e_test_app', 'unsafe role target');
+  const host = process.env.PGHOST || '/tmp/mlvs01-p02m16a-pg';
+  const port = process.env.PGPORT ? Number(process.env.PGPORT) : 55447;
+  const database = process.env.PGDATABASE || 'medialab_p02m16a_test';
+  const user = process.env.PGUSER || 'medialab_p02m16a_test_owner';
+  const runtime = process.env.PGRUNTIMEUSER || 'medialab_p02m16a_test_app';
+  assert(host === '/tmp/mlvs01-p02m16a-pg' && port === 55447 && database === 'medialab_p02m16a_test', 'unsafe database target');
+  assert(user === 'medialab_p02m16a_test_owner' && runtime === 'medialab_p02m16a_test_app', 'unsafe role target');
 
   const client = new pg.Client({ host, port, database, user });
   await client.connect();
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
   } finally {
     await client.end();
   }
-  console.log('P02-M15-E organization records and audited export verification PASSED.');
+  console.log('P02-M16-A organization records and audited export verification PASSED.');
 }
 
 main().catch(error => { console.error(error); process.exit(1); });

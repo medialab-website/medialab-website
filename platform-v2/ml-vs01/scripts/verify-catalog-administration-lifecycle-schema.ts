@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_E_ALLOWLIST } from './p02-m15-e-changed-files.js';
+import { P02_M16_A_ALLOWLIST } from './p02-m16-a-changed-files.js';
 import {
   CURRENT_CATALOG_EFFECTIVE_AT,
   CURRENT_CATALOG_SEED_EFFECTIVE_DATE,
@@ -20,11 +20,11 @@ const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = path.resolve(baseDir, '../..');
 let errors = false;
 
-const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const TEST_PORT = 55446;
-const TEST_DB = 'medialab_p02m15e_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const TEST_PORT = 55447;
+const TEST_DB = 'medialab_p02m16a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m16a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m16a_test_app';
 
 const expectedMigrations = [
   ['0001_identity_and_tenancy.sql', '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
@@ -146,7 +146,7 @@ const packetIndexes = [
   'catalog_products_duplicate_source_idx'
 ];
 
-const allowedPaths = [...P02_M15_E_ALLOWLIST].sort();
+const allowedPaths = [...P02_M16_A_ALLOWLIST].sort();
 
 const exactPrices: Record<string, number> = {
   ADDITIONAL_AERIAL_EXTERIOR_PHOTO: 1500,

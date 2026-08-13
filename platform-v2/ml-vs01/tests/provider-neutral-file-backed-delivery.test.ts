@@ -11,11 +11,11 @@ import { buildDisposableDeliveryApp } from '../src/disposable-delivery/app.js';
 import { createDisposableDeliveryDatabase, type DeliverySourceDescriptor } from '../src/disposable-delivery/database.js';
 import { createLocalFileAdapter } from '../src/disposable-delivery/local-file-adapter.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const OWNER = 'medialab_p02m15e_test_owner';
-const RUNTIME = 'medialab_p02m15e_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const OWNER = 'medialab_p02m16a_test_owner';
+const RUNTIME = 'medialab_p02m16a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const PORT = 55447;
 const STORAGE_ROOT = '/tmp/mlvs01-p02m15e-storage';
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M15_D_TEST';

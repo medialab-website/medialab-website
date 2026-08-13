@@ -11,11 +11,11 @@ import {
 import { ORDER_FOUNDATION_ORDER_ID, ORDER_FOUNDATION_PROPERTY_ID } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const TEST_PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m16a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m16a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const TEST_PORT = 55447;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const CUSTOMER_IDENTITY_ID = IDENTITY_FIXTURES[0].id;
 const STAFF_PERSON_ID = PEOPLE_FIXTURES[1].id;

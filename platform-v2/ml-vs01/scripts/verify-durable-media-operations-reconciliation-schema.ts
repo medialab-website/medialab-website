@@ -90,8 +90,8 @@ for (const evidence of [
 for (const prohibited of ['ON DELETE CASCADE', 'drive.googleapis.com', 'dropbox.com', 'box.com', 'aws_secret_access_key']) {
   if (sql.includes(prohibited)) fail(`Migration 0012 contains prohibited evidence: ${prohibited}`);
 }
-const client = new pg.Client({ host: '/tmp/mlvs01-p02m15e-pg', port: 55446,
-  database: 'medialab_p02m15e_test', user: 'medialab_p02m15e_test_owner' });
+const client = new pg.Client({ host: '/tmp/mlvs01-p02m16a-pg', port: 55447,
+  database: 'medialab_p02m16a_test', user: 'medialab_p02m16a_test_owner' });
 try {
   await client.connect();
   const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
@@ -111,7 +111,7 @@ try {
     `SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core'
       AND tablename = ANY($1::text[]) ORDER BY tablename`, [tables]);
   exact('Database table inventory', dbTables.rows.map((row) => row.tablename), tables);
-  if (dbTables.rows.some((row) => row.tableowner !== 'medialab_p02m15e_test_owner')) fail('Packet table ownership mismatch');
+  if (dbTables.rows.some((row) => row.tableowner !== 'medialab_p02m16a_test_owner')) fail('Packet table ownership mismatch');
   const functions = [...publicFunctions, ...helperFunctions];
   const dbFunctions = await client.query(
     `SELECT p.proname, pg_get_userbyid(p.proowner) AS owner, p.prosecdef, p.proconfig,
@@ -119,9 +119,9 @@ try {
             has_function_privilege('public', p.oid, 'EXECUTE') AS public_execute
        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'medialab_core' AND p.proname = ANY($2::text[]) ORDER BY p.proname`,
-    ['medialab_p02m15e_test_app', functions]);
+    ['medialab_p02m16a_test_app', functions]);
   exact('Database function inventory', dbFunctions.rows.map((row) => row.proname), functions);
-  if (dbFunctions.rows.some((row) => row.owner !== 'medialab_p02m15e_test_owner')) fail('Packet function ownership mismatch');
+  if (dbFunctions.rows.some((row) => row.owner !== 'medialab_p02m16a_test_owner')) fail('Packet function ownership mismatch');
   if (dbFunctions.rows.some((row) => row.public_execute)) fail('PUBLIC can execute a packet function');
   if (dbFunctions.rows.some((row) => publicFunctions.includes(row.proname) !== row.runtime_execute)) fail('Runtime function grants mismatch');
   if (dbFunctions.rows.some((row) => row.prosecdef && JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp']))) {
@@ -132,7 +132,7 @@ try {
             has_table_privilege('public', c.oid, 'SELECT,INSERT,UPDATE,DELETE') AS public_access
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'medialab_core' AND c.relname = ANY($2::text[])`,
-    ['medialab_p02m15e_test_app', tables]);
+    ['medialab_p02m16a_test_app', tables]);
   if (privileges.rows.some((row) => row.runtime_access || row.public_access)) fail('Direct table privilege boundary mismatch');
   const permissionRows = await client.query(
     `SELECT code FROM medialab_core.permissions WHERE code LIKE 'media_operation.%' ORDER BY code`);

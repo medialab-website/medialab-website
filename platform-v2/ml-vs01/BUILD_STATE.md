@@ -1,30 +1,21 @@
-# P02-M15-E Build State
+# P02-M16-A Build State
 
-- Packet: P02-M15-E — Organization Records Dashboard & Audited Export Foundation
+- Packet: P02-M16-A — Operational Pilot Golden Path Reconstruction R01
 - Candidate state: uncommitted, unstaged, bounded nonproduction review candidate
-- Base commit: `35ea18a5e94947e9b9ff90363eeb7c476ef370af`
-- Base tree: `fcf5cb6d13c31fa6edbc212eab5575583068876e`
-- Production/default `main` evidence: `b72c3f2115fe00c217a7cda2eca699c404c312f8`
-- Local branch: `platform-v2-p02-m15-e-organization-records-dashboard-audited-export-r01`
-- Migration: `db/migrations/0022_organization_records_dashboard_audited_export_foundation.sql`
-- Database: `medialab_p02m15e_test`
-- Owner role: `medialab_p02m15e_test_owner`
-- Restricted runtime role: `medialab_p02m15e_test_app`
-- Socket and port: `/tmp/mlvs01-p02m15e-pg`, `55446`
-- Disposable cluster data directory: `/tmp/mlvs01-p02m15e-data`
-- Accepted predecessor migrations: `0001` through `0021`, byte-identical
-- Dependency boundary: exact required dependencies remain Fastify `5.11.2` and pg `8.22.0`; `package-lock.json` remains immutable
-- Classification boundary: organization funding requires matching immutable `BILLING_PARTY` and `COMMERCIAL_OWNER` organization evidence; matching personal payer/owner evidence is personal; every contradiction fails closed
-- Privacy boundary: personal Orders are excluded by default; only the exact active personal commercial owner may share or revoke a non-financial summary through session-derived runtime commands
-- Projection boundary: organization-funded rows expose only bounded Order/item/Appointment/settlement/total/existing financial-eligibility evidence; personal rows expose no financial, payment, settlement, media, storage, credential, provider, path, download, or Property Hub data
-- Export boundary: owner-only snapshot creation freezes deterministic row order, canonical payload text, per-row visibility basis/share evidence, SHA-256 identities, and append-only audit history
-- Preservation boundary: revocation stops future personal-summary visibility without deleting the share, audit history, or earlier sealed export membership/payloads
-- Activation boundary: customer-facing dashboard/export runtime authority remains unavailable; no trusted-billing predicate or Milestone F capability exists
-- Payment boundary: no transaction ledger, processor settlement, invoice state, paid state, Stripe state, or provider operation exists
-- Media boundary: financial/records visibility creates no Property Hub, publication, media, credential, storage, or download authority
-- Preserved account-recovery law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history
-- Preserved deletion boundary: it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data
-- Preserved deferral boundary: Actual profile/preferences reset behavior remains deferred until those models exist
-- Commit, staging, push, retained remote branch, PR, `platform` advancement, `main` mutation, deployment, production, dual-run, cutover, and cleanup: none
-
-Validation and frozen evidence identities are recorded outside the repository in the review package produced from this exact candidate.
+- Base platform commit: `fbe5f9ae74a3b59bebea7ef74a1047bc6fb1dd8d`
+- Base tree: `52c52ac84c0173bf5518b34864f14902ac32bd04`
+- Production/default `main`: `b72c3f2115fe00c217a7cda2eca699c404c312f8`
+- Local branch: `platform-v2-p02-m16-a-operational-pilot-golden-path-reconstruction-r01`
+- Database boundary: `medialab_p02m16a_test`, restricted runtime `medialab_p02m16a_test_app`, owner only for reset/seed/test bootstrap
+- Socket/port: `/tmp/mlvs01-p02m16a-pg`, `55447`; application host/port: `127.0.0.1`, `4316`
+- Accepted migrations: exactly `0001` through `0022`; no migration `0023`
+- Dependency boundary: Fastify `5.11.2`, pg `8.22.0`, TypeScript `7.0.2`, Vitest `4.1.10`; byte-identical `package-lock.json`
+- Scenario: `M16A_GOLDEN_PATH_QUICK_EDIT_V1`, deterministic valid synthetic PNG fixtures only
+- Review law: five exact returned versions; four `ACCEPT`; one `QUICK_EDIT`; complete-review gate required before queue promotion
+- Quick Edit law: raw bounded staging, durable restricted worker, one-winner claim, injected attempt-1 failure, linked attempt-2 success, immutable correction/lineage/association, no approval from byte arrival
+- Human action law: explicit later `Send to Final`; focused unresolved `Needs Review` snapshot; no application-only canonical status
+- Delivery: deliberate five-version PHOTO publication, `NONPRODUCTION_FIXTURE` eligibility, fixed TDC, local exact-byte delivery only
+- Identity-recovery law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history.
+- Identity-recovery non-effect: it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
+- Deferred scope: Actual profile/preferences reset behavior remains deferred until those models exist.
+- Prohibited actions: no commit, staging, push, remote branch, PR, platform/main mutation, deploy, provider, real data/media, Desktop, shadow/dual run, cutover, Aryeo action, Historical Business Replay, or next packet

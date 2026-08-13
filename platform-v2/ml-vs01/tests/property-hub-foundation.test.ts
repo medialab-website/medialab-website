@@ -22,11 +22,11 @@ import {
   PROPERTY_HUB_SOURCE
 } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const TEST_PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m16a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m16a_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const TEST_PORT = 55447;
 const OWNER_IDENTITY_ID = IDENTITY_FIXTURES[0].id;
 const OPERATOR_MEMBERSHIP_ID = MEMBERSHIP_FIXTURES[1].id;
 const OWNER_MEMBERSHIP_ID = MEMBERSHIP_FIXTURES[0].id;

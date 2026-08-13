@@ -18,11 +18,11 @@ import { createDisposableDeliveryDatabase } from '../src/disposable-delivery/dat
 import { createSyntheticFixtureDownload } from '../src/disposable-delivery/fixture-download.js';
 import type { DeliveryByteSource } from '../src/disposable-delivery/local-file-adapter.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const OWNER = 'medialab_p02m15e_test_owner';
-const RUNTIME = 'medialab_p02m15e_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const OWNER = 'medialab_p02m16a_test_owner';
+const RUNTIME = 'medialab_p02m16a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const PORT = 55447;
 const ACTOR = IDENTITY_FIXTURES[1].id;
 const ADMIN = IDENTITY_FIXTURES[0].id;
 const SOURCE = 'SYNTHETIC_P02_M15_B_TEST';

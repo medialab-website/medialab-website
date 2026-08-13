@@ -6,11 +6,11 @@ import { IDENTITY_FIXTURES, ORGANIZATION_FIXTURE, PEOPLE_FIXTURES } from '../db/
 import { ORDER_FOUNDATION_ORDER_ID, ORDER_ITEM_FIXTURES } from '../db/fixtures/order-foundation-fixtures.js';
 import { PROPERTY_HUB_ID } from '../db/fixtures/property-hub-foundation-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const OWNER_ROLE = 'medialab_p02m15e_test_owner';
-const RUNTIME_ROLE = 'medialab_p02m15e_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const OWNER_ROLE = 'medialab_p02m16a_test_owner';
+const RUNTIME_ROLE = 'medialab_p02m16a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const PORT = 55447;
 const STAFF_IDENTITY_ID = IDENTITY_FIXTURES[1].id;
 const SOURCE = 'SYNTHETIC_P02_M07_A_TEST';
 

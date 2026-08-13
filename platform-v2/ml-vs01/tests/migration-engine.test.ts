@@ -15,10 +15,10 @@ describe('Migration Engine Substantive Behavior', () => {
 
   beforeAll(async () => {
     client = new pg.Client({
-      host: '/tmp/mlvs01-p02m15e-pg',
-      port: 55446,
-      database: 'medialab_p02m15e_test',
-      user: 'medialab_p02m15e_test_owner'
+      host: '/tmp/mlvs01-p02m16a-pg',
+      port: 55447,
+      database: 'medialab_p02m16a_test',
+      user: 'medialab_p02m16a_test_owner'
     });
     await client.connect();
   });

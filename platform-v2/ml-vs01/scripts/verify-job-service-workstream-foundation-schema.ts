@@ -22,11 +22,11 @@ const tenthSuccessorMigration = '0019_temporary_download_center_access_credentia
 const eleventhSuccessorMigration = '0020_disposable_delivery_surface_local_fixture_foundation.sql';
 const twelfthSuccessorMigration = '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql';
 const thirteenthSuccessorMigration = '0022_organization_records_dashboard_audited_export_foundation.sql';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const TEST_PORT = 55446;
-const TEST_DB = 'medialab_p02m15e_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const TEST_PORT = 55447;
+const TEST_DB = 'medialab_p02m16a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m16a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m16a_test_app';
 let errors = false;
 
 const predecessorMigrations = [

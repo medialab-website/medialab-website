@@ -11,11 +11,11 @@ import {
 import { ORDER_ITEM_FIXTURES } from '../db/fixtures/order-foundation-fixtures.js';
 import { ORGANIZATION_RECORDS_AUDITED_EXPORT_FIXTURE_POLICY } from '../db/fixtures/organization-records-dashboard-audited-export-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const OWNER = 'medialab_p02m15e_test_owner';
-const RUNTIME = 'medialab_p02m15e_test_app';
-const SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const OWNER = 'medialab_p02m16a_test_owner';
+const RUNTIME = 'medialab_p02m16a_test_app';
+const SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const PORT = 55447;
 const OPERATOR_IDENTITY = IDENTITY_FIXTURES[1].id;
 const OPERATOR_PERSON = PEOPLE_FIXTURES[1].id;
 const OPERATOR_MEMBERSHIP = MEMBERSHIP_FIXTURES[1].id;
@@ -27,7 +27,7 @@ const AS_OF = '2099-01-01T00:00:00.000Z';
 
 const digest = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 
-describe('P02-M15-E organization records dashboard and audited export foundation', () => {
+describe('P02-M16-A organization records dashboard and audited export foundation', () => {
   let owner: pg.Client;
   let runtime: pg.Client;
   const reset = () => resetTestDatabase({ host: SOCKET, port: PORT, database: TEST_DB, user: OWNER, runtimeUser: RUNTIME, confirm: TEST_DB });

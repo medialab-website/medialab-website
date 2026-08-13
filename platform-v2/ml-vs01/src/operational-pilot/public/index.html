@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediaLab Operational Pilot</title><link rel="stylesheet" href="/styles.css"></head>
+<body><header><p class="eyebrow">M16A · Local synthetic pilot</p><h1>Operational golden path</h1>
+<p id="context">Choose a bounded local fixture session. All saved state reloads from canonical R69 projections.</p>
+<div class="session-actions"><button id="review-session">Whole-listing reviewer</button><button id="quick-edit-session">Quick Edit operator</button></div></header>
+<main>
+<section class="panel" aria-labelledby="overview-heading"><div><p class="eyebrow">Canonical context</p><h2 id="overview-heading">Job overview &amp; Mission Plan</h2></div>
+<button id="refresh-overview">Refresh overview</button><a class="button-link" href="/api/mission-plan">Download offline Mission Plan</a><pre id="overview">Session required.</pre></section>
+
+<section aria-labelledby="review-heading"><p class="eyebrow">Reviewer surface</p><h2 id="review-heading">Whole-listing review</h2>
+<div class="workspace" aria-live="polite"><div class="preview"><img id="preview" alt="Synthetic returned media preview"><p id="status">Session required.</p></div>
+<aside><p id="progress">0 / 5 resolved · 5 unresolved</p><h3 id="filename">Returned image</h3><div class="actions" role="group" aria-label="Review decision">
+<button data-decision="ACCEPT">Accept <kbd>A</kbd></button><button data-decision="REJECT">Reject / Send Back <kbd>R</kbd></button><button data-decision="QUICK_EDIT">Quick Edit <kbd>Q</kbd></button></div>
+<nav aria-label="Returned media"><button id="previous">Previous</button><button id="next">Next</button></nav><button id="submit" disabled>Complete review</button></aside></div></section>
+
+<section class="panel" aria-labelledby="queue-heading"><div><p class="eyebrow">Operator surface</p><h2 id="queue-heading">Quick Edit queue</h2></div>
+<button id="refresh-queue">Refresh queue</button><p>Queue becomes actionable only after the five-item review is completed.</p><div id="queue">Session required.</div>
+<div id="correction-controls" hidden><a id="working-file" class="button-link" href="#">Download exact working file</a>
+<label>Corrected synthetic PNG <input id="correction-file" type="file" accept="image/png"></label><button id="stage-correction">Stage corrected media</button></div></section>
+
+<section class="panel" aria-labelledby="operation-heading"><div><p class="eyebrow">Durable recovery</p><h2 id="operation-heading">Operation, failure &amp; retry</h2></div>
+<button id="refresh-operation">Refresh operation</button><button id="retry-operation" disabled>Retry failed operation</button><pre id="operation">No operation selected.</pre>
+<div class="actions final-actions"><button id="send-final" disabled>Send to Final</button><button id="needs-review" disabled>Needs Review</button></div></section>
+
+<section class="panel" aria-labelledby="delivery-heading"><div><p class="eyebrow">Deliberate final action</p><h2 id="delivery-heading">Publication &amp; local delivery</h2></div>
+<button id="refresh-publication">Refresh publication</button><pre id="publication">No publication available.</pre></section>
+
+<section class="panel" aria-labelledby="observation-heading"><div><p class="eyebrow">Owner-readable evidence</p><h2 id="observation-heading">Lifecycle observability</h2></div>
+<button id="refresh-observability">Refresh evidence</button><pre id="observability">Session required.</pre></section>
+</main><script src="/app.js"></script></body></html>

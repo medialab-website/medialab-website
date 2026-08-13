@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import { P02_M15_D_ALLOWLIST } from './p02-m15-d-changed-files.js';
+import { P02_M16_A_ALLOWLIST } from './p02-m16-a-changed-files.js';
 
 const base = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const migration = '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql';
@@ -20,7 +20,7 @@ function fail(message: string): never {
   throw new Error(`PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_VERIFICATION_FAILED: ${message}`);
 }
 
-if (P02_M15_D_ALLOWLIST.length !== 61 || new Set(P02_M15_D_ALLOWLIST).size !== 61) fail('changed-path allowlist is not exactly 61 unique paths');
+if (P02_M16_A_ALLOWLIST.length !== 78 || new Set(P02_M16_A_ALLOWLIST).size !== 78) fail('changed-path allowlist is not exactly 78 unique paths');
 if (JSON.stringify(packageJson.dependencies) !== JSON.stringify({ fastify: '5.11.2', pg: '8.22.0' })) fail('required runtime dependency identity changed');
 if (lockSha256 !== '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a') fail('package-lock identity changed');
 if (/CREATE\s+TABLE/i.test(migrationSql)) fail('0021 creates an unauthorized durable table');
@@ -37,7 +37,7 @@ for (const required of ['path.isAbsolute', "identifier.includes('\\\\')", 'realp
 }
 if (/\breaddir(?:Sync)?\b|\bfetch\b|node:https|node:http|signed[_ -]?url|presigned/i.test(adapterSource + appSource + databaseSource)) fail('filesystem enumeration, network, or signed URL mechanism detected');
 
-const client = new pg.Client({ host: '/tmp/mlvs01-p02m15e-pg', port: 55446, database: 'medialab_p02m15e_test', user: 'medialab_p02m15e_test_owner' });
+const client = new pg.Client({ host: '/tmp/mlvs01-p02m16a-pg', port: 55447, database: 'medialab_p02m16a_test', user: 'medialab_p02m16a_test_owner' });
 await client.connect();
 try {
   const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
@@ -46,14 +46,14 @@ try {
       pg_get_function_identity_arguments(p.oid) arguments,pg_get_functiondef(p.oid) definition,
       has_function_privilege($1,p.oid,'EXECUTE') runtime,has_function_privilege('public',p.oid,'EXECUTE') public
     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='medialab_core' AND p.proname='resolve_temporary_download_center_delivery_source'`, ['medialab_p02m15e_test_app']);
+    WHERE n.nspname='medialab_core' AND p.proname='resolve_temporary_download_center_delivery_source'`, ['medialab_p02m16a_test_app']);
   if (fn.rows.length !== 1) fail('resolver function inventory mismatch');
   const row = fn.rows[0];
-  if (!row.prosecdef || row.owner !== 'medialab_p02m15e_test_owner' || !row.runtime || row.public ||
+  if (!row.prosecdef || row.owner !== 'medialab_p02m16a_test_owner' || !row.runtime || row.public ||
       JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp'])) fail('resolver owner/security/privilege mismatch');
   if (row.arguments !== 'p_credential uuid, p_presented_secret text, p_access_event_reference text, p_item uuid, p_evidence jsonb, p_provider text, p_storage_namespace text') fail('resolver signature mismatch');
   if ((row.definition.match(/evaluate_temporary_download_center_gateway_access/g) ?? []).length !== 1 || /\b(?:INSERT|UPDATE|DELETE)\b/i.test(row.definition)) fail('resolver gateway reuse or no-direct-DML boundary mismatch');
-  const runtimeDml = await client.query(`SELECT count(*)::int n FROM information_schema.role_table_grants WHERE grantee=$1 AND table_schema='medialab_core' AND privilege_type IN ('INSERT','UPDATE','DELETE')`, ['medialab_p02m15e_test_app']);
+  const runtimeDml = await client.query(`SELECT count(*)::int n FROM information_schema.role_table_grants WHERE grantee=$1 AND table_schema='medialab_core' AND privilege_type IN ('INSERT','UPDATE','DELETE')`, ['medialab_p02m16a_test_app']);
   if (runtimeDml.rows[0].n !== 0) fail('restricted runtime has direct table DML');
   const publicFunctions = await client.query(`SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='medialab_core' AND has_function_privilege('public',p.oid,'EXECUTE')`);
   if (publicFunctions.rows[0].n !== 0) fail('PUBLIC function execution authority is not zero');
@@ -66,7 +66,7 @@ console.log(JSON.stringify({
   migration,
   migrationSize: migrationBytes.length,
   migrationSha256,
-  changedPathBoundary: P02_M15_D_ALLOWLIST.length,
+  changedPathBoundary: P02_M16_A_ALLOWLIST.length,
   packageLockSha256: lockSha256,
   provider: 'LOCAL_FIXTURE',
   namespace: 'M15D_DELIVERY',

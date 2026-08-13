@@ -78,10 +78,10 @@ if (/CREATE(?: OR REPLACE)? (?:TABLE|FUNCTION) medialab_core\.[a-z0-9_]*(public_
 }
 
 const client = new pg.Client({
-  host: '/tmp/mlvs01-p02m15e-pg',
-  port: 55446,
-  database: 'medialab_p02m15e_test',
-  user: 'medialab_p02m15e_test_owner'
+  host: '/tmp/mlvs01-p02m16a-pg',
+  port: 55447,
+  database: 'medialab_p02m16a_test',
+  user: 'medialab_p02m16a_test_owner'
 });
 
 await client.connect();
@@ -94,7 +94,7 @@ try {
     [tables]
   );
   if (JSON.stringify(tableInventory.rows.map(row => row.tablename)) !== JSON.stringify(tables) ||
-      tableInventory.rows.some(row => row.tableowner !== 'medialab_p02m15e_test_owner')) fail('table inventory or owner mismatch');
+      tableInventory.rows.some(row => row.tableowner !== 'medialab_p02m16a_test_owner')) fail('table inventory or owner mismatch');
 
   const functionInventory = await client.query(
     `SELECT p.proname,pg_get_userbyid(p.proowner) owner,p.prosecdef,p.proconfig,
@@ -104,10 +104,10 @@ try {
             has_function_privilege('public',p.oid,'EXECUTE') public
        FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname='medialab_core' AND p.proname=ANY($2::text[]) ORDER BY p.proname`,
-    ['medialab_p02m15e_test_app', [...runtimeFunctions, ...helpers]]
+    ['medialab_p02m16a_test_app', [...runtimeFunctions, ...helpers]]
   );
   if (functionInventory.rows.length !== runtimeFunctions.length + helpers.length) fail('function inventory mismatch');
-  if (functionInventory.rows.some(row => row.owner !== 'medialab_p02m15e_test_owner' || row.public || row.runtime !== runtimeFunctions.includes(row.proname))) {
+  if (functionInventory.rows.some(row => row.owner !== 'medialab_p02m16a_test_owner' || row.public || row.runtime !== runtimeFunctions.includes(row.proname))) {
     fail('function owner/runtime/PUBLIC grant mismatch');
   }
   if (functionInventory.rows.some(row => JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp'])) ||
@@ -146,7 +146,7 @@ try {
             (has_table_privilege('public',c.oid,'SELECT') OR has_table_privilege('public',c.oid,'INSERT') OR has_table_privilege('public',c.oid,'UPDATE') OR has_table_privilege('public',c.oid,'DELETE')) public
        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
       WHERE n.nspname='medialab_core' AND c.relname=ANY($2::text[])`,
-    ['medialab_p02m15e_test_app', [...tables, 'temporary_download_center_access_observations']]
+    ['medialab_p02m16a_test_app', [...tables, 'temporary_download_center_access_observations']]
   );
   if (dml.rows.some(row => row.runtime || row.public)) fail('runtime or PUBLIC direct table authority detected');
 

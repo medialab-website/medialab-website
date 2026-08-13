@@ -1,0 +1,33 @@
+const root = "platform-v2/ml-vs01/";
+export const P02_M16_A_ALLOWLIST = [
+  "BUILD_STATE.md", "CHANGED_FILES.md", "db/reset-test-database.ts", "db/seed.ts", "package.json",
+  "scripts/p02-m16-a-changed-files.ts", "scripts/run-operational-pilot-golden-path.ts", "scripts/verify-operational-pilot-golden-path.ts",
+  "scripts/verify-capture-session-ingest-custody-schema.ts", "scripts/verify-catalog-administration-lifecycle-schema.ts", "scripts/verify-changed-files.ts",
+  "scripts/verify-current-catalog-price-reconstruction-schema.ts", "scripts/verify-disposable-delivery-surface-local-fixture.ts",
+  "scripts/verify-durable-media-operations-reconciliation-schema.ts", "scripts/verify-editor-handoff-returned-media-intake-schema.ts", "scripts/verify-foundation-closeout.ts",
+  "scripts/verify-job-service-workstream-foundation-schema.ts", "scripts/verify-media-asset-identity-lineage-schema.ts",
+  "scripts/verify-media-cull-workspace-selected-media-schema.ts", "scripts/verify-migration-engine.ts", "scripts/verify-mission-plan-foundation-schema.ts",
+  "scripts/verify-order-foundation-schema.ts", "scripts/verify-organization-records-dashboard-audited-export.ts",
+  "scripts/verify-person-contacts-account-lifecycle-schema.ts", "scripts/verify-property-hub-foundation-schema.ts", "scripts/verify-property-snapshot-schema.ts",
+  "scripts/verify-provider-neutral-file-backed-delivery.ts", "scripts/verify-publication-delivery-entitlement-schema.ts",
+  "scripts/verify-returned-editor-review-final-source-schema.ts", "scripts/verify-runtime.ts", "scripts/verify-scheduling-appointment-foundation-schema.ts",
+  "scripts/verify-temporary-download-center-access-credential-gateway-schema.ts", "scripts/verify-temporary-download-center-external-sharing-schema.ts",
+  "src/operational-pilot/app.ts", "src/operational-pilot/contracts.ts", "src/operational-pilot/database.ts", "src/operational-pilot/fixture-media.ts",
+  "src/operational-pilot/fixture-scenario.ts", "src/operational-pilot/local-media-adapter.ts", "src/operational-pilot/observability.ts",
+  "src/operational-pilot/quick-edit-worker.ts", "src/operational-pilot/replay-contract.ts", "src/operational-pilot/server.ts",
+  "src/operational-pilot/public/index.html", "src/operational-pilot/public/app.js", "src/operational-pilot/public/styles.css",
+  "src/disposable-delivery/app.ts", "src/disposable-delivery/database.ts", "src/disposable-delivery/local-file-adapter.ts",
+  "tests/operational-pilot-contracts.test.ts", "tests/operational-pilot-golden-path.test.ts", "tests/operational-pilot-quick-edit-worker.test.ts", "tests/operational-pilot-ui.test.ts",
+  "tests/capture-session-ingest-custody-foundation.test.ts", "tests/catalog-administration-lifecycle.test.ts", "tests/current-catalog-price-reconstruction.test.ts",
+  "tests/current-real-estate-catalog.test.ts", "tests/durable-media-operations-reconciliation-foundation.test.ts",
+  "tests/editor-handoff-returned-media-intake-foundation.test.ts", "tests/foundation-fixtures.test.ts", "tests/identity-tenancy-schema.test.ts",
+  "tests/job-service-workstream-foundation.test.ts", "tests/media-asset-identity-lineage-foundation.test.ts",
+  "tests/media-cull-workspace-selected-media-foundation.test.ts", "tests/migration-engine.test.ts", "tests/mission-plan-foundation.test.ts", "tests/order-foundation.test.ts",
+  "tests/organization-records-dashboard-audited-export-foundation.test.ts", "tests/person-contacts-account-lifecycle-schema.test.ts", "tests/property-hub-foundation.test.ts",
+  "tests/property-snapshot-schema.test.ts", "tests/provider-neutral-file-backed-delivery.test.ts", "tests/publication-delivery-entitlement-foundation.test.ts",
+  "tests/returned-editor-review-final-source-foundation.test.ts", "tests/scheduling-appointment-foundation.test.ts",
+  "tests/temporary-download-center-access-credential-gateway-foundation.test.ts", "tests/temporary-download-center-external-sharing-foundation.test.ts",
+  "tests/test-database-reset.test.ts",
+].map((path) => `${root}${path}`);
+
+if (P02_M16_A_ALLOWLIST.length !== 78 || new Set(P02_M16_A_ALLOWLIST).size !== 78) throw new Error("P02-M16-A allowlist must contain exactly 78 unique paths");

@@ -20,7 +20,7 @@ if (!fs.existsSync(pgBinary)) {
 console.log(`PostgreSQL binary verified: ${pgBinary}`);
 
 // 3. Verify PostgreSQL cluster directory
-const pgDataDir = '/tmp/mlvs01-p02m15e-data';
+const pgDataDir = '/tmp/mlvs01-p02m16a-data';
 if (!fs.existsSync(pgDataDir)) {
   console.error(`ERROR: PostgreSQL cluster data directory not found at ${pgDataDir}`);
   process.exit(1);
@@ -28,7 +28,7 @@ if (!fs.existsSync(pgDataDir)) {
 console.log(`PostgreSQL cluster data dir verified: ${pgDataDir}`);
 
 // 4. Verify socket directory
-const socketDir = '/tmp/mlvs01-p02m15e-pg';
+const socketDir = '/tmp/mlvs01-p02m16a-pg';
 if (!fs.existsSync(socketDir)) {
   console.error(`ERROR: Approved socket directory not found at ${socketDir}`);
   process.exit(1);
@@ -37,12 +37,12 @@ console.log(`PostgreSQL socket dir verified: ${socketDir}`);
 
 // 5. Verify the packet-specific Unix-socket listener and its exact isolated data/database identity.
 try {
-  execSync('/Applications/Postgres.app/Contents/Versions/latest/bin/pg_isready -h /tmp/mlvs01-p02m15e-pg -p 55446 -d medialab_p02m15e_test', { encoding: 'utf-8' });
+  execSync('/Applications/Postgres.app/Contents/Versions/latest/bin/pg_isready -h /tmp/mlvs01-p02m16a-pg -p 55447 -d medialab_p02m16a_test', { encoding: 'utf-8' });
   const identity = execSync(
-    "/Applications/Postgres.app/Contents/Versions/latest/bin/psql -h /tmp/mlvs01-p02m15e-pg -p 55446 -U medialab_p02m15e_test_owner -d medialab_p02m15e_test -Atc \"SELECT current_database()||'|'||current_user\"",
+    "/Applications/Postgres.app/Contents/Versions/latest/bin/psql -h /tmp/mlvs01-p02m16a-pg -p 55447 -U medialab_p02m16a_test_owner -d medialab_p02m16a_test -Atc \"SELECT current_database()||'|'||current_user\"",
     { encoding: 'utf-8' }
   ).trim();
-  if (identity !== 'medialab_p02m15e_test|medialab_p02m15e_test_owner') {
+  if (identity !== 'medialab_p02m16a_test|medialab_p02m16a_test_owner') {
     console.error(`ERROR: Packet PostgreSQL identity mismatch: ${identity}`);
     process.exit(1);
   }

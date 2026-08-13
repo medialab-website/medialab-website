@@ -1,19 +1,15 @@
-# P02-M15-E Changed Files
+# P02-M16-A Changed Files
 
-The uncommitted and unstaged candidate contains exactly this 60-path subset of the 61-path maximum allowlist exported by `scripts/p02-m15-e-changed-files.ts`.
-
-The bounded inventory is limited to migration 0022, organization-record classification, personal-summary share/revoke evidence, deterministic internal projection, immutable audited export snapshots, disposable database wiring, predecessor regression boundary updates, and packet verification/tests. `package-lock.json`, migrations `0001`–`0021`, the existing disposable-delivery source files, and predecessor packet allowlist scripts remain unchanged.
+The uncommitted and unstaged candidate contains this exact 72-path subset of the approved 78-path maximum allowlist. Migrations `0001`–`0022`, `db/migrate.ts`, `db/migrations/README.md`, `package-lock.json`, predecessor fixture files, predecessor allowlist scripts, and accepted disposable-delivery source remain byte-identical.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
-- platform-v2/ml-vs01/db/fixtures/organization-records-dashboard-audited-export-fixtures.ts
-- platform-v2/ml-vs01/db/migrate.ts
-- platform-v2/ml-vs01/db/migrations/0022_organization_records_dashboard_audited_export_foundation.sql
-- platform-v2/ml-vs01/db/migrations/README.md
 - platform-v2/ml-vs01/db/reset-test-database.ts
 - platform-v2/ml-vs01/db/seed.ts
 - platform-v2/ml-vs01/package.json
-- platform-v2/ml-vs01/scripts/p02-m15-e-changed-files.ts
+- platform-v2/ml-vs01/scripts/p02-m16-a-changed-files.ts
+- platform-v2/ml-vs01/scripts/run-operational-pilot-golden-path.ts
+- platform-v2/ml-vs01/scripts/verify-operational-pilot-golden-path.ts
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
 - platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-changed-files.ts
@@ -25,13 +21,10 @@ The bounded inventory is limited to migration 0022, organization-record classifi
 - platform-v2/ml-vs01/scripts/verify-job-service-workstream-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-media-asset-identity-lineage-schema.ts
 - platform-v2/ml-vs01/scripts/verify-media-cull-workspace-selected-media-schema.ts
-- platform-v2/ml-vs01/scripts/verify-migration-engine.ts
 - platform-v2/ml-vs01/scripts/verify-mission-plan-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-organization-records-dashboard-audited-export.ts
-- platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts
 - platform-v2/ml-vs01/scripts/verify-property-hub-foundation-schema.ts
-- platform-v2/ml-vs01/scripts/verify-property-snapshot-schema.ts
 - platform-v2/ml-vs01/scripts/verify-provider-neutral-file-backed-delivery.ts
 - platform-v2/ml-vs01/scripts/verify-publication-delivery-entitlement-schema.ts
 - platform-v2/ml-vs01/scripts/verify-returned-editor-review-final-source-schema.ts
@@ -39,6 +32,23 @@ The bounded inventory is limited to migration 0022, organization-record classifi
 - platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-access-credential-gateway-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-external-sharing-schema.ts
+- platform-v2/ml-vs01/src/operational-pilot/app.ts
+- platform-v2/ml-vs01/src/operational-pilot/contracts.ts
+- platform-v2/ml-vs01/src/operational-pilot/database.ts
+- platform-v2/ml-vs01/src/operational-pilot/fixture-media.ts
+- platform-v2/ml-vs01/src/operational-pilot/fixture-scenario.ts
+- platform-v2/ml-vs01/src/operational-pilot/local-media-adapter.ts
+- platform-v2/ml-vs01/src/operational-pilot/observability.ts
+- platform-v2/ml-vs01/src/operational-pilot/quick-edit-worker.ts
+- platform-v2/ml-vs01/src/operational-pilot/replay-contract.ts
+- platform-v2/ml-vs01/src/operational-pilot/server.ts
+- platform-v2/ml-vs01/src/operational-pilot/public/index.html
+- platform-v2/ml-vs01/src/operational-pilot/public/app.js
+- platform-v2/ml-vs01/src/operational-pilot/public/styles.css
+- platform-v2/ml-vs01/tests/operational-pilot-contracts.test.ts
+- platform-v2/ml-vs01/tests/operational-pilot-golden-path.test.ts
+- platform-v2/ml-vs01/tests/operational-pilot-quick-edit-worker.test.ts
+- platform-v2/ml-vs01/tests/operational-pilot-ui.test.ts
 - platform-v2/ml-vs01/tests/capture-session-ingest-custody-foundation.test.ts
 - platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts
 - platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts

@@ -18,10 +18,10 @@ import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtu
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
 
-const TEST_DB = 'medialab_p02m15e_test';
-const TEST_ROLE = 'medialab_p02m15e_test_owner';
-const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const TEST_PORT = 55446;
+const TEST_DB = 'medialab_p02m16a_test';
+const TEST_ROLE = 'medialab_p02m16a_test_owner';
+const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const TEST_PORT = 55447;
 
 const EXACT_ROUTINE_NAMES = [
   'classify_organization_record_order',

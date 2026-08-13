@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M15_E_ALLOWLIST } from './p02-m15-e-changed-files.js';
+import { P02_M16_A_ALLOWLIST } from './p02-m16-a-changed-files.js';
 import {
   PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS,
   PROPERTY_HUB_ID,
@@ -15,11 +15,11 @@ console.log('Running verify-property-hub-foundation-schema.ts...');
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(baseDir, '../..');
-const TEST_SOCKET = '/tmp/mlvs01-p02m15e-pg';
-const TEST_PORT = 55446;
-const TEST_DB = 'medialab_p02m15e_test';
-const TEST_OWNER_ROLE = 'medialab_p02m15e_test_owner';
-const TEST_RUNTIME_ROLE = 'medialab_p02m15e_test_app';
+const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
+const TEST_PORT = 55447;
+const TEST_DB = 'medialab_p02m16a_test';
+const TEST_OWNER_ROLE = 'medialab_p02m16a_test_owner';
+const TEST_RUNTIME_ROLE = 'medialab_p02m16a_test_app';
 let errors = false;
 
 const expectedMigrations = [
@@ -57,7 +57,7 @@ const packetTriggers = [
   ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation']
 ];
 
-const allowedPaths = [...P02_M15_E_ALLOWLIST].sort();
+const allowedPaths = [...P02_M16_A_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);

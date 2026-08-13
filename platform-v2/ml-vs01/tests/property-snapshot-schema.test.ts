@@ -5,10 +5,10 @@ import crypto from 'crypto';
 
 describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
   const poolTest = new Pool({
-    host: '/tmp/mlvs01-p02m15e-pg',
-    port: 55446,
-    database: 'medialab_p02m15e_test',
-    user: 'medialab_p02m15e_test_owner'
+    host: '/tmp/mlvs01-p02m16a-pg',
+    port: 55447,
+    database: 'medialab_p02m16a_test',
+    user: 'medialab_p02m16a_test_owner'
   });
 
   afterAll(async () => {
@@ -53,7 +53,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
           ORDER BY tablename
         `);
         expect(res.rows).toHaveLength(2);
-        const expectedOwner = env === 'test' ? 'medialab_p02m15e_test_owner' : 'medialab_p02m04a_owner';
+        const expectedOwner = env === 'test' ? 'medialab_p02m16a_test_owner' : 'medialab_p02m04a_owner';
         expect(res.rows[0].tableowner).toBe(expectedOwner);
         expect(res.rows[1].tableowner).toBe(expectedOwner);
       });
