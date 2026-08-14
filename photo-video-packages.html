@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Coordinated wedding photo and video packages from MediaLab filmmaker Sean Statzer, co-producer Thomasina Statzer, and photographer Elena Gera of Focus On the Moment.">
+  <title>Photo &amp; Video Wedding Packages | MediaLab</title>
+
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/utilities.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&amp;family=Oswald:wght@400;700&amp;family=Playfair+Display:ital,wght@0,400;0,700;1,400&amp;family=Raleway:wght@300;400;600&amp;display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="assets/logos/brandicon.png">
+
+  <style>
+    .partner-hero {
+      min-height: 68vh;
+      margin-top: var(--header-height);
+      padding: 7rem 1.5rem 5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.88)), url('assets/WEDDING_HERO.jpg') center / cover;
+      border-bottom: 2px solid var(--accent-gold);
+      text-align: center;
+    }
+    .partner-hero-inner {
+      max-width: 880px;
+    }
+    .partner-hero h1 {
+      margin-bottom: 1rem;
+      font-size: clamp(2.6rem, 8vw, 5.2rem);
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .partner-hero p {
+      max-width: 760px;
+      margin: 0 auto;
+      font-size: clamp(1rem, 2vw, 1.25rem);
+    }
+    .eyebrow {
+      color: var(--accent-gold);
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .section-heading {
+      margin: 0.5rem 0 1rem;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .section-intro {
+      max-width: 780px;
+      margin: 0 auto;
+      color: var(--text-secondary);
+    }
+    .intro-film-shell {
+      position: relative;
+      max-width: 960px;
+      margin: 2.5rem auto 0;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.82)), url('assets/WEDDING_HERO.jpg') center / cover;
+      border: 1px solid var(--accent-gold);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+    }
+    .team-grid,
+    .business-grid,
+    .deliverable-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+      max-width: 1040px;
+      margin: 2.5rem auto 0;
+    }
+    .team-card,
+    .business-card,
+    .deliverable-card {
+      padding: 2rem;
+      background: var(--bg-secondary);
+      border: 1px solid #333;
+    }
+    .team-card:first-child {
+      border-top: 3px solid var(--accent-gold);
+    }
+    .team-card h3,
+    .business-card h3,
+    .deliverable-card h3 {
+      margin-bottom: 0.8rem;
+      color: #fff;
+      font-family: var(--font-serif);
+      font-size: 1.55rem;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .team-role {
+      margin-bottom: 0.75rem;
+      color: var(--accent-gold);
+      font-family: var(--font-sans);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      max-width: 1100px;
+      margin: 2.5rem auto 0;
+    }
+    .partner-collection {
+      width: 100%;
+      padding: 2rem 1.25rem;
+      cursor: pointer;
+      background: var(--bg-secondary);
+      border: 1px solid #333;
+      color: var(--text-primary);
+      font: inherit;
+      text-align: center;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .partner-collection:hover,
+    .partner-collection:focus-visible,
+    .partner-collection.is-selected {
+      border-color: var(--accent-gold);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+      transform: translateY(-3px);
+    }
+    .partner-collection:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 3px;
+    }
+    .collection-name {
+      margin-bottom: 0.35rem;
+      font-family: var(--font-serif);
+      font-size: 1.55rem;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .collection-coverage {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+    }
+    .collection-price {
+      margin: 0.8rem 0 0;
+      color: var(--accent-gold);
+      font-family: var(--font-sans);
+      font-size: clamp(2rem, 4vw, 2.7rem);
+      font-weight: 700;
+    }
+    .selection-summary {
+      max-width: 860px;
+      margin: 2rem auto 0;
+      padding: 2rem;
+      background: #080808;
+      border-top: 2px solid var(--accent-gold);
+      text-align: center;
+    }
+    .selection-summary h3 {
+      color: #fff;
+      font-family: var(--font-serif);
+      font-size: 1.75rem;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .savings {
+      margin-top: 0.7rem;
+      color: var(--accent-gold);
+      font-family: var(--font-sans);
+      font-weight: 700;
+    }
+    .feature-list {
+      margin: 1rem 0 0;
+      padding: 0;
+      color: var(--text-secondary);
+      list-style: none;
+    }
+    .feature-list li {
+      position: relative;
+      margin-top: 0.7rem;
+      padding-left: 1.35rem;
+    }
+    .feature-list li::before {
+      position: absolute;
+      left: 0;
+      color: var(--accent-gold);
+      content: '\2713';
+      font-weight: 700;
+    }
+    .film-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+    }
+    .film-grid figure {
+      margin: 0;
+    }
+    .film-grid figcaption {
+      padding-top: 0.7rem;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.86rem;
+      text-align: center;
+    }
+    .cta-band {
+      padding: 4rem 1.5rem;
+      background: #070707;
+      border-top: 1px solid rgba(235, 178, 56, 0.4);
+      text-align: center;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+    .btn-disabled,
+    .btn-disabled:hover {
+      background: transparent;
+      border-color: #555;
+      color: #888;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .cta-note {
+      width: 100%;
+      color: #888;
+      font-size: 0.82rem;
+    }
+    @media (max-width: 800px) {
+      .team-grid,
+      .business-grid,
+      .deliverable-grid,
+      .collection-grid,
+      .film-grid {
+        grid-template-columns: 1fr;
+      }
+      .partner-hero {
+        min-height: 58vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="nav-header">
+    <div class="nav-logo">
+      <a href="index.html">
+        <img src="assets/logos/polishedlogo.jpg" alt="MediaLab" style="height: 40px; display: block;">
+      </a>
+    </div>
+    <button type="button" class="hamburger" aria-label="Open navigation" aria-expanded="false" aria-controls="site-navigation">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="nav-links" id="site-navigation">
+      <a href="index.html">Home</a>
+      <a href="real-estate.html">Realtor Media Solutions</a>
+      <a href="weddings.html" class="active">Weddings</a>
+      <a href="creative.html">Creative &amp; Commercial</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="partner-hero">
+      <div class="partner-hero-inner">
+        <p class="eyebrow">A MediaLab Wedding Experience</p>
+        <h1 class="font-serif">Photo &amp; Video Packages</h1>
+        <p>A coordinated wedding experience with filmmaker Sean Statzer and co-producer Thomasina Statzer of MediaLab, alongside esteemed photographer Elena Gera of Focus On the Moment.</p>
+        <div class="cta-row">
+          <a href="#collections" class="btn btn-primary">Explore Collections</a>
+          <a href="weddings.html" class="btn btn-secondary">Wedding Films Only</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="container mt-5 mb-5 text-center">
+      <p class="eyebrow">Meet Your Team</p>
+      <h2 class="section-heading font-serif text-gold">Two crafts. One coordinated experience.</h2>
+      <p class="section-intro">Sean and Elena have spent hundreds of hours working side by side at weddings. That familiarity helps the photo and film teams move with intention, protect the flow of your day, and create without competing for the same moments.</p>
+
+      <div
+        class="intro-film-shell lite-youtube"
+        data-joint-intro-video
+        data-video-source-status="ready"
+        data-id="bHiVHjr3wlE"
+        data-title="Meet Sean and Elena: MediaLab Photo &amp; Video Wedding Packages"
+        role="button"
+        tabindex="0"
+        aria-label="Play Sean and Elena’s introduction to the MediaLab photo and video wedding packages"
+      ></div>
+
+      <div class="team-grid text-left">
+        <article class="team-card">
+          <p class="team-role">MediaLab · Wedding Films</p>
+          <h3>Sean &amp; Thomasina Statzer</h3>
+          <p>Sean leads the filmmaking and story direction. Thomasina works alongside him as co-producer and wedding-day assistant, helping the MediaLab team stay attentive, prepared, and present for the moments that matter.</p>
+        </article>
+        <article class="team-card">
+          <p class="team-role">Focus On the Moment · Photography</p>
+          <h3>Elena Gera</h3>
+          <p>Elena brings a candid, natural approach to wedding photography, pairing experienced direction with an unobtrusive presence so the day can feel like your own.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="collections" class="bg-charcoal pt-5 pb-5">
+      <div class="container text-center">
+        <p class="eyebrow">Photo &amp; Video Collections</p>
+        <h2 class="section-heading font-serif text-gold">Choose the coverage that fits your day.</h2>
+        <p class="section-intro">Each total combines the coordinated photography and videography package. MediaLab and Focus On the Moment remain separate businesses and provide separate agreements, invoices, and payment schedules.</p>
+
+        <div class="collection-grid">
+          <button type="button" class="partner-collection" data-partner-collection="classic" data-partner-name="Classic" data-partner-coverage="6 hours" data-partner-price="$5,400" aria-pressed="false">
+            <h3 class="collection-name">Classic</h3>
+            <p class="collection-coverage">6 hours of photography &amp; videography</p>
+            <p class="collection-price">$5,400</p>
+          </button>
+          <button type="button" class="partner-collection is-selected" data-partner-collection="signature" data-partner-name="Signature" data-partner-coverage="8 hours" data-partner-price="$6,000" aria-pressed="true">
+            <p class="eyebrow">Most Popular</p>
+            <h3 class="collection-name">Signature</h3>
+            <p class="collection-coverage">8 hours of photography &amp; videography</p>
+            <p class="collection-price">$6,000</p>
+          </button>
+          <button type="button" class="partner-collection" data-partner-collection="legacy" data-partner-name="Legacy" data-partner-coverage="10+ hours" data-partner-price="$7,200" aria-pressed="false">
+            <h3 class="collection-name">Legacy</h3>
+            <p class="collection-coverage">10+ hours of extended wedding-day coverage</p>
+            <p class="collection-price">$7,200</p>
+          </button>
+        </div>
+
+        <div class="selection-summary" aria-live="polite">
+          <h3><span data-partner-selected-name>Signature</span> Collection · <span data-partner-selected-price>$6,000</span></h3>
+          <p><span data-partner-selected-coverage>8 hours</span> of coordinated wedding-day photography and videography.</p>
+          <p class="savings">$900 in savings from booking separately</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="container mt-5 mb-5 text-center">
+      <p class="eyebrow">What You Receive</p>
+      <h2 class="section-heading font-serif text-gold">Photography and film, each handled by a specialist.</h2>
+      <div class="deliverable-grid text-left">
+        <article class="deliverable-card">
+          <h3>MediaLab Wedding Film</h3>
+          <ul class="feature-list">
+            <li>A 7–9 minute cinematic highlight film</li>
+            <li>Drone footage when legal, safe, operationally feasible, and weather permitting</li>
+            <li>Full ceremony delivered as a separate video</li>
+            <li>First dances and speeches delivered separately</li>
+            <li>Premium streaming gallery for your wedding media</li>
+          </ul>
+        </article>
+        <article class="deliverable-card">
+          <h3>Focus On the Moment Photography</h3>
+          <ul class="feature-list">
+            <li>Candid, natural wedding-day storytelling</li>
+            <li>Experienced guidance without taking over the day</li>
+            <li>High-resolution edited photographs with print rights</li>
+            <li>A private online gallery for viewing and sharing</li>
+            <li>Final photography scope is confirmed in Elena’s agreement</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="bg-charcoal pt-5 pb-5">
+      <div class="container text-center">
+        <p class="eyebrow">How Booking Works</p>
+        <h2 class="section-heading font-serif text-gold">One coordinated inquiry. Two independent professionals.</h2>
+        <div class="business-grid text-left">
+          <article class="business-card">
+            <h3>MediaLab</h3>
+            <p>MediaLab leads the inquiry on this page and manages the wedding-film portion. Sean confirms video availability and sends MediaLab’s agreement, invoice, and payment schedule.</p>
+          </article>
+          <article class="business-card">
+            <h3>Focus On the Moment</h3>
+            <p>Elena confirms photography availability and sends her own photography agreement, invoice, and payment schedule through Focus On the Moment.</p>
+          </article>
+        </div>
+        <p class="section-intro mt-3">Your date is not reserved until both professionals confirm availability and each business’s booking requirements are completed.</p>
+      </div>
+    </section>
+
+    <section class="container mt-5 mb-5">
+      <div class="text-center">
+        <p class="eyebrow">Featured Wedding Films</p>
+        <h2 class="section-heading font-serif text-gold">See how MediaLab tells the story.</h2>
+      </div>
+      <div class="film-grid">
+        <figure>
+          <div class="lite-youtube" data-id="BZDdwXOhf6k" data-title="The Thacker Pyle Wedding" role="button" tabindex="0" aria-label="Play The Thacker Pyle Wedding"></div>
+          <figcaption>The Thacker Pyle Wedding</figcaption>
+        </figure>
+        <figure>
+          <div class="lite-youtube" data-id="vmF2anBsGDo" data-title="The Mason Wedding" role="button" tabindex="0" aria-label="Play The Mason Wedding"></div>
+          <figcaption>The Mason Wedding</figcaption>
+        </figure>
+        <figure>
+          <div class="lite-youtube" data-id="CsbUvCDOb0A" data-title="The Askar Wedding" role="button" tabindex="0" aria-label="Play The Askar Wedding"></div>
+          <figcaption>The Askar Wedding</figcaption>
+        </figure>
+      </div>
+      <div class="text-center mt-4">
+        <a href="https://www.youtube.com/playlist?list=PLZZ-XhAOEHjNuOzbo9KZGD808KSj_02Ba" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">View the Wedding Film Playlist</a>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <p class="eyebrow">Ready to Start?</p>
+      <h2 class="section-heading font-serif text-white">Tell us what you’re planning.</h2>
+      <p class="section-intro">You can ask questions or choose a collection now. Submitting an inquiry will not reserve a date.</p>
+      <div class="cta-row">
+        <a href="https://weddings.medialab.fyi/public/6a7e762d03dcab290f927dc4" class="btn btn-primary" data-partner-inquiry-link>Start a Photo + Video Inquiry</a>
+        <a href="https://www.focusonmoment.com/wedding-photo-and-video" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Visit Elena’s Wedding Page</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 MediaLab. All rights reserved.</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

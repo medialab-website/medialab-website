@@ -3,78 +3,222 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Cinematic wedding films by Tri-Cities MediaLab.">
-  <title>Weddings | Tri-Cities MediaLab</title>
+  <meta name="description" content="Story-driven wedding films by MediaLab filmmaker Sean Statzer and co-producer Thomasina Statzer, with photo and video collections offered alongside Elena Gera.">
+  <title>Wedding Films</title>
   
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/utilities.css">
   
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Raleway:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&amp;family=Oswald:wght@400;700&amp;family=Playfair+Display:ital,wght@0,400;0,700;1,400&amp;family=Raleway:wght@300;400;600&amp;display=swap" rel="stylesheet">
   <style>
-    .pricing-split {
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-      max-width: 1000px;
+    .wedding-section-heading {
+      max-width: 780px;
+      margin-right: auto;
+      margin-left: auto;
+    }
+    .service-path {
+      max-width: 1100px;
       margin: 0 auto;
-    }
-    @media (min-width: 768px) {
-      .pricing-split {
-        flex-direction: row;
-        align-items: stretch;
-      }
-    }
-    .pricing-card {
-      flex: 1;
-      background-color: var(--bg-primary);
-      border: 1px solid #333;
       padding: 3rem 2rem;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      background: var(--bg-primary);
     }
-    .bundle-card {
-      border: 2px solid var(--accent-gold);
-      position: relative;
+    .path-heading {
+      margin-top: 0.4rem;
+      font-size: clamp(1.9rem, 4vw, 2.7rem);
     }
-    .bundle-badge {
-      position: absolute;
-      top: -15px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: var(--accent-gold);
-      color: var(--bg-primary);
-      padding: 0.5rem 1.5rem;
-      font-family: var(--font-sans);
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-size: 0.85rem;
-    }
-    .feature-list {
-      list-style: none;
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
       margin: 2rem 0;
-      color: var(--text-primary);
     }
-    .feature-list li {
+    .collection-card {
+      position: relative;
+      padding: 1.75rem 1.25rem;
+      background: var(--bg-secondary);
+      border: 1px solid #333;
+      color: var(--text-primary);
+      text-align: center;
+    }
+    .collection-option {
+      width: 100%;
+      cursor: pointer;
+      font: inherit;
+      transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .collection-option:hover,
+    .collection-option:focus-visible {
+      border-color: rgba(235, 178, 56, 0.75);
+      transform: translateY(-3px);
+    }
+    .collection-option:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 3px;
+    }
+    .collection-card.is-selected {
+      border-color: var(--accent-gold);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+    }
+    .collection-badge {
+      display: inline-block;
       margin-bottom: 0.8rem;
-      font-size: 1.05rem;
+      padding: 0.3rem 0.7rem;
+      background: var(--accent-gold);
+      color: #000;
+      font-family: var(--font-sans);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .collection-name {
+      margin-bottom: 0.25rem;
+      font-family: var(--font-serif);
+      font-size: 1.45rem;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .collection-coverage {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
     }
     .price-display {
-      font-size: 2.5rem;
+      margin: 0.7rem 0 0;
       color: var(--text-primary);
-      font-weight: bold;
-      margin: 1rem 0;
+      font-family: var(--font-sans);
+      font-size: clamp(2rem, 4vw, 2.6rem);
+      font-weight: 700;
     }
-    .price-display span {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      font-weight: normal;
-    }
-    .gold-highlight {
+    .is-selected .price-display {
       color: var(--accent-gold);
+    }
+    .collection-details {
+      max-width: 860px;
+      margin: 2rem auto 0;
+      padding: 2rem;
+      background: var(--bg-secondary);
+      border-top: 2px solid var(--accent-gold);
+    }
+    .collection-details h4 {
+      color: var(--text-primary);
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem 1.5rem;
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0;
+      color: var(--text-primary);
+      list-style: none;
+      text-align: left;
+    }
+    .feature-list li {
+      position: relative;
+      padding-left: 1.4rem;
+    }
+    .feature-list li::before {
+      position: absolute;
+      left: 0;
+      color: var(--accent-gold);
+      content: '\2713';
+      font-weight: 700;
+    }
+    .bundle-savings {
+      margin: 1.5rem auto;
+      color: var(--accent-gold);
+      font-family: var(--font-sans);
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+    .btn-secondary.btn-hero-black,
+    .btn-secondary.btn-hero-black:hover {
+      background-color: #000;
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+    .film-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .film-card {
+      margin: 0;
+    }
+    .film-card figcaption {
+      padding-top: 0.8rem;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+      text-align: center;
+    }
+    .delivery-frame {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border: 1px solid var(--accent-gold);
+      border-radius: 8px;
+    }
+    .delivery-frame iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    .client-login-link {
+      display: inline-block;
+      margin-top: 1.25rem;
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-decoration: underline;
+      text-underline-offset: 0.25rem;
+      text-transform: uppercase;
+    }
+    .btn-disabled,
+    .btn-disabled:hover {
+      background: transparent;
+      border-color: #555;
+      color: #888;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .cta-note {
+      width: 100%;
+      margin-top: 0.25rem;
+      color: #888;
+      font-size: 0.82rem;
+    }
+    @media (max-width: 800px) {
+      .collection-grid,
+      .film-grid,
+      .feature-list {
+        grid-template-columns: 1fr;
+      }
+      .service-path {
+        padding: 2.25rem 1.25rem;
+      }
     }
   </style>
   <link rel="icon" type="image/png" href="assets/logos/brandicon.png">
@@ -85,19 +229,19 @@
   <header class="nav-header">
     <div class="nav-logo">
       <a href="index.html">
-        <img src="assets/logos/polishedlogo.jpg" alt="" style="height: 40px; display: block;">
+        <img src="assets/logos/polishedlogo.jpg" alt="MediaLab" style="height: 40px; display: block;">
       </a>
     </div>
-    <div class="hamburger">
+    <button type="button" class="hamburger" aria-label="Open navigation" aria-expanded="false" aria-controls="site-navigation">
       <span></span>
       <span></span>
       <span></span>
-    </div>
-    <nav class="nav-links">
+    </button>
+    <nav class="nav-links" id="site-navigation">
       <a href="index.html">Home</a>
       <a href="real-estate.html">Realtor Media Solutions</a>
       <a href="weddings.html" class="active">Weddings</a>
-      <a href="creative.html">Creative & Commercial</a>
+      <a href="creative.html">Creative &amp; Commercial</a>
 
     </nav>
   </header>
@@ -107,133 +251,140 @@
     <div class="hero-content">
       <h1 class="font-serif">Wedding Films</h1>
       <p style="font-size: 1.2rem; margin-top: 1rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-        Beautiful, timeless documentation of your big day.
+        Story-driven wedding videography with filmmaker Sean Statzer and his wife and co-producer, Thomasina. Also offering premium photo &amp; video packages with esteemed photographer Elena Gera.
       </p>
       <div class="hero-buttons mt-3">
-        <a href="https://weddings.medialab.fyi" class="btn btn-secondary" target="_blank" style="background: transparent; border-color: #fff; color: #fff;">Client Login</a>
-        <a href="#inquiry" class="btn btn-primary">Book a Consultation</a>
-        <a href="#pricing" class="btn btn-secondary">View Film & Bundle Options &rarr;</a>
+        <a href="#video-only" class="btn btn-primary">Video-Only</a>
+        <a href="photo-video-packages.html" class="btn btn-secondary btn-hero-black">Video + Photo</a>
       </div>
-    </div>
-  </section>
-  
-  <div class="trust-banner" style="background: rgba(0,0,0,0.9); border-bottom: 1px solid #333; color: white;">
-    <span class="text-gold">Accepting a severely limited number of bookings each year to ensure uncompromising quality.</span>
-  </div>
-
-  <!-- 2. BUNDLE / OFFER SECTION -->
-  <section id="pricing" class="bg-charcoal pt-5 pb-5">
-    <div class="container text-center mt-4">
-      <h2 class="text-gold font-serif mb-3 text-transform-none" style="font-size: 2.5rem;">Your Investment</h2>
-      <p class="text-primary mb-5" style="font-weight: 400; font-size: 1.1rem; max-width: 800px; margin: 0 auto;">
-        We focus solely on high-end, emotional storytelling rather than cookie-cutter packages. Choose our dedicated cinematography, or take advantage of our exclusive, highly-sought-after collaboration.
-      </p>
-      
-      <div class="pricing-split">
-        
-        <!-- Film Only Path -->
-        <div class="pricing-card">
-          <div>
-            <h3 class="font-serif text-transform-none" style="font-size: 1.8rem;">Cinematic Wedding Film</h3>
-            <p class="text-secondary mt-2">Dedicated videography coverage focused purely on capturing the motion and emotion of your day.</p>
-            
-            <div class="price-display">
-              $2,950 <span>base rate</span>
-            </div>
-            
-            <ul class="feature-list">
-              <li>Full Day Coverage</li>
-              <li>Multi-Camera Setup</li>
-              <li>Professional Audio Capture</li>
-              <li>Drone Footage <span style="font-size: 0.85rem; color:#888;">(Weather Permitting)</span></li>
-              <li>5-8 Minute Highlight Film</li>
-            </ul>
-          </div>
-          <a href="#inquiry" class="btn btn-secondary mt-3">Inquire for Film Only</a>
-        </div>
-
-        <!-- Bundle Path -->
-        <div class="pricing-card bundle-card">
-          <div class="bundle-badge">Most Popular Choice</div>
-          <div>
-            <h3 class="font-serif text-gold text-transform-none" style="font-size: 1.8rem;">The Complete Experience</h3>
-            <p class="text-secondary mt-2">Book Photo + Video together through our collaboration with <strong class="text-white">Elena Gera / Focus On the Moment</strong> and save over $900.</p>
-            
-            <div class="price-display gold-highlight">
-              Save over $900
-            </div>
-            
-            <ul class="feature-list">
-              <li>Everything in the Cinematic Film</li>
-              <li>+ Lead Photographer (Elena Gera)</li>
-              <li>+ Comprehensive Digital Gallery</li>
-              <li>+ Seamless Team Coordination</li>
-              <li>+ Priority Booking Priority</li>
-            </ul>
-          </div>
-          <!-- PRIMARY BUTTON FOR BUNDLE -->
-          <a href="https://www.focusonmoment.com/wedding-photo-and-video" target="_blank" class="btn btn-primary mt-3" style="font-size: 1.1rem; padding: 1rem 2rem; box-shadow: 0 4px 15px rgba(235, 178, 56, 0.3);">View Photo + Video Bundle</a>
-        </div>
-
-      </div>
-      
-      <p class="text-secondary mt-5" style="font-style: italic; font-weight: bold;">Limited bookings each year to ensure quality and attention to every film.</p>
+      <a href="https://weddings.medialab.fyi" class="client-login-link" target="_blank" rel="noopener noreferrer">Existing client login</a>
     </div>
   </section>
 
-  <!-- 3. VIDEO PROOF SECTION -->
+  <!-- 2. WEDDING FILM COLLECTIONS -->
+  <section id="video-only" class="bg-charcoal pt-5 pb-5">
+    <div class="container text-center">
+      <div class="service-path">
+        <h2 class="path-heading font-serif text-gold text-transform-none">Wedding Film Collections</h2>
+        <p class="text-secondary wedding-section-heading">Story-driven wedding videography with filmmaker Sean Statzer and his wife and co-producer, Thomasina.</p>
+
+        <div class="collection-grid">
+          <button type="button" class="collection-card collection-option" data-collection="classic" data-name="Classic" data-coverage="6 hours" data-price="$3,150" aria-pressed="false">
+            <h4 class="collection-name">Classic</h4>
+            <p class="collection-coverage">6 hours of videography</p>
+            <p class="price-display">$3,150</p>
+          </button>
+          <button type="button" class="collection-card collection-option is-selected" data-collection="signature" data-name="Signature" data-coverage="8 hours" data-price="$3,450" aria-pressed="true">
+            <span class="collection-badge">Featured</span>
+            <h4 class="collection-name">Signature</h4>
+            <p class="collection-coverage">8 hours of videography</p>
+            <p class="price-display">$3,450</p>
+          </button>
+          <button type="button" class="collection-card collection-option" data-collection="legacy" data-name="Legacy" data-coverage="10+ hours" data-price="$4,050" aria-pressed="false">
+            <h4 class="collection-name">Legacy</h4>
+            <p class="collection-coverage">10+ hours of extended coverage</p>
+            <p class="price-display">$4,050</p>
+          </button>
+        </div>
+
+        <div class="collection-details" aria-live="polite">
+          <h4><span data-selected-name>Signature</span> Collection — <span data-selected-price>$3,450</span></h4>
+          <ul class="feature-list">
+            <li><span data-selected-coverage>8 hours</span> of wedding-day coverage</li>
+            <li>A 7–9 minute cinematic highlight film</li>
+            <li>Drone footage when legal, safe, and weather permitting</li>
+            <li>The full ceremony as a separate video</li>
+            <li>First dances &amp; speeches as separate videos</li>
+            <li>Premium streaming gallery for all your media</li>
+          </ul>
+        </div>
+
+        <div class="cta-row">
+          <a href="wedding-consultation.html" class="btn btn-primary">Book a Wedding Film Consultation</a>
+          <a href="https://weddings.medialab.fyi/public/6a7e7918aefea8b50d2e1fe0" class="btn btn-secondary">Request to Book a Wedding Film</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. PHOTO + VIDEO PARTNERSHIP -->
+  <section id="photo-video" class="pt-5 pb-5">
+    <div class="container text-center">
+      <div class="service-path">
+        <h2 class="path-heading font-serif text-gold text-transform-none">Photo + Video Collections</h2>
+        <p class="text-secondary wedding-section-heading">Need a photographer and a videographer? No need to search for separate vendors. Filmmaker Sean Statzer of MediaLab and esteemed photographer Elena Gera of Focus On the Moment have you covered! One seamless booking process for two seasoned professionals who have worked together for hundreds of hours means less stress and worry for you.</p>
+
+        <div class="collection-grid">
+          <article class="collection-card" style="cursor: default;">
+            <h4 class="collection-name">Classic</h4>
+            <p class="collection-coverage">6 hours of photography + videography</p>
+            <p class="price-display">$5,400</p>
+          </article>
+          <article class="collection-card is-selected" style="cursor: default;">
+            <span class="collection-badge">Most Popular</span>
+            <h4 class="collection-name">Signature</h4>
+            <p class="collection-coverage">8 hours of photography + videography</p>
+            <p class="price-display">$6,000</p>
+          </article>
+          <article class="collection-card" style="cursor: default;">
+            <h4 class="collection-name">Legacy</h4>
+            <p class="collection-coverage">10+ hours of extended coverage</p>
+            <p class="price-display">$7,200</p>
+          </article>
+        </div>
+
+        <p class="bundle-savings">$900 in savings from booking separately</p>
+        <div class="cta-row">
+          <a href="photo-video-packages.html" class="btn btn-primary" style="font-size: 1.05rem; padding: 1rem 2rem; box-shadow: 0 4px 15px rgba(235, 178, 56, 0.3);">Photo + Video Collections</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. VIDEO PROOF SECTION -->
   <section class="container mt-3 mb-5">
     <div class="text-center mb-5" style="padding-top: 2rem; border-top: 1px solid rgba(235, 178, 56, 0.3);">
       <h2 class="font-serif text-gold text-transform-none" style="font-size: 2.2rem;">Featured Films</h2>
-      <p class="text-secondary">Watch examples of our recent high-end cinematic work.</p>
     </div>
     
-    <div class="feature-grid" style="gap: 3rem;">
-      <!-- NOTE TO USER: Replace data-id with the actual YouTube text ID after the ?v= -->
-      
-      <div class="lite-youtube" data-id="BZDdwXOhf6k" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
-      <div class="lite-youtube" data-id="vmF2anBsGDo" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
-      <div class="lite-youtube" data-id="CsbUvCDOb0A" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+    <div class="film-grid">
+      <figure class="film-card">
+        <div class="lite-youtube" data-id="BZDdwXOhf6k" data-title="The Thacker Pyle Wedding" role="button" tabindex="0" aria-label="Play The Thacker Pyle Wedding" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+        <figcaption>The Thacker Pyle Wedding</figcaption>
+      </figure>
+      <figure class="film-card">
+        <div class="lite-youtube" data-id="vmF2anBsGDo" data-title="The Mason Wedding" role="button" tabindex="0" aria-label="Play The Mason Wedding" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+        <figcaption>The Mason Wedding</figcaption>
+      </figure>
+      <figure class="film-card">
+        <div class="lite-youtube" data-id="CsbUvCDOb0A" data-title="The Askar Wedding" role="button" tabindex="0" aria-label="Play The Askar Wedding" style="border: 1px solid var(--accent-gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+        <figcaption>The Askar Wedding</figcaption>
+      </figure>
     </div>
     
     <div class="text-center mt-5">
-      <a href="YOUR_YOUTUBE_PLAYLIST_LINK_HERE" target="_blank" class="btn btn-secondary">View Wedding Films Playlist on YouTube</a>
+      <a href="https://www.youtube.com/playlist?list=PLZZ-XhAOEHjNuOzbo9KZGD808KSj_02Ba" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">View the Wedding Videos Playlist on YouTube</a>
     </div>
   </section>
 
-  <!-- 4. VIDFLOW DELIVERY SECTION -->
+  <!-- 5. VIDFLOW DELIVERY SECTION -->
   <section class="bg-charcoal pt-5 pb-5 mt-5">
     <div class="container text-center">
       <h2 class="font-serif text-white text-transform-none" style="font-size: 2rem;">A Premium Viewing Experience</h2>
       <p class="text-secondary mb-4 max-width" style="margin: 0 auto;">Finished films are delivered in high-definition through modern streaming galleries. Enjoy it on your phone, share it with family, or cast it directly to your Smart TV.</p>
       
-      <div style="background: var(--bg-primary); max-width: 800px; margin: 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid var(--accent-gold);">
-        <div style="position: relative; padding: 20px; height: 650px;">
-          <iframe style="position: absolute; top: 0; left: 0; width: 125%; height: 125%; zoom: 0.8; transform: scale(0.8); -webkit-transform: scale(0.8); transform-origin: 0 0; -webkit-transform-origin: 0 0;" src="https://galleries.vidflow.co/embed/d/f9hfquf1" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>
-        </div>
+      <div class="delivery-frame">
+        <iframe src="https://galleries.vidflow.co/embed/d/f9hfquf1" title="Example MediaLab wedding-film delivery gallery" loading="lazy" allowfullscreen></iframe>
+      </div>
+
+      <div class="cta-row" style="margin-top: 2rem;">
+        <a href="wedding-consultation.html" class="btn btn-primary">Book a Wedding Film Consultation</a>
       </div>
     </div>
   </section>
 
-  <!-- 5. HONEYBOOK INQUIRY SECTION -->
-  <section id="inquiry" class="container mt-5 mb-5">
-    <div class="form-container" style="background: transparent; border: none; padding: 0;">
-      <h2 class="text-center mb-2 font-serif text-gold" style="text-transform:none; font-size: 2.2rem;">Check Availability</h2>
-      <p class="text-center text-secondary mb-4">If you're interested in booking us for your wedding film, or if you want to explore the collaborative photo+video bundle, fill out the form below and we'll be in touch shortly to set up a consultation call.</p>
-      
-      <div class="hb-p-65647b211769020008c5cf07-2"></div><img height="1" width="1" style="display:none" src="https://www.honeybook.com/p.png?pid=65647b211769020008c5cf07">
-      <script>
-        (function(h,b,s,n,i,p,e,t) {
-          h._HB_ = h._HB_ || {};h._HB_.pid = i;;;;
-          t=b.createElement(s);t.type="text/javascript";t.async=!0;t.src=n;
-          e=b.getElementsByTagName(s)[0];e.parentNode.insertBefore(t,e);
-      })(window,document,"script","https://widget.honeybook.com/assets_users_production/websiteplacements/placement-controller.min.js","65647b211769020008c5cf07");
-      </script>
-    </div>
-  </section>
-
   <footer class="footer">
-    <p>&copy; 2026 Tri-Cities MediaLab. All rights reserved.</p>
+    <p>&copy; 2026 MediaLab. All rights reserved.</p>
   </footer>
 
   <script src="js/main.js"></script>
