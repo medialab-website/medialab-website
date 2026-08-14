@@ -57,6 +57,12 @@
   transform: translateY(-2px);
 }
 
+.btn:focus-visible,
+.hamburger:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
 /* --- NAVIGATION HEADER --- */
 .nav-header {
   position: fixed;
@@ -107,6 +113,9 @@
   flex-direction: column;
   cursor: pointer;
   gap: 5px;
+  padding: 0.5rem;
+  border: 0;
+  background: transparent;
 }
 
 .hamburger span {
@@ -274,6 +283,16 @@
 .lite-youtube:hover::before {
   opacity: 1;
   color: #fff;
+}
+.lite-youtube:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+.lite-youtube.is-playing {
+  cursor: default;
+}
+.lite-youtube.is-playing::before {
+  display: none;
 }
 .lite-youtube iframe {
   width: 100%;
