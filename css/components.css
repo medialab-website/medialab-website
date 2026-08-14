@@ -111,6 +111,10 @@
 .hamburger {
   display: none;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   cursor: pointer;
   gap: 5px;
   padding: 0.5rem;
