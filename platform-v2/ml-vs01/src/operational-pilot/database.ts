@@ -35,6 +35,7 @@ const ALLOWED_FUNCTIONS = new Set([
   "issue_temporary_download_center_access_credential", "claim_media_operation", "start_media_operation_attempt",
   "record_media_operation_checkpoint", "record_media_operation_receipt", "complete_media_operation_attempt",
   "schedule_media_operation_retry",
+  "supersede_and_reschedule_appointment", "get_appointment_record",
 ]);
 
 export class OperationalPilotDatabase {
@@ -46,7 +47,7 @@ export class OperationalPilotDatabase {
 
   async invoke<T = unknown>(name: string, values: readonly unknown[], casts: readonly string[] = []): Promise<T> {
     if (!ALLOWED_FUNCTIONS.has(name)) throw new Error(`function is outside operational-pilot authority: ${name}`);
-    if (casts.length > values.length || casts.some((cast) => cast !== "" && !/^::(?:jsonb|uuid|uuid\[\]|timestamptz)$/.test(cast))) throw new Error("unsafe function cast");
+    if (casts.length > values.length || casts.some((cast) => cast !== "" && !/^::(?:jsonb|uuid|uuid\[\]|timestamptz|timestamp without time zone)$/.test(cast))) throw new Error("unsafe function cast");
     const placeholders = values.map((_, index) => `$${index + 1}${casts[index] ?? ""}`).join(",");
     const result = await this.pool.query<Record<string, T>>(`SELECT medialab_core.${name}(${placeholders})`, values as unknown[]);
     return result.rows[0]![name] as T;

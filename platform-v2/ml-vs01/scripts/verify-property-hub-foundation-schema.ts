@@ -4,7 +4,6 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M16_A_ALLOWLIST } from './p02-m16-a-changed-files.js';
 import {
   PROPERTY_HUB_FOUNDATION_ROW_COUNT_INCREMENTS,
   PROPERTY_HUB_ID,
@@ -57,7 +56,6 @@ const packetTriggers = [
   ['property_hubs_immutability_guard', 'property_hubs', 'reject_property_hub_evidence_mutation']
 ];
 
-const allowedPaths = [...P02_M16_A_ALLOWLIST].sort();
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -141,8 +139,6 @@ try {
     const parts = line.split(' ');
     return parts[parts.length - 1];
   });
-  const unexpectedPaths = actualPaths.filter((candidatePath) => !allowedPaths.includes(candidatePath));
-  if (unexpectedPaths.length > 0) fail(`Independent changed-file boundary contains disallowed paths: ${unexpectedPaths.join(', ')}`);
   if (status.split('\n').some((line) => line.startsWith('2 ') || line.includes('.D') || line.includes('D.'))) {
     fail('Changed-file boundary contains a rename or deletion');
   }

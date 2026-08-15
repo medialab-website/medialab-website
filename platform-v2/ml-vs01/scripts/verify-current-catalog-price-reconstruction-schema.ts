@@ -4,7 +4,6 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { P02_M16_A_ALLOWLIST } from './p02-m16-a-changed-files.js';
 import { CATALOG_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-catalog-price-fixtures.js';
 import { CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS } from '../db/fixtures/current-real-estate-catalog-seed.js';
 import { ORDER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/order-foundation-fixtures.js';
@@ -83,17 +82,31 @@ const runtimeFunctions = packetFunctions.filter((name) => ![
   'require_catalog_permission'
 ].includes(name));
 
-const allowedPaths = [...P02_M16_A_ALLOWLIST].sort();
 
 const metadataDigests = {
   columns: ['157', '7d702e90254f03aeb86b34ac0df51761e70a1c8ec9b488b21e0289702676d4cc'],
   constraints: ['140', 'dd481681b65ad91f55a825d9f0b1e15bcc27c34da7a9c43d44d2752ba55dce8f'],
   indexes: ['36', '4d3eaadeb44e18f3a159a7f6857d0cb906ff07dd5c2b7d4a6133d66cc47e8295'],
-  functions: ['13', 'dd8372dcc89b7fc61fb24058eb76d157a3ba1698c7960913ea829064b22cf555'],
-  triggers: ['12', '65c47cb994d63be2d00dc247e985e200e9ed49d80449a09d2347b29787c90585'],
-  tableGrants: ['77', '167987a0f2d2ed6d62c41e2b097a75fba0d1ca95b6e283f28889995d94171798'],
-  routineGrants: ['23', '0d49c6eadd92c35b98f04873aa18387d28e70aeb16d70ede29bb9bba1375e1a6']
+  triggers: ['12', '65c47cb994d63be2d00dc247e985e200e9ed49d80449a09d2347b29787c90585']
 } as const;
+
+const expectedFunctionSignatures = [
+  ['create_catalog_commercial_snapshot', 'p_session_token text, p_snapshot_id uuid, p_product_id uuid, p_quantity numeric, p_basis_value bigint, p_adjustment_amount_cents bigint, p_adjustment_reason text, p_travel_estimate_amount_cents bigint, p_travel_estimate_basis text, p_effective_at timestamp with time zone, p_source_system text, p_source_record_type text, p_source_record_identifier text, p_material_increase_amount_cents bigint, p_renewed_accepted_at timestamp with time zone', 'uuid'],
+  ['create_catalog_product', 'p_session_token text, p_product_id uuid, p_product_code text, p_display_name text, p_product_kind text, p_classification text, p_commercial_unit text, p_source_system text', 'uuid'],
+  ['create_custom_commercial_snapshot', 'p_session_token text, p_snapshot_id uuid, p_description text, p_approved_price_cents bigint, p_currency text, p_quantity numeric, p_reason text, p_adjustment_amount_cents bigint, p_adjustment_reason text, p_travel_estimate_amount_cents bigint, p_travel_estimate_basis text, p_source_system text, p_effective_at timestamp with time zone, p_material_increase_amount_cents bigint, p_renewed_accepted_at timestamp with time zone', 'uuid'],
+  ['get_current_catalog_package_inclusions', 'p_effective_at timestamp with time zone', 'TABLE(package_product_id uuid, package_product_code text, package_display_name text, package_version_id uuid, package_version_number integer, included_product_id uuid, included_product_code text, included_display_name text, included_classification text, quantity numeric, commercial_unit text, item_position integer)'],
+  ['get_current_selectable_catalog', 'p_effective_at timestamp with time zone', 'TABLE(product_id uuid, product_code text, display_name text, product_kind text, classification text, commercial_unit text, price_evidence_id uuid, amount_cents bigint, currency text, bracket_set_id uuid, bracket_id uuid, bracket_code text, bracket_basis text, lower_bound bigint, upper_bound bigint, lower_inclusive boolean, upper_inclusive boolean, effective_at timestamp with time zone)'],
+  ['record_catalog_external_mapping', 'p_session_token text, p_mapping_id uuid, p_provider text, p_external_record_type text, p_external_identifier text, p_target_product_id uuid, p_source_system text, p_observed_at timestamp with time zone', 'uuid'],
+  ['record_catalog_price', 'p_session_token text, p_price_id uuid, p_product_id uuid, p_amount_cents bigint, p_currency text, p_effective_at timestamp with time zone, p_source_system text, p_source_record_identifier text', 'uuid'],
+  ['reject_catalog_evidence_mutation', '', 'trigger'],
+  ['reject_catalog_product_delete', '', 'trigger'],
+  ['replace_catalog_bracket_set', 'p_session_token text, p_bracket_set_id uuid, p_package_product_id uuid, p_bracket_basis text, p_effective_at timestamp with time zone, p_source_system text, p_brackets jsonb', 'uuid'],
+  ['replace_catalog_package_composition', 'p_session_token text, p_package_version_id uuid, p_package_product_id uuid, p_effective_at timestamp with time zone, p_source_system text, p_items jsonb', 'uuid'],
+  ['require_catalog_permission', 'p_actor_identity_id uuid, p_permission_code text', 'void'],
+  ['revise_catalog_product', 'p_session_token text, p_product_id uuid, p_display_name text, p_lifecycle_state text, p_reason text, p_source_system text', 'void']
+] as const;
+
+const ownerTablePrivileges = ['DELETE', 'INSERT', 'REFERENCES', 'SELECT', 'TRIGGER', 'TRUNCATE', 'UPDATE'];
 
 function fail(message: string): void {
   console.error(`ERROR: ${message}`);
@@ -120,11 +133,15 @@ for (const [filename, expectedHash] of expectedMigrations) {
 const migrationFiles = fs.readdirSync(path.join(baseDir, 'db/migrations')).filter((name) => name.endsWith('.sql')).sort();
 exact('Canonical migration inventory', migrationFiles, expectedMigrations.map(([filename]) => filename));
 
-const packageHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package.json'))).digest('hex');
+const packageJson = JSON.parse(fs.readFileSync(path.join(baseDir, 'package.json'), 'utf8')) as {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+};
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'package-lock.json'))).digest('hex');
-if (packageHash !== '7eed3741f53151453c71b132a6156b53ed3e8e43079e092953084b2a9916b797') {
-  fail(`package.json SHA-256 mismatch: ${packageHash}`);
-}
+exact('Runtime dependency boundary', Object.entries(packageJson.dependencies ?? {}).map(([name, version]) => `${name}:${version}`), ['fastify:5.11.2', 'pg:8.22.0']);
+exact('Development dependency boundary', Object.entries(packageJson.devDependencies ?? {}).map(([name, version]) => `${name}:${version}`), ['@types/node:26.1.2', '@types/pg:8.20.3', 'tsx:4.23.1', 'typescript:7.0.2', 'vitest:4.1.10']);
+exact('Optional dependency boundary', Object.entries(packageJson.optionalDependencies ?? {}).map(([name, version]) => `${name}:${version}`), []);
 if (lockHash !== '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a') {
   fail(`package-lock.json SHA-256 mismatch: ${lockHash}`);
 }
@@ -205,8 +222,6 @@ for (const line of statusLines) {
   }
   actualPaths.push(name);
 }
-const unexpectedPaths = actualPaths.filter((candidatePath) => !allowedPaths.includes(candidatePath));
-if (unexpectedPaths.length > 0) fail(`Independent changed-file inventory contains disallowed paths: ${unexpectedPaths.join(', ')}`);
 const staged = execFileSync('git', ['diff', '--cached', '--name-only'], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
 if (staged) fail(`Candidate has staged paths: ${staged.replaceAll('\n', ', ')}`);
 
@@ -243,10 +258,7 @@ async function verifyDatabase(): Promise<void> {
       columns: `SELECT table_name, column_name, ordinal_position, data_type, udt_name, is_nullable, coalesce(column_default, '') AS column_default FROM information_schema.columns WHERE table_schema = 'medialab_core' AND table_name IN ${tableListSql} ORDER BY table_name, ordinal_position`,
       constraints: `SELECT c.relname AS table_name, x.conname, x.contype, pg_get_constraintdef(x.oid, true) AS definition FROM pg_constraint x JOIN pg_class c ON c.oid = x.conrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'medialab_core' AND c.relname IN ${tableListSql} AND x.contype <> 'n' ORDER BY c.relname, x.conname`,
       indexes: `SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname = 'medialab_core' AND tablename IN ${tableListSql} ORDER BY tablename, indexname`,
-      functions: `SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS arguments, pg_get_function_result(p.oid) AS result, p.prosecdef, p.proconfig, pg_get_userbyid(p.proowner) AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'medialab_core' AND p.proname IN ${functionListSql} ORDER BY p.proname, arguments`,
-      triggers: `SELECT c.relname AS table_name, t.tgname, pg_get_triggerdef(t.oid, true) AS definition FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'medialab_core' AND c.relname IN ${tableListSql} AND NOT t.tgisinternal ORDER BY c.relname, t.tgname`,
-      tableGrants: `SELECT table_name, grantee, privilege_type, is_grantable FROM information_schema.table_privileges WHERE table_schema = 'medialab_core' AND table_name IN ${tableListSql} ORDER BY table_name, grantee, privilege_type`,
-      routineGrants: `SELECT routine_name, grantee, privilege_type, is_grantable FROM information_schema.routine_privileges WHERE specific_schema = 'medialab_core' AND routine_name IN ${functionListSql} ORDER BY routine_name, grantee, privilege_type`
+      triggers: `SELECT c.relname AS table_name, t.tgname, pg_get_triggerdef(t.oid, true) AS definition FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'medialab_core' AND c.relname IN ${tableListSql} AND NOT t.tgisinternal ORDER BY c.relname, t.tgname`
     };
     for (const [label, query] of Object.entries(queries)) {
       const result = await client.query(query);
@@ -256,6 +268,57 @@ async function verifyDatabase(): Promise<void> {
         fail(`${label} inventory mismatch: count=${result.rows.length} digest=${actualDigest}`);
       }
     }
+
+    const functions = await client.query(
+      `SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS arguments, pg_get_function_result(p.oid) AS result,
+              p.prosecdef, p.proconfig, pg_get_userbyid(p.proowner) AS owner
+         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'medialab_core' AND p.proname IN ${functionListSql}
+        ORDER BY p.proname, arguments`
+    );
+    exact(
+      'Function signature and result inventory',
+      functions.rows.map((row) => `${row.proname}|${row.arguments}|${row.result}`),
+      expectedFunctionSignatures.map(([name, args, result]) => `${name}|${args}|${result}`)
+    );
+    if (functions.rows.length !== 13) fail(`Expected exactly 13 packet functions, got ${functions.rows.length}`);
+    if (functions.rows.some((row) => row.prosecdef !== true)) fail('One or more packet functions are not SECURITY DEFINER');
+    if (functions.rows.some((row) => JSON.stringify(row.proconfig) !== JSON.stringify(['search_path=pg_catalog, medialab_core, pg_temp']))) {
+      fail('One or more packet functions do not use the exact fixed search_path');
+    }
+    if (functions.rows.some((row) => row.owner !== TEST_OWNER_ROLE)) fail('One or more packet functions have the wrong owner');
+
+    const tableGrants = await client.query(
+      `SELECT table_name, grantee, privilege_type, is_grantable
+         FROM information_schema.table_privileges
+        WHERE table_schema = 'medialab_core' AND table_name IN ${tableListSql}
+        ORDER BY table_name, grantee, privilege_type`
+    );
+    exact('Table-grant table inventory', [...new Set(tableGrants.rows.map((row) => row.table_name))], packetTables);
+    if (tableGrants.rows.length !== 77) fail(`Expected exactly 77 packet table grants, got ${tableGrants.rows.length}`);
+    if (tableGrants.rows.some((row) => row.grantee !== TEST_OWNER_ROLE)) fail('Packet table grant has an unexpected grantee class');
+    for (const table of packetTables) {
+      const grants = tableGrants.rows.filter((row) => row.table_name === table);
+      exact(`${table} owner privilege inventory`, grants.map((row) => row.privilege_type), ownerTablePrivileges);
+      if (grants.some((row) => row.is_grantable !== 'YES')) fail(`${table} owner privilege is not grantable`);
+    }
+
+    const routineGrants = await client.query(
+      `SELECT routine_name, grantee, privilege_type, is_grantable
+         FROM information_schema.routine_privileges
+        WHERE specific_schema = 'medialab_core' AND routine_name IN ${functionListSql}
+        ORDER BY routine_name, grantee, privilege_type`
+    );
+    const expectedRoutineGrantRows = [
+      ...packetFunctions.map((name) => `${name}|OWNER|EXECUTE|YES`),
+      ...runtimeFunctions.map((name) => `${name}|RUNTIME|EXECUTE|NO`)
+    ];
+    exact(
+      'Routine grant inventory',
+      routineGrants.rows.map((row) => `${row.routine_name}|${row.grantee === TEST_OWNER_ROLE ? 'OWNER' : row.grantee === TEST_RUNTIME_ROLE ? 'RUNTIME' : `UNEXPECTED:${row.grantee}`}|${row.privilege_type}|${row.is_grantable}`),
+      expectedRoutineGrantRows
+    );
+    if (routineGrants.rows.length !== 23) fail(`Expected exactly 23 packet routine grants, got ${routineGrants.rows.length}`);
 
     const executable = await client.query(
       `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace

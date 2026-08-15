@@ -1,21 +1,20 @@
-# P02-M16-A Build State
+# P02-M16-B Build State
 
-- Packet: P02-M16-A — Operational Pilot Golden Path Reconstruction R01
-- Candidate state: uncommitted, unstaged, bounded nonproduction review candidate
-- Base platform commit: `fbe5f9ae74a3b59bebea7ef74a1047bc6fb1dd8d`
-- Base tree: `52c52ac84c0173bf5518b34864f14902ac32bd04`
-- Production/default `main`: `b72c3f2115fe00c217a7cda2eca699c404c312f8`
-- Local branch: `platform-v2-p02-m16-a-operational-pilot-golden-path-reconstruction-r01`
-- Database boundary: `medialab_p02m16a_test`, restricted runtime `medialab_p02m16a_test_app`, owner only for reset/seed/test bootstrap
-- Socket/port: `/tmp/mlvs01-p02m16a-pg`, `55447`; application host/port: `127.0.0.1`, `4316`
+- Controlling authority: P02-M16-B — Historical Business Replay Harness & Coverage Framework R01 plus Scope Amendment R01, Verifier Reconciliation R02, and Verifier Portability Reconciliation R03
+- Candidate state: uncommitted, unstaged, bounded synthetic-only nonproduction review candidate
+- Base Platform commit: `8f55e159b0d568b149b55d6c515857ec62c657fd`
+- Base Platform tree: `aee1823fd990841f57450f850085a395ac316427`
+- Observed production/default `main`: `28517e4d2131014cfdf090fa3aa40d6bcf7b6398`; observational only and not used as the build base
+- Local branch: `platform-v2-p02-m16-b-historical-business-replay-harness-r01`
+- Database boundary: `medialab_p02m16a_test`; restricted runtime `medialab_p02m16a_test_app`; owner only for accepted reset, seed, and synthetic session bootstrap
+- Socket/port: `/tmp/mlvs01-p02m16a-pg`, `55447`
 - Accepted migrations: exactly `0001` through `0022`; no migration `0023`
-- Dependency boundary: Fastify `5.11.2`, pg `8.22.0`, TypeScript `7.0.2`, Vitest `4.1.10`; byte-identical `package-lock.json`
-- Scenario: `M16A_GOLDEN_PATH_QUICK_EDIT_V1`, deterministic valid synthetic PNG fixtures only
-- Review law: five exact returned versions; four `ACCEPT`; one `QUICK_EDIT`; complete-review gate required before queue promotion
-- Quick Edit law: raw bounded staging, durable restricted worker, one-winner claim, injected attempt-1 failure, linked attempt-2 success, immutable correction/lineage/association, no approval from byte arrival
-- Human action law: explicit later `Send to Final`; focused unresolved `Needs Review` snapshot; no application-only canonical status
-- Delivery: deliberate five-version PHOTO publication, `NONPRODUCTION_FIXTURE` eligibility, fixed TDC, local exact-byte delivery only
+- Dependency boundary: byte-identical `package-lock.json`; no dependency changes
+- Verifier portability: predecessor packet allowlists removed from the eight authorized domain verifiers; three stale whole-file `package.json` hashes replaced by exact dependency checks; current-catalog role-bearing metadata hashes replaced by exact semantic function/grant verification
+- Replay boundary: synthetic-only BusinessReplayScenarioV1, independently authored expected outcomes, observed R71 outcomes, stable mismatch classification, 25-dimension coverage, deterministic greedy represented-set planning, and offline evidence
+- Platform execution: baseline Quick Edit, unresolved Needs Review, and append-only reschedule through accepted R71 command/projection surfaces
+- Post-R03 validation: TypeScript PASS; focused replay tests 29/29 PASS; full serial regression 439/439 PASS; strict `verify:all` PASS; two clean 29-scenario corpus runs PASS with identical semantic SHA-256 `1bb76357ea085a962bf458a046e79ed5bd62980d82c50ddb8fc0fef3a91aa627`
 - Identity-recovery law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history.
 - Identity-recovery non-effect: it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
 - Deferred scope: Actual profile/preferences reset behavior remains deferred until those models exist.
-- Prohibited actions: no commit, staging, push, remote branch, PR, platform/main mutation, deploy, provider, real data/media, Desktop, shadow/dual run, cutover, Aryeo action, Historical Business Replay, or next packet
+- Prohibited actions: no commit, staging, push, remote branch, PR, Platform/main mutation, deploy, provider/network, real or historical data/media, Desktop, shadow/dual run, cutover, Aryeo action, or later packet

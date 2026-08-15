@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { fileURLToPath } from 'node:url';
-import { P02_M16_A_ALLOWLIST } from './p02-m16-a-changed-files.js';
 import { createSyntheticFixtureDownload } from '../src/disposable-delivery/fixture-download.js';
 import { DISPOSABLE_DELIVERY_CSP, DISPOSABLE_DELIVERY_HTML, DISPOSABLE_DELIVERY_JAVASCRIPT } from '../src/disposable-delivery/page.js';
 
@@ -20,7 +19,6 @@ function fail(message: string): never {
   throw new Error(`DISPOSABLE_DELIVERY_SURFACE_LOCAL_FIXTURE_VERIFICATION_FAILED: ${message}`);
 }
 
-if (P02_M16_A_ALLOWLIST.length !== 78 || new Set(P02_M16_A_ALLOWLIST).size !== 78) fail('changed-path allowlist is not exactly 78 unique paths');
 if (packageJson.dependencies?.fastify !== '5.11.2') fail('Fastify is not pinned exactly to 5.11.2 as a required packet-owned runtime dependency');
 if (JSON.stringify(Object.keys(packageJson.dependencies).sort()) !== JSON.stringify(['fastify', 'pg']) ||
     Object.keys(packageJson.optionalDependencies ?? {}).length !== 0) fail('unexpected or optional runtime dependency detected');
@@ -82,7 +80,6 @@ console.log(JSON.stringify({
   migration,
   migrationSize: migrationBytes.length,
   migrationSha256: migrationHash,
-  changedPathBoundary: P02_M16_A_ALLOWLIST.length,
   fastify: packageJson.dependencies.fastify,
   bind: '127.0.0.1',
   syntheticFixtureSize: fixtureA.bytes.length,

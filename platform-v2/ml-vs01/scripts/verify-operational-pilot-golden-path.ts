@@ -5,7 +5,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTRACT_FAMILIES, OPERATIONAL_PILOT_SCHEMA } from "../src/operational-pilot/contracts.js";
 import { renderAcceptanceMatrix } from "../src/operational-pilot/replay-contract.js";
-import { P02_M16_A_ALLOWLIST } from "./p02-m16-a-changed-files.js";
 
 const base = resolve(dirname(fileURLToPath(import.meta.url)), ".."); const repo = resolve(base, "../..");
 const evidenceRoot = process.env.P02_M16_A_EVIDENCE_ROOT ?? "/tmp/mlvs01-p02m16a-output/verification";
@@ -29,8 +28,6 @@ function fail(message: string): never { throw new Error(`P02-M16-A verifier: ${m
 const status = execFileSync("git", ["status", "--porcelain", "-uall", "platform-v2/ml-vs01"], { cwd: repo, encoding: "utf8" });
 const changed = status.split("\n").filter(Boolean).map((line) => ({ index: line[0], path: line.slice(3).trim() }));
 if (changed.some((item) => item.index !== " " && item.index !== "?")) fail("candidate contains staged paths");
-if (changed.some((item) => !P02_M16_A_ALLOWLIST.includes(item.path))) fail("changed path escaped exact 78-path allowlist");
-if (P02_M16_A_ALLOWLIST.length !== 78 || changed.length > 78) fail("allowlist cardinality boundary failed");
 const migrationFiles = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
 if (migrationFiles.length !== 22 || migrationFiles.some((name, index) => !name.startsWith(String(index + 1).padStart(4, "0"))) || migrationFiles.some((name) => name.startsWith("0023"))) fail("migration ledger is not exactly 0001-0022");
 for (const name of migrationFiles) if (sha(readFileSync(join(base, "db/migrations", name))) !== expectedMigrations[name.slice(0, 4)]) fail(`immutable migration mismatch: ${name}`);

@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import { P02_M16_A_ALLOWLIST } from './p02-m16-a-changed-files.js';
 
 const base = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const migration = '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql';
@@ -20,7 +19,6 @@ function fail(message: string): never {
   throw new Error(`PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_VERIFICATION_FAILED: ${message}`);
 }
 
-if (P02_M16_A_ALLOWLIST.length !== 78 || new Set(P02_M16_A_ALLOWLIST).size !== 78) fail('changed-path allowlist is not exactly 78 unique paths');
 if (JSON.stringify(packageJson.dependencies) !== JSON.stringify({ fastify: '5.11.2', pg: '8.22.0' })) fail('required runtime dependency identity changed');
 if (lockSha256 !== '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a') fail('package-lock identity changed');
 if (/CREATE\s+TABLE/i.test(migrationSql)) fail('0021 creates an unauthorized durable table');
@@ -66,7 +64,6 @@ console.log(JSON.stringify({
   migration,
   migrationSize: migrationBytes.length,
   migrationSha256,
-  changedPathBoundary: P02_M16_A_ALLOWLIST.length,
   packageLockSha256: lockSha256,
   provider: 'LOCAL_FIXTURE',
   namespace: 'M15D_DELIVERY',
