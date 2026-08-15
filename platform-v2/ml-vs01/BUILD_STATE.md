@@ -1,20 +1,23 @@
-# P02-M16-B Build State
+# P02-M16-C Build State
 
-- Controlling authority: P02-M16-B — Historical Business Replay Harness & Coverage Framework R01 plus Scope Amendment R01, Verifier Reconciliation R02, and Verifier Portability Reconciliation R03
-- Candidate state: uncommitted, unstaged, bounded synthetic-only nonproduction review candidate
-- Base Platform commit: `8f55e159b0d568b149b55d6c515857ec62c657fd`
-- Base Platform tree: `aee1823fd990841f57450f850085a395ac316427`
+- Controlling authority: P02-M16-C — Curated Historical Business Replay Normalization & Scenario Regression R01 plus R82 Privacy Repair and Continuation Builder Handoff R01
+- Candidate state: uncommitted, unstaged, bounded historical-evidence nonproduction review candidate
+- Base Platform commit: `f845f71c23bbd18af31b6655b0255b54fa956cda`
+- Base Platform tree: `be11181b6291d4cc8875c2f43a248c177afe3c4a`
 - Observed production/default `main`: `28517e4d2131014cfdf090fa3aa40d6bcf7b6398`; observational only and not used as the build base
-- Local branch: `platform-v2-p02-m16-b-historical-business-replay-harness-r01`
-- Database boundary: `medialab_p02m16a_test`; restricted runtime `medialab_p02m16a_test_app`; owner only for accepted reset, seed, and synthetic session bootstrap
+- Local workspace: `/private/tmp/mlvs01-p02m16c-curated-historical-replay-r01`
+- Local branch: `platform-v2-p02-m16-c-curated-historical-business-replay-r01`
+- Raw evidence boundary: the five exact frozen source files and two acquisition manifests remain immutable and local; no raw upload
+- Database boundary: `medialab_p02m16a_test`; restricted runtime `medialab_p02m16a_test_app`; owner only for accepted reset, seed, and verification bootstrap
 - Socket/port: `/tmp/mlvs01-p02m16a-pg`, `55447`
 - Accepted migrations: exactly `0001` through `0022`; no migration `0023`
 - Dependency boundary: byte-identical `package-lock.json`; no dependency changes
-- Verifier portability: predecessor packet allowlists removed from the eight authorized domain verifiers; three stale whole-file `package.json` hashes replaced by exact dependency checks; current-catalog role-bearing metadata hashes replaced by exact semantic function/grant verification
-- Replay boundary: synthetic-only BusinessReplayScenarioV1, independently authored expected outcomes, observed R71 outcomes, stable mismatch classification, 25-dimension coverage, deterministic greedy represented-set planning, and offline evidence
-- Platform execution: baseline Quick Edit, unresolved Needs Review, and append-only reschedule through accepted R71 command/projection surfaces
-- Post-R03 validation: TypeScript PASS; focused replay tests 29/29 PASS; full serial regression 439/439 PASS; strict `verify:all` PASS; two clean 29-scenario corpus runs PASS with identical semantic SHA-256 `1bb76357ea085a962bf458a046e79ed5bd62980d82c50ddb8fc0fef3a91aa627`
+- Historical replay boundary: 22 curated provider-neutral `HISTORICAL_NORMALIZED` scenarios, explicit provenance and uncertainty, one accepted R71 Platform execution, 25-dimension coverage, and offline sanitized evidence
+- R82 privacy repair: exact canonical SHA-256 field recognition and identifier matching bounded to one structured value or HTML text node; genuine phone/provider-ID cases remain fail-closed
+- Determinism: two clean 22-scenario runs produced identical semantic SHA-256 `7b17db5c385b3e66da85504be833858b091c0374dcb309003f28ca7728682b58`
+- Validation: R82 privacy proof PASS; focused historical tests 6/6 PASS; full serial regression 445/445 PASS; TypeScript PASS; strict `verify:all` PASS
+- Gap outcome: no implementation gap and no canonical-schema gap asserted; source conflict, ambiguous evidence, and deferred capability remain explicit
 - Identity-recovery law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history.
 - Identity-recovery non-effect: it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
 - Deferred scope: Actual profile/preferences reset behavior remains deferred until those models exist.
-- Prohibited actions: no commit, staging, push, remote branch, PR, Platform/main mutation, deploy, provider/network, real or historical data/media, Desktop, shadow/dual run, cutover, Aryeo action, or later packet
+- Prohibited actions: no staging, commit, push, PR, Platform/main mutation, deploy, production, provider/network, raw upload, current-era cohort, shadow/dual run, cutover, or later packet

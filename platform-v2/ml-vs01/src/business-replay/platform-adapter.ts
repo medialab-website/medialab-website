@@ -43,7 +43,8 @@ async function readJson(path: string): Promise<any> { return JSON.parse(await re
 export async function executePlatformScenario(scenario: BusinessReplayScenarioV1, outputRoot: string): Promise<BusinessReplayObservedOutcomeV1> {
   const platformRoot = join(outputRoot, "platform-baseline");
   await ensureGoldenPath(platformRoot);
-  if (scenario.scenarioId === "M16B_PLATFORM_BASELINE_QUICK_EDIT_V1") {
+  const executionTemplateId = scenario.platformExecutionTemplateId ?? scenario.scenarioId;
+  if (executionTemplateId === "M16B_PLATFORM_BASELINE_QUICK_EDIT_V1") {
     const outcome = await readJson(join(platformRoot, "OBSERVED_OUTCOME.json"));
     return observed([
       { field: "comparisonPass", value: outcome.comparison.pass, source: "PLATFORM_OBSERVED" },
@@ -53,14 +54,14 @@ export async function executePlatformScenario(scenario: BusinessReplayScenarioV1
       { field: "exactDownloads", value: outcome.counts.exactDownloads, source: "PLATFORM_OBSERVED" },
     ], ["M16A_GOLDEN_PATH_QUICK_EDIT_V1"]);
   }
-  if (scenario.scenarioId === "M16B_PLATFORM_NEEDS_REVIEW_V1") {
+  if (executionTemplateId === "M16B_PLATFORM_NEEDS_REVIEW_V1") {
     const snapshot = await readJson(join(platformRoot, "NEEDS_REVIEW_SNAPSHOT.json"));
     return observed([
       { field: "unresolved", value: snapshot.unresolved, source: "PLATFORM_OBSERVED" },
       { field: "finalDesignationCreatedByNeedsReview", value: snapshot.finalDesignationCreatedByNeedsReview, source: "PLATFORM_OBSERVED" },
     ], ["M16A_GOLDEN_PATH_QUICK_EDIT_V1", "get_returned_review_lineage"]);
   }
-  if (scenario.scenarioId !== "M16B_PLATFORM_RESCHEDULE_V1") throw new Error(`unsupported Platform scenario: ${scenario.scenarioId}`);
+  if (executionTemplateId !== "M16B_PLATFORM_RESCHEDULE_V1") throw new Error(`unsupported Platform scenario: ${scenario.scenarioId}`);
 
   const golden = await readJson(join(platformRoot, "OBSERVED_OUTCOME.json"));
   const originalAppointment = golden.ids.appointment as string;

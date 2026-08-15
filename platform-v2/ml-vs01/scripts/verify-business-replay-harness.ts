@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { CLASSIFICATION_PRECEDENCE } from "../src/business-replay/classification.js";
 import { COVERAGE_DIMENSIONS } from "../src/business-replay/coverage.js";
 import { P02_M16_B_ALLOWLIST } from "./p02-m16-b-changed-files.js";
+import { P02_M16_C_ALLOWLIST } from "./p02-m16-c-changed-files.js";
 
 const base = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(base, "../..");
@@ -46,8 +47,9 @@ for (const name of eight) {
   if (!scriptName || !String(packageJson.scripts["verify:all"]).includes(`npm run ${scriptName}`)) fail(`${name} omitted from strict verify:all`);
 }
 if (P02_M16_B_ALLOWLIST.length !== 50 || P02_M16_B_ALLOWLIST.some((item) => !item.startsWith("platform-v2/ml-vs01/"))) fail("amended 50-path boundary invalid");
-if (!readFileSync(join(base, "scripts/verify-changed-files.ts"), "utf8").includes("P02_M16_B_ALLOWLIST") ||
-    !readFileSync(join(base, "scripts/verify-foundation-closeout.ts"), "utf8").includes("P02_M16_B_ALLOWLIST")) fail("current boundary is not centralized");
+if (P02_M16_C_ALLOWLIST.length !== 16 || P02_M16_C_ALLOWLIST.some((item) => !item.startsWith("platform-v2/ml-vs01/"))) fail("M16-C boundary invalid");
+if (!readFileSync(join(base, "scripts/verify-changed-files.ts"), "utf8").includes("P02_M16_C_ALLOWLIST") ||
+    !readFileSync(join(base, "scripts/verify-foundation-closeout.ts"), "utf8").includes("P02_M16_C_ALLOWLIST")) fail("current boundary is not centralized");
 
 const replayFiles = readdirSync(join(base, "src/business-replay")).map((name) => join(base, "src/business-replay", name));
 const replaySource = replayFiles.map((file) => readFileSync(file, "utf8")).join("\n");

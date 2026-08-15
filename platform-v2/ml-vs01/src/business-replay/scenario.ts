@@ -1,7 +1,7 @@
 import { BUSINESS_REPLAY_SCHEMA, type BusinessReplayScenarioV1 } from "./contracts.js";
-import { assertSyntheticOnlyScenario } from "./sanitization.js";
+import { assertReplayScenarioSafety } from "./sanitization.js";
 
-const ID = /^M16B_[A-Z0-9_]+_V1$/;
+const ID = /^M16[BC]_[A-Z0-9_]+_V1$/;
 const HASH = /^[0-9a-f]{64}$/;
 
 export function validateScenario(scenario: BusinessReplayScenarioV1): BusinessReplayScenarioV1 {
@@ -12,7 +12,9 @@ export function validateScenario(scenario: BusinessReplayScenarioV1): BusinessRe
     throw new Error("BUSINESS_REPLAY_SCENARIO_IDENTITY_REJECTED");
   }
   if (!Number.isFinite(Date.parse(scenario.syntheticReferenceDate))) throw new Error("BUSINESS_REPLAY_CLOCK_REJECTED");
-  if (!scenario.fixtureNamespace.startsWith("M16B_SYNTHETIC_")) throw new Error("BUSINESS_REPLAY_NAMESPACE_REJECTED");
+  if (!(scenario.fixtureNamespace.startsWith("M16B_SYNTHETIC_") || scenario.fixtureNamespace.startsWith("M16C_HISTORICAL_NORMALIZED_"))) {
+    throw new Error("BUSINESS_REPLAY_NAMESPACE_REJECTED");
+  }
   if (scenario.expectedR71Outcome.authoredIndependently !== true || scenario.expectedR71Outcome.assertions.length === 0) {
     throw new Error("BUSINESS_REPLAY_EXPECTED_OUTCOME_REJECTED");
   }
@@ -24,7 +26,7 @@ export function validateScenario(scenario: BusinessReplayScenarioV1): BusinessRe
       throw new Error("BUSINESS_REPLAY_EVIDENCE_HASH_REJECTED");
     }
   }
-  assertSyntheticOnlyScenario(scenario);
+  assertReplayScenarioSafety(scenario);
   return scenario;
 }
 
@@ -35,4 +37,3 @@ export function serializeScenario(scenario: BusinessReplayScenarioV1): string {
 export function deserializeScenario(serialized: string): BusinessReplayScenarioV1 {
   return validateScenario(JSON.parse(serialized) as BusinessReplayScenarioV1);
 }
-

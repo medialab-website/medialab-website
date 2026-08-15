@@ -25,6 +25,25 @@ export function assertSyntheticOnlyScenario(scenario: BusinessReplayScenarioV1):
   }
 }
 
+export function assertReplayScenarioSafety(scenario: BusinessReplayScenarioV1): void {
+  if (scenario.provenanceClassification === "CURRENT_SHADOW_NORMALIZED") {
+    throw new ReplaySafetyError("REPLAY_PROVENANCE_REJECTED", "$.provenanceClassification");
+  }
+  if (scenario.provenanceClassification === "SYNTHETIC_FIXTURE") {
+    assertSyntheticOnlyScenario(scenario);
+    return;
+  }
+  if (!scenario.scenarioId.startsWith("M16C_HISTORICAL_") || !scenario.fixtureNamespace.startsWith("M16C_HISTORICAL_NORMALIZED_")) {
+    throw new ReplaySafetyError("HISTORICAL_NORMALIZED_NAMESPACE_REJECTED", "$.fixtureNamespace");
+  }
+  scan(scenario, "$", undefined);
+  for (let index = 0; index < scenario.evidence.length; index += 1) {
+    if (scenario.evidence[index]!.syntheticEvidenceRoleLabel !== true) {
+      throw new ReplaySafetyError("PROVIDER_LABEL_NOT_ROLE_ONLY", `$.evidence[${index}]`);
+    }
+  }
+}
+
 function scan(value: unknown, path: string, key: string | undefined): void {
   if (value === null || value === undefined || typeof value === "boolean" || typeof value === "number") return;
   if (typeof value === "string") {

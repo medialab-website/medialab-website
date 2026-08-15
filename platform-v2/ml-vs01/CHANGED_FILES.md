@@ -1,42 +1,20 @@
-# P02-M16-B Changed Files
+# P02-M16-C Changed Files
 
-The uncommitted and unstaged candidate contains this exact 38-path subset of the amended 50-path maximum allowlist under Scope Amendment R01, Verifier Reconciliation R02, and Verifier Portability Reconciliation R03. Migrations `0001`–`0022`, `db/migrate.ts`, `db/migrations/README.md`, `package-lock.json`, dependency versions, and `scripts/p02-m16-a-changed-files.ts` remain byte-identical.
+The uncommitted and unstaged candidate contains this exact 16-path bounded set. Migrations `0001`–`0022`, `db/migrate.ts`, `db/migrations/README.md`, `package-lock.json`, and dependency versions remain byte-identical.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
 - platform-v2/ml-vs01/package.json
+- platform-v2/ml-vs01/scripts/p02-m16-c-changed-files.ts
+- platform-v2/ml-vs01/scripts/run-historical-business-replay.ts
+- platform-v2/ml-vs01/scripts/verify-business-replay-harness.ts
 - platform-v2/ml-vs01/scripts/verify-changed-files.ts
 - platform-v2/ml-vs01/scripts/verify-foundation-closeout.ts
-- platform-v2/ml-vs01/src/operational-pilot/database.ts
-- platform-v2/ml-vs01/scripts/p02-m16-b-changed-files.ts
-- platform-v2/ml-vs01/scripts/run-business-replay-harness.ts
-- platform-v2/ml-vs01/scripts/verify-business-replay-harness.ts
-- platform-v2/ml-vs01/src/business-replay/README.md
-- platform-v2/ml-vs01/src/business-replay/classification.ts
+- platform-v2/ml-vs01/scripts/verify-historical-business-replay.ts
 - platform-v2/ml-vs01/src/business-replay/contracts.ts
-- platform-v2/ml-vs01/src/business-replay/coverage.ts
-- platform-v2/ml-vs01/src/business-replay/deterministic-ids.ts
-- platform-v2/ml-vs01/src/business-replay/evidence.ts
-- platform-v2/ml-vs01/src/business-replay/index.ts
 - platform-v2/ml-vs01/src/business-replay/platform-adapter.ts
-- platform-v2/ml-vs01/src/business-replay/report.ts
-- platform-v2/ml-vs01/src/business-replay/runner.ts
 - platform-v2/ml-vs01/src/business-replay/sanitization.ts
 - platform-v2/ml-vs01/src/business-replay/scenario.ts
-- platform-v2/ml-vs01/src/business-replay/synthetic-scenarios.ts
-- platform-v2/ml-vs01/tests/business-replay-classification.test.ts
-- platform-v2/ml-vs01/tests/business-replay-contracts.test.ts
-- platform-v2/ml-vs01/tests/business-replay-coverage.test.ts
-- platform-v2/ml-vs01/tests/business-replay-determinism.test.ts
-- platform-v2/ml-vs01/tests/business-replay-platform-adapter.test.ts
-- platform-v2/ml-vs01/tests/business-replay-report.test.ts
-- platform-v2/ml-vs01/tests/business-replay-runner.test.ts
-- platform-v2/ml-vs01/tests/business-replay-sanitization.test.ts
-- platform-v2/ml-vs01/scripts/verify-catalog-administration-lifecycle-schema.ts
-- platform-v2/ml-vs01/scripts/verify-current-catalog-price-reconstruction-schema.ts
-- platform-v2/ml-vs01/scripts/verify-disposable-delivery-surface-local-fixture.ts
-- platform-v2/ml-vs01/scripts/verify-operational-pilot-golden-path.ts
-- platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts
-- platform-v2/ml-vs01/scripts/verify-property-hub-foundation-schema.ts
-- platform-v2/ml-vs01/scripts/verify-provider-neutral-file-backed-delivery.ts
-- platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts
+- platform-v2/ml-vs01/src/historical-replay/index.ts
+- platform-v2/ml-vs01/src/historical-replay/privacy.ts
+- platform-v2/ml-vs01/tests/historical-business-replay.test.ts

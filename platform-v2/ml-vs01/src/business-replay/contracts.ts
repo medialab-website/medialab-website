@@ -63,12 +63,13 @@ export interface BusinessReplayScenarioV1 {
   description: string;
   scenarioTags: readonly string[];
   executionMode: ExecutionMode;
+  platformExecutionTemplateId?: "M16B_PLATFORM_BASELINE_QUICK_EDIT_V1" | "M16B_PLATFORM_NEEDS_REVIEW_V1" | "M16B_PLATFORM_RESCHEDULE_V1";
   evidence: readonly SourceEvidenceReferenceV1[];
   actorsAndAuthority: Record<string, unknown>;
   commercialFacts: Record<string, unknown>;
   schedulingAndOperations: Record<string, unknown>;
   financialAndDeliveryFacts: Record<string, unknown>;
-  historicallyObservedOutcome: { status: "SYNTHETIC_NOT_APPLICABLE"; fields: readonly BusinessReplayObservedFieldV1[] };
+  historicallyObservedOutcome: { status: "SYNTHETIC_NOT_APPLICABLE" | "NORMALIZED_OBSERVED" | "UNCERTAIN"; fields: readonly BusinessReplayObservedFieldV1[] };
   currentIntendedPolicyOutcome: Record<string, unknown>;
   expectedR71Outcome: BusinessReplayExpectedOutcomeV1;
   syntheticObservedOutcome?: BusinessReplayObservedOutcomeV1;
@@ -104,4 +105,3 @@ export function observed(fields: readonly BusinessReplayObservedFieldV1[], comma
   return { schema: BUSINESS_REPLAY_SCHEMA, contract: "BusinessReplayObservedOutcomeV1", fields, commandsAttempted,
     commandResults: commandsAttempted.map((command) => ({ command, status: "ACCEPTED" as const })) };
 }
-
