@@ -1,23 +1,22 @@
-# P02-M16-C Build State
+# P02-M16-D Build State
 
-- Controlling authority: P02-M16-C — Curated Historical Business Replay Normalization & Scenario Regression R01 plus R82 Privacy Repair and Continuation Builder Handoff R01
-- Candidate state: uncommitted, unstaged, bounded historical-evidence nonproduction review candidate
-- Base Platform commit: `f845f71c23bbd18af31b6655b0255b54fa956cda`
-- Base Platform tree: `be11181b6291d4cc8875c2f43a248c177afe3c4a`
-- Observed production/default `main`: `28517e4d2131014cfdf090fa3aa40d6bcf7b6398`; observational only and not used as the build base
-- Local workspace: `/private/tmp/mlvs01-p02m16c-curated-historical-replay-r01`
-- Local branch: `platform-v2-p02-m16-c-curated-historical-business-replay-r01`
-- Raw evidence boundary: the five exact frozen source files and two acquisition manifests remain immutable and local; no raw upload
-- Database boundary: `medialab_p02m16a_test`; restricted runtime `medialab_p02m16a_test_app`; owner only for accepted reset, seed, and verification bootstrap
+- Controlling authority: P02-M16-D — Current-Era Controlled Shadow Reconstruction & Cohort Replay R01 under R87
+- Candidate state: uncommitted, unstaged, bounded current-era nonproduction review candidate
+- Base Platform commit: `b1e1f1ed60db129ca2a48bdba8d3b31c7e9f42db`
+- Base Platform tree: `adc28a5480efa73d9e10aa6373fef78b981d9e62`
+- Observed production/default `main`: `28517e4d2131014cfdf090fa3aa40d6bcf7b6398`; observational only
+- Local workspace: `/private/tmp/mlvs01-p02m16d-current-era-shadow-r01`
+- Local branch: `platform-v2-p02-m16-d-current-era-shadow-r01`
+- Source boundary: exact frozen local read-only workbook; the 42-member March 27, 2026-or-later reviewed cohort is represented only by non-reversible fingerprints in evidence
+- Database boundary: `medialab_p02m16a_test`; restricted runtime `medialab_p02m16a_test_app`; owner only for accepted reset, seed, and test-session bootstrap
 - Socket/port: `/tmp/mlvs01-p02m16a-pg`, `55447`
 - Accepted migrations: exactly `0001` through `0022`; no migration `0023`
 - Dependency boundary: byte-identical `package-lock.json`; no dependency changes
-- Historical replay boundary: 22 curated provider-neutral `HISTORICAL_NORMALIZED` scenarios, explicit provenance and uncertainty, one accepted R71 Platform execution, 25-dimension coverage, and offline sanitized evidence
-- R82 privacy repair: exact canonical SHA-256 field recognition and identifier matching bounded to one structured value or HTML text node; genuine phone/provider-ID cases remain fail-closed
-- Determinism: two clean 22-scenario runs produced identical semantic SHA-256 `7b17db5c385b3e66da85504be833858b091c0374dcb309003f28ca7728682b58`
-- Validation: R82 privacy proof PASS; focused historical tests 6/6 PASS; full serial regression 445/445 PASS; TypeScript PASS; strict `verify:all` PASS
-- Gap outcome: no implementation gap and no canonical-schema gap asserted; source conflict, ambiguous evidence, and deferred capability remain explicit
+- Pilot boundary: exactly six deterministic structural-diversity members selected before replay outcomes; every pilot member uses actual supported Platform commands
+- Full-cohort boundary: if the pilot mechanism passes, all remaining 36 continue through the same runtime reconstruction path in the same run
+- Market-status boundary: cohort membership is never treated as current-market-status evidence; no Property Hub is created
+- Evidence boundary: frozen review evidence is sanitized; raw current customer rows and external-system values remain local and are never uploaded
 - Identity-recovery law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history.
 - Identity-recovery non-effect: it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
 - Deferred scope: Actual profile/preferences reset behavior remains deferred until those models exist.
-- Prohibited actions: no staging, commit, push, PR, Platform/main mutation, deploy, production, provider/network, raw upload, current-era cohort, shadow/dual run, cutover, or later packet
+- Prohibited actions: no staging, commit, push, PR, Platform/main mutation, deploy, production, live provider/network access, current-system mutation, canonical import, cutover, or later packet
