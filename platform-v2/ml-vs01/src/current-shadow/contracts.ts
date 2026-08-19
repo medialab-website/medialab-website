@@ -109,3 +109,42 @@ export interface CurrentEraRunResultV1 {
   receipts: readonly CurrentEraReconstructionReceiptV1[];
   semanticResultSha256: string;
 }
+
+export const CURRENT_ERA_INTAKE_REPROOF_SCHEMA = "ML_CURRENT_ERA_INTAKE_REPROOF_V1" as const;
+
+export interface CurrentEraIntakeReproofReceiptV1 {
+  schema: typeof CURRENT_ERA_INTAKE_REPROOF_SCHEMA;
+  contract: "CurrentEraIntakeReproofReceiptV1";
+  scenarioId: string;
+  customerOutcome: "CREATED" | "REUSED" | "AMBIGUOUS";
+  customerIdentityBasis: "EMAIL" | "EXTERNAL_REFERENCE" | "INSUFFICIENT_EVIDENCE";
+  externalReferenceOutcome: "CREATED" | "REUSED" | "NOT_APPLICABLE";
+  membershipOutcome: "CREATED" | "REUSED" | "NOT_APPLICABLE";
+  propertyEvidenceComplete: boolean;
+  propertyOutcome: "PROPERTY_CREATED" | "PROPERTY_REUSED" | "NOT_ATTEMPTED";
+  snapshotOutcome: "SNAPSHOT_CREATED" | "SNAPSHOT_REUSED" | "NOT_ATTEMPTED";
+  orderCreated: boolean;
+  orderReadBack: boolean;
+  customerPartyReferenceMatches: boolean;
+  propertyReferenceMatches: boolean;
+  snapshotReferenceMatches: boolean;
+  sourceLineCardinalityRepresented: boolean;
+  financialEligibilityMeaningRepresented: boolean;
+  fixtureCustomerPersonUsed: false;
+  fixturePropertyUsed: false;
+  fixturePropertySnapshotUsed: false;
+  propertyHubCreated: false;
+  classification: ShadowClassification;
+  findingCodes: readonly string[];
+  platformCommands: readonly {
+    command: string;
+    status: "ACCEPTED" | "REJECTED" | "NOT_ATTEMPTED";
+  }[];
+}
+
+export interface CurrentEraIntakeReproofRunResultV1 {
+  sourceProfile: CurrentEraSourceProfileV1;
+  identityProof: CurrentEraCohortIdentityProofV1;
+  receipts: readonly CurrentEraIntakeReproofReceiptV1[];
+  semanticResultSha256: string;
+}

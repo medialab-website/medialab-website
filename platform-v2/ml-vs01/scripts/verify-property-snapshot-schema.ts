@@ -31,7 +31,7 @@ for (const relPath of requiredFiles) {
 const migrationsDir = path.join(baseDir, 'db/migrations');
 const migrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
 if (
-  migrations.length !== 22 ||
+  migrations.length !== 23 ||
   migrations[0] !== '0001_identity_and_tenancy.sql' ||
   migrations[1] !== '0002_property_identity_and_snapshots.sql' ||
   migrations[2] !== '0003_person_contacts_and_account_lifecycle.sql' ||
@@ -53,7 +53,8 @@ if (
   migrations[18] !== '0019_temporary_download_center_access_credential_gateway_foundation.sql' ||
   migrations[19] !== '0020_disposable_delivery_surface_local_fixture_foundation.sql' ||
   migrations[20] !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql' ||
-  migrations[21] !== '0022_organization_records_dashboard_audited_export_foundation.sql'
+  migrations[21] !== '0022_organization_records_dashboard_audited_export_foundation.sql' ||
+  migrations[22] !== '0023_runtime_intake_reconciliation_commands.sql'
 ) {
   console.error(`ERROR: Unexpected migration inventory: ${migrations.join(', ')}`);
   errors = true;

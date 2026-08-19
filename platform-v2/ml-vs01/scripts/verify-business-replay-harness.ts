@@ -61,7 +61,12 @@ const adapterDml = adapterSource.match(/\b(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+|
 if (adapterDml.length !== 1 || !/INSERT INTO medialab_core\.development_sessions/i.test(adapterDml[0]!)) fail("Platform adapter exceeds accepted synthetic session bootstrap DML");
 const diff = BunLikeGitDiff();
 if (/\bGRANT\b[^;]*\bPUBLIC\b/i.test(diff) || /\bREVOKE\b[^;]*\bPUBLIC\b/i.test(diff)) fail("new PUBLIC authority detected");
-if (readdirSync(join(base, "db/migrations")).some((name) => name.startsWith("0023"))) fail("migration 0023 exists");
+const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
+if (migrations.length !== 23 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql") fail("migration inventory is not exact 0001-0023");
+for (const name of migrations.slice(0, 22)) {
+  const predecessor = requireChildProcess().execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
+  if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);
+}
 const lockHash = createHash("sha256").update(readFileSync(join(base, "package-lock.json"))).digest("hex");
 if (lockHash !== "2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a") fail("package-lock changed");
 for (const artifact of requiredArtifacts) {

@@ -231,6 +231,11 @@ const ORGANIZATION_RECORD_APIS = [
   'share_personal_order_summary'
 ];
 
+const RUNTIME_INTAKE_APIS = [
+  'reconcile_customer_person_intake',
+  'reconcile_property_snapshot_intake'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
@@ -248,7 +253,8 @@ const ALL_RUNTIME_APIS = [
   ...MEDIA_RETURN_REVIEW_APIS,
   ...PUBLICATION_DELIVERY_APIS,
   ...TEMPORARY_DOWNLOAD_CENTER_APIS,
-  ...ORGANIZATION_RECORD_APIS
+  ...ORGANIZATION_RECORD_APIS,
+  ...RUNTIME_INTAKE_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -466,6 +472,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
       ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
       ,'0022_organization_records_dashboard_audited_export_foundation.sql'
+      ,'0023_runtime_intake_reconciliation_commands.sql'
     ]);
 
     const result = await runMigrations({
@@ -497,6 +504,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
       ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
       ,'0022_organization_records_dashboard_audited_export_foundation.sql'
+      ,'0023_runtime_intake_reconciliation_commands.sql'
     ]);
   });
 
@@ -896,7 +904,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(243);
+      expect(searchPaths.rows).toHaveLength(245);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

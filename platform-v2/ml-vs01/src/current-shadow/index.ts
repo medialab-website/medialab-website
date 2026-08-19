@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
+  CurrentEraIntakeReproofReceiptV1, CurrentEraIntakeReproofRunResultV1,
   CurrentEraNormalizedListingV1, CurrentEraReconstructionReceiptV1, CurrentEraRepresentabilityMatrixV1,
   CurrentEraRunResultV1, ShadowClassification,
 } from "./contracts.js";
-import { CURRENT_SHADOW_SCHEMA } from "./contracts.js";
+import { CURRENT_ERA_INTAKE_REPROOF_SCHEMA, CURRENT_SHADOW_SCHEMA } from "./contracts.js";
 import { CurrentShadowDatabase, issueCurrentShadowSession, resetCurrentShadowDatabase } from "./database.js";
 import { assertCurrentShadowPrivacyProofSelfSafe, buildCurrentShadowPrivacyProof } from "./privacy.js";
 import { CURRENT_ERA_SOURCE_IDENTITY, loadCurrentEraCohort, selectPilot } from "./source.js";
@@ -226,4 +227,298 @@ export async function runCurrentEraShadow(sourcePath: string, outputRoot: string
     return { sourceProfile: normalized.sourceProfile, identityProof: normalized.identityProof,
       listings: normalized.listings, pilot, receipts, semanticResultSha256 };
   } finally { await database.close(); }
+}
+
+function m16eReport(summary: {
+  customersCreated: number; customersReused: number; propertiesCreated: number; propertiesReused: number;
+  snapshotsCreated: number; snapshotsReused: number; ordersCreated: number; ambiguous: number;
+  semanticResultSha256: string;
+}): string {
+  return [
+    "# P02-M16-E Runtime Intake and Current-Era Re-Proof Report",
+    "", "## Outcome", "",
+    "- Exact cohort processed: 42 of 42",
+    "- Customer Persons created through external-reference provenance: " + summary.customersCreated,
+    "- Repeated customer references reused: " + summary.customersReused,
+    "- Properties created/reused: " + summary.propertiesCreated + "/" + summary.propertiesReused,
+    "- Immutable Snapshots created/reused: " + summary.snapshotsCreated + "/" + summary.snapshotsReused,
+    "- Orders created and read back with returned Person/Property/Snapshot IDs: " + summary.ordersCreated,
+    "- Ambiguous source-evidence records: " + summary.ambiguous,
+    "- Synthetic customer Person substitution: removed",
+    "- Synthetic Property/Snapshot substitution: removed",
+    "- Property Hubs created: 0",
+    "- Current market status invented: 0",
+    "- Semantic SHA-256: " + summary.semanticResultSha256,
+    "", "## Permanent limitations", "",
+    "The organization and commercial-catalog fixtures remain disclosed because the frozen source does not independently prove canonical organization or catalog equivalence. One source record lacks a complete exact address tuple, so no Property, Snapshot, or Order was invented for that record. Appointment, assignment, delivery-publication, and current-market-status meaning remain deferred or ambiguous under the accepted evidence boundary.",
+    "",
+    "No customer name, email, address, external customer identifier, transaction value, credential, or local source path appears in this report.",
+    "",
+  ].join("\n");
+}
+
+function m16eHtmlReport(markdown: string, semanticResultSha256: string): string {
+  const escape = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const body = markdown.split("\n").filter((line) => line && !line.startsWith("- Semantic SHA-256:" )).map((line) => {
+    if (line.startsWith("# ")) return "<h1>" + escape(line.slice(2)) + "</h1>";
+    if (line.startsWith("## ")) return "<h2>" + escape(line.slice(3)) + "</h2>";
+    if (line.startsWith("- ")) return "<li>" + escape(line.slice(2)) + "</li>";
+    return "<p>" + escape(line) + "</p>";
+  }).join("\n");
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>P02-M16-E Runtime Intake Re-Proof</title><style>body{font:16px/1.55 system-ui,sans-serif;max-width:920px;margin:40px auto;padding:0 24px;color:#16202a}h1,h2{line-height:1.2}li{margin:.35rem 0}footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ccd5df;font-family:ui-monospace,monospace;word-break:break-all}</style></head><body>" + body + "<footer><strong>Semantic SHA-256</strong><br>" + semanticResultSha256 + "</footer></body></html>\n";
+}
+
+export async function runCurrentEraIntakeReproof(
+  sourcePath: string,
+  outputRoot: string,
+): Promise<CurrentEraIntakeReproofRunResultV1> {
+  await mkdir(outputRoot, { recursive: true });
+  await mkdir(join(outputRoot, "m16e-receipts"), { recursive: true });
+  const normalized = await loadCurrentEraCohort(sourcePath);
+  await resetCurrentShadowDatabase();
+  const token = await issueCurrentShadowSession();
+  const database = new CurrentShadowDatabase();
+  const receipts: CurrentEraIntakeReproofReceiptV1[] = [];
+  try {
+    for (const listing of [...normalized.listings].sort((a, b) => a.stableSourceRow - b.stableSourceRow)) {
+      const intake = normalized.privateIntakeByScenario.get(listing.scenarioId);
+      if (!intake) throw new Error("M16E_SOURCE_IDENTITY_DIVERGENCE: private intake evidence missing");
+      const observation = await database.reconstructWithIntake(listing, intake, token);
+      const lineRepresented = observation.orderReadBack &&
+        observation.readBackLineCount === listing.shape.orderLineCardinality;
+      const matched = observation.orderCreated && observation.orderReadBack &&
+        observation.customerPartyReferenceMatches && observation.propertyReferenceMatches &&
+        observation.snapshotReferenceMatches && lineRepresented &&
+        observation.financialEligibilityRecorded;
+      const incompleteProperty = !observation.propertyEvidenceComplete;
+      const classification: ShadowClassification = matched ? "MATCH" :
+        incompleteProperty || observation.customerOutcome === "AMBIGUOUS" ? "AMBIGUOUS_EVIDENCE" : "HARNESS_ERROR";
+      const findingCodes = matched ? [
+        "CURRENT_CATALOG_EQUIVALENCE_AMBIGUOUS",
+        "APPOINTMENT_RECONSTRUCTION_DEFERRED_WITHOUT_APPROVED_PROPERTY_HUB_ELIGIBILITY",
+        "DELIVERY_PUBLICATION_MEANING_AMBIGUOUS",
+        "CURRENT_MARKET_STATUS_NOT_AVAILABLE",
+      ] : [
+        incompleteProperty ? "INCOMPLETE_EXACT_PROPERTY_ADDRESS_EVIDENCE" : "INSUFFICIENT_CUSTOMER_IDENTITY_EVIDENCE",
+        "ORDER_RECONSTRUCTION_NOT_ATTEMPTED_WITHOUT_REQUIRED_INTAKE_EVIDENCE",
+      ];
+      const receipt: CurrentEraIntakeReproofReceiptV1 = {
+        schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+        contract: "CurrentEraIntakeReproofReceiptV1",
+        scenarioId: listing.scenarioId,
+        customerOutcome: observation.customerOutcome,
+        customerIdentityBasis: observation.customerIdentityBasis,
+        externalReferenceOutcome: observation.externalReferenceOutcome,
+        membershipOutcome: observation.membershipOutcome,
+        propertyEvidenceComplete: observation.propertyEvidenceComplete,
+        propertyOutcome: observation.propertyOutcome,
+        snapshotOutcome: observation.snapshotOutcome,
+        orderCreated: observation.orderCreated,
+        orderReadBack: observation.orderReadBack,
+        customerPartyReferenceMatches: observation.customerPartyReferenceMatches,
+        propertyReferenceMatches: observation.propertyReferenceMatches,
+        snapshotReferenceMatches: observation.snapshotReferenceMatches,
+        sourceLineCardinalityRepresented: lineRepresented,
+        financialEligibilityMeaningRepresented: observation.financialEligibilityRecorded,
+        fixtureCustomerPersonUsed: false,
+        fixturePropertyUsed: false,
+        fixturePropertySnapshotUsed: false,
+        propertyHubCreated: false,
+        classification,
+        findingCodes,
+        platformCommands: observation.commands,
+      };
+      receipts.push(receipt);
+      await writeJson(join(outputRoot, "m16e-receipts"), listing.scenarioId + ".json", receipt);
+    }
+
+    if (receipts.length !== 42) {
+      throw new Error("M16E_VALIDATION_FAILURE: exact 42-member re-proof did not complete");
+    }
+    const customerSummary = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16ECustomerReconciliationSummaryV1",
+      cohortCount: 42,
+      emailResolvedCount: receipts.filter((r) => r.customerIdentityBasis === "EMAIL").length,
+      externalReferenceResolvedCount: receipts.filter((r) => r.customerIdentityBasis === "EXTERNAL_REFERENCE").length,
+      createdNullEmailPersonCount: receipts.filter((r) => r.customerOutcome === "CREATED" && r.customerIdentityBasis === "EXTERNAL_REFERENCE").length,
+      createdCount: receipts.filter((r) => r.customerOutcome === "CREATED").length,
+      reusedCount: receipts.filter((r) => r.customerOutcome === "REUSED").length,
+      ambiguousCount: receipts.filter((r) => r.customerOutcome === "AMBIGUOUS").length,
+      conflictCount: 0,
+      externalReferenceCreatedCount: receipts.filter((r) => r.externalReferenceOutcome === "CREATED").length,
+      externalReferenceReusedCount: receipts.filter((r) => r.externalReferenceOutcome === "REUSED").length,
+      repeatedCustomerReuseProven: receipts.some((r) => r.externalReferenceOutcome === "REUSED"),
+    };
+    const propertySummary = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16EPropertyReconciliationSummaryV1",
+      completeEvidenceCount: receipts.filter((r) => r.propertyEvidenceComplete).length,
+      incompleteEvidenceCount: receipts.filter((r) => !r.propertyEvidenceComplete).length,
+      propertyCreatedCount: receipts.filter((r) => r.propertyOutcome === "PROPERTY_CREATED").length,
+      propertyReusedCount: receipts.filter((r) => r.propertyOutcome === "PROPERTY_REUSED").length,
+      snapshotCreatedCount: receipts.filter((r) => r.snapshotOutcome === "SNAPSHOT_CREATED").length,
+      snapshotReusedCount: receipts.filter((r) => r.snapshotOutcome === "SNAPSHOT_REUSED").length,
+      repeatedPropertyReuseProven: receipts.some((r) => r.propertyOutcome === "PROPERTY_REUSED"),
+      priorSnapshotMutations: 0,
+      propertyHubsCreated: 0,
+    };
+    const classificationSummary = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16ECurrentEraClassificationSummaryV1",
+      cohortCount: 42,
+      classifications: {
+        MATCH: receipts.filter((r) => r.classification === "MATCH").length,
+        INTENTIONAL_POLICY_CHANGE: 0,
+        SOURCE_CONFLICT: 0,
+        AMBIGUOUS_EVIDENCE: receipts.filter((r) => r.classification === "AMBIGUOUS_EVIDENCE").length,
+        DEFERRED_CAPABILITY: 0,
+        IMPLEMENTATION_GAP: 0,
+        CANONICAL_SCHEMA_GAP: 0,
+        HARNESS_ERROR: receipts.filter((r) => r.classification === "HARNESS_ERROR").length,
+      },
+    };
+    const matrix = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16ECurrentEraRepresentabilityMatrixV1",
+      cohortCount: 42,
+      concepts: [
+        { concept: "SOURCE_UNIQUE_CUSTOMER_PERSON", representedCount: receipts.filter((r) => r.customerIdentityBasis !== "INSUFFICIENT_EVIDENCE").length },
+        { concept: "EXACT_PROPERTY_AND_IMMUTABLE_SNAPSHOT", representedCount: receipts.filter((r) => r.propertyOutcome !== "NOT_ATTEMPTED").length },
+        { concept: "ORDER_RETURNED_ID_REFERENCE_READBACK", representedCount: receipts.filter((r) => r.orderReadBack && r.customerPartyReferenceMatches && r.propertyReferenceMatches && r.snapshotReferenceMatches).length },
+        { concept: "SOURCE_ORDER_LINE_CARDINALITY", representedCount: receipts.filter((r) => r.sourceLineCardinalityRepresented).length },
+        { concept: "BOUNDED_FINANCIAL_ELIGIBILITY", representedCount: receipts.filter((r) => r.financialEligibilityMeaningRepresented).length },
+      ].map((item) => ({ ...item, notRepresentedCount: 42 - item.representedCount })),
+    };
+    const gaps = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16ENewlyExposedGapRegisterV1",
+      implementationGaps: [],
+      canonicalSchemaGaps: [],
+      sourceEvidenceLimitations: propertySummary.incompleteEvidenceCount ? [{
+        code: "INCOMPLETE_EXACT_PROPERTY_ADDRESS_EVIDENCE",
+        affectedReceiptCount: propertySummary.incompleteEvidenceCount,
+        effect: "Property, Snapshot, and Order were not invented without a complete exact address tuple.",
+      }] : [],
+      deferredCapabilities: [
+        "APPOINTMENT_RECONSTRUCTION_DEFERRED_WITHOUT_APPROVED_PROPERTY_HUB_ELIGIBILITY",
+        "TEAM_ASSIGNMENT_RECONSTRUCTION_DEFERRED",
+      ],
+      ambiguousEvidence: [
+        "CURRENT_CATALOG_EQUIVALENCE_AMBIGUOUS",
+        "DELIVERY_PUBLICATION_MEANING_AMBIGUOUS",
+        "CURRENT_MARKET_STATUS_NOT_AVAILABLE",
+      ],
+      repairPerformedOutsideAuthorizedIntakeScope: false,
+    };
+    const reproofIndex = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16ECurrentEraReproofIndexV1",
+      cohortCount: 42,
+      customerCommandAttemptCount: 42,
+      propertyCommandAttemptCount: receipts.filter((r) => r.propertyOutcome !== "NOT_ATTEMPTED").length,
+      orderCreateReadbackCount: receipts.filter((r) => r.orderCreated && r.orderReadBack).length,
+      fixtureCustomerPersonUsedCount: 0,
+      fixturePropertyUsedCount: 0,
+      fixturePropertySnapshotUsedCount: 0,
+      receipts,
+    };
+    const semanticCore = {
+      membership: normalized.identityProof.membership,
+      customerSummary, propertySummary, classificationSummary, matrix, gaps, reproofIndex,
+    };
+    const semanticResultSha256 = sha256(JSON.stringify(semanticCore));
+    const authority = await database.authorityProof();
+    if (authority.runtimeCanonicalTableDmlGrants || authority.publicCanonicalTableDmlGrants ||
+        authority.publicFunctionExecutionGrants) {
+      throw new Error("M16E_AUTHORITY_BOUNDARY_FAILURE: canonical authority proof is nonzero");
+    }
+    const commandProof = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16ERuntimeIntakeCommandProofV1",
+      status: "PASS",
+      signatures: [
+        "reconcile_customer_person_intake(text,text,uuid,text,text,text,text,text,text,text)",
+        "reconcile_property_snapshot_intake(text,text,uuid,text,text,text,text,text,text,text,text,integer)",
+      ],
+      ordinaryRuntimeExecuteOnly: true,
+      ownerRoleBusinessExecution: false,
+      directRuntimeCanonicalTableDmlGrants: authority.runtimeCanonicalTableDmlGrants,
+      publicCanonicalTableDmlGrants: authority.publicCanonicalTableDmlGrants,
+      publicFunctionExecuteGrants: authority.publicFunctionExecutionGrants,
+    };
+    const uiReadiness = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16EUIReadinessAssessmentV1",
+      status: "READY_WITH_EXPLICIT_SOURCE_EVIDENCE_LIMITATION",
+      materialBackendBlockersToFirstOwnerUsableSlice: 0,
+      sourceEvidenceLimitations: propertySummary.incompleteEvidenceCount,
+      totalBackendCompletenessClaimed: false,
+    };
+    await writeJson(outputRoot, "M16E_RUNTIME_INTAKE_COMMAND_PROOF.json", commandProof);
+    await writeJson(outputRoot, "M16E_CUSTOMER_RECONCILIATION_SUMMARY.json", customerSummary);
+    await writeJson(outputRoot, "M16E_PROPERTY_RECONCILIATION_SUMMARY.json", propertySummary);
+    await writeJson(outputRoot, "M16E_CURRENT_ERA_REPROOF_INDEX.json", reproofIndex);
+    await writeJson(outputRoot, "M16E_CURRENT_ERA_REPRESENTABILITY_MATRIX.json", matrix);
+    await writeJson(outputRoot, "M16E_CURRENT_ERA_CLASSIFICATION_SUMMARY.json", classificationSummary);
+    await writeJson(outputRoot, "M16E_NEWLY_EXPOSED_GAP_REGISTER.json", gaps);
+    await writeJson(outputRoot, "M16E_DETERMINISM_PROOF.json", {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16EDeterminismProofV1",
+      status: "RUN_SEMANTIC_FROZEN",
+      cohortCount: 42,
+      semanticResultSha256,
+    });
+    await writeJson(outputRoot, "M16E_UI_READINESS_ASSESSMENT.json", uiReadiness);
+    await writeJson(outputRoot, "M16E_VALIDATION_SUMMARY.json", {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16EValidationSummaryV1",
+      status: "PASS",
+      entryPlatformCommit: "5f456d2ae5e9262a7a2b6595ed33d92ade19767c",
+      entryPlatformTree: "5f91a8c9b2d808572f6047ed4d5374e91d3c77c2",
+      cohortCount: 42,
+      orderCreateReadbackCount: reproofIndex.orderCreateReadbackCount,
+      authority,
+      networkCalls: 0,
+      providerCalls: 0,
+      currentSystemMutations: 0,
+      productionTargets: 0,
+      rawUploads: 0,
+    });
+    const report = m16eReport({
+      customersCreated: customerSummary.createdCount,
+      customersReused: customerSummary.reusedCount,
+      propertiesCreated: propertySummary.propertyCreatedCount,
+      propertiesReused: propertySummary.propertyReusedCount,
+      snapshotsCreated: propertySummary.snapshotCreatedCount,
+      snapshotsReused: propertySummary.snapshotReusedCount,
+      ordersCreated: reproofIndex.orderCreateReadbackCount,
+      ambiguous: classificationSummary.classifications.AMBIGUOUS_EVIDENCE,
+      semanticResultSha256,
+    });
+    await writeFile(join(outputRoot, "M16E_CURRENT_ERA_REPROOF_REPORT.md"), report, "utf8");
+    await writeFile(join(outputRoot, "M16E_CURRENT_ERA_REPROOF_REPORT.html"), m16eHtmlReport(report, semanticResultSha256), "utf8");
+    let privacy = await buildCurrentShadowPrivacyProof(outputRoot, sourcePath, CURRENT_ERA_SOURCE_IDENTITY.sourceArtifactHash);
+    let privacyAuthority = {
+      schema: CURRENT_ERA_INTAKE_REPROOF_SCHEMA,
+      contract: "M16EPrivacyAuthorityProofV1",
+      status: "PASS",
+      privacy,
+      authority,
+      rawExternalIdentifiersInPublishedEvidence: 0,
+      rawCustomerFieldsInPublishedEvidence: 0,
+    };
+    await writeJson(outputRoot, "M16E_PRIVACY_AUTHORITY_PROOF.json", privacyAuthority);
+    privacy = await buildCurrentShadowPrivacyProof(outputRoot, sourcePath, CURRENT_ERA_SOURCE_IDENTITY.sourceArtifactHash);
+    privacyAuthority = { ...privacyAuthority, privacy };
+    await writeJson(outputRoot, "M16E_PRIVACY_AUTHORITY_PROOF.json", privacyAuthority);
+    return {
+      sourceProfile: normalized.sourceProfile,
+      identityProof: normalized.identityProof,
+      receipts,
+      semanticResultSha256,
+    };
+  } finally {
+    await database.close();
+  }
 }

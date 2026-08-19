@@ -6,6 +6,7 @@ import type {
   CurrentEraShapeV1, CurrentEraSourceProfileV1,
 } from "./contracts.js";
 import { CURRENT_SHADOW_SCHEMA } from "./contracts.js";
+import type { PrivateCurrentEraIntakeV1 } from "../runtime-intake/contracts.js";
 
 export const CURRENT_ERA_SOURCE_IDENTITY = Object.freeze({
   artifactName: "Orders - Aug 15 2026.xlsx",
@@ -18,7 +19,7 @@ export const CURRENT_ERA_SOURCE_IDENTITY = Object.freeze({
 type Row = Record<string, string> & { __rowNumber: string };
 
 const REQUIRED_HEADERS = Object.freeze({
-  Orders: ["ID", "Status", "Payment Status", "Fulfillment Status", "Created At", "Team Members", "Order Form ID"],
+  Orders: ["ID", "Customer", "Customer Team ID", "Address", "Status", "Payment Status", "Fulfillment Status", "Created At", "Team Members", "Order Form ID"],
   Appointments: ["Order ID", "Has Been Rescheduled", "Has Been Postponed"],
   "Order Items": ["Order ID", "Item"],
   Payments: ["Order ID", "Payment Type"],
@@ -143,10 +144,42 @@ function shapeFor(order: Row, items: readonly Row[], appointments: readonly Row[
     serviceFamilies: families, shapeTokens: tokens };
 }
 
+function privateIntakeFor(order: Row, evidenceFingerprint: string): PrivateCurrentEraIntakeV1 {
+  const customerDisplayName = order.Customer?.trim().replace(/\s+/g, " ") ?? "";
+  const externalCustomerKey = order["Customer Team ID"]?.trim() ?? "";
+  const addressParts = (order.Address ?? "").split(",").map((part) => part.trim()).filter(Boolean);
+  const tail = addressParts.at(-1)?.match(/^([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+  const property = addressParts.length === 3 && tail ? {
+    sourceSystem: "ARYEO_LOCAL_EXPORT",
+    sourceEvidenceFingerprint: evidenceFingerprint,
+    addressLine1: addressParts[0]!,
+    addressLine2: null,
+    locality: addressParts[1]!,
+    administrativeArea: tail[1]!.toUpperCase(),
+    postalCode: tail[2]!,
+    countryCode: "US",
+    reportedSquareFeet: null,
+  } : null;
+  return {
+    customer: {
+      sourceSystem: "ARYEO_LOCAL_EXPORT",
+      sourceScope: externalCustomerKey ? "FROZEN_ACCOUNT_SCOPE_V1" : null,
+      externalRecordType: externalCustomerKey ? "CUSTOMER_TEAM" : null,
+      externalIdentifier: externalCustomerKey || null,
+      sourceEvidenceFingerprint: evidenceFingerprint,
+      displayName: customerDisplayName,
+      email: null,
+    },
+    property,
+    propertyEvidenceStatus: property ? "COMPLETE_EXACT_US_POSTAL_TUPLE" : "INCOMPLETE_ADDRESS_EVIDENCE",
+  };
+}
+
 export async function loadCurrentEraCohort(sourcePath: string): Promise<{
   sourceProfile: CurrentEraSourceProfileV1;
   identityProof: CurrentEraCohortIdentityProofV1;
   listings: CurrentEraNormalizedListingV1[];
+  privateIntakeByScenario: ReadonlyMap<string, PrivateCurrentEraIntakeV1>;
 }> {
   const bytes = await readFile(sourcePath);
   if (bytes.length !== CURRENT_ERA_SOURCE_IDENTITY.byteSize || sha256(bytes) !== CURRENT_ERA_SOURCE_IDENTITY.sourceArtifactHash) {
@@ -172,14 +205,18 @@ export async function loadCurrentEraCohort(sourcePath: string): Promise<{
   };
   const itemGroups = byOrder(items, "Order ID"); const appointmentGroups = byOrder(appointments, "Order ID");
   const paymentGroups = byOrder(payments, "Order ID");
+  const privateIntakeByScenario = new Map<string, PrivateCurrentEraIntakeV1>();
   const listings = cohort.map((order, index): CurrentEraNormalizedListingV1 => {
     const rawOrderKey = order.ID!;
     if (!rawOrderKey) throw new Error("CURRENT_SHADOW_SOURCE_SCHEMA_DIVERGENCE: cohort row lacks a source key");
+    const scenarioId = "M16D_CURRENT_ERA_" + String(index + 1).padStart(3, "0") + "_V1";
+    const opaqueSourceReferenceHash = sha256("P02-M16-D|" + CURRENT_ERA_SOURCE_IDENTITY.sourceArtifactHash + "|" + rawOrderKey);
+    privateIntakeByScenario.set(scenarioId, privateIntakeFor(order, opaqueSourceReferenceHash));
     return {
       schema: CURRENT_SHADOW_SCHEMA, contract: "CurrentEraNormalizedListingV1",
-      scenarioId: `M16D_CURRENT_ERA_${String(index + 1).padStart(3, "0")}_V1`,
+      scenarioId,
       stableSourceRow: Number(order.__rowNumber),
-      opaqueSourceReferenceHash: sha256(`P02-M16-D|${CURRENT_ERA_SOURCE_IDENTITY.sourceArtifactHash}|${rawOrderKey}`),
+      opaqueSourceReferenceHash,
       shape: shapeFor(order, itemGroups.get(rawOrderKey) ?? [], appointmentGroups.get(rawOrderKey) ?? [], paymentGroups.get(rawOrderKey) ?? []),
       marketStatusEvidence: "MARKET_STATUS_NOT_AVAILABLE",
     };
@@ -206,7 +243,7 @@ export async function loadCurrentEraCohort(sourcePath: string): Promise<{
     membership: listings.map(({ scenarioId, opaqueSourceReferenceHash }) => ({ scenarioId, opaqueSourceReferenceHash })),
     rejectedWithinHorizonShapeCounts: rejectedShapeCounts, rawIdentifiersIncluded: false, forcedMatches: 0,
   };
-  return { sourceProfile, identityProof, listings };
+  return { sourceProfile, identityProof, listings, privateIntakeByScenario };
 }
 
 export function selectPilot(listings: readonly CurrentEraNormalizedListingV1[]): CurrentEraPilotSelectionReceiptV1 {

@@ -29,8 +29,8 @@ const status = execFileSync("git", ["status", "--porcelain", "-uall", "platform-
 const changed = status.split("\n").filter(Boolean).map((line) => ({ index: line[0], path: line.slice(3).trim() }));
 if (changed.some((item) => item.index !== " " && item.index !== "?")) fail("candidate contains staged paths");
 const migrationFiles = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrationFiles.length !== 22 || migrationFiles.some((name, index) => !name.startsWith(String(index + 1).padStart(4, "0"))) || migrationFiles.some((name) => name.startsWith("0023"))) fail("migration ledger is not exactly 0001-0022");
-for (const name of migrationFiles) if (sha(readFileSync(join(base, "db/migrations", name))) !== expectedMigrations[name.slice(0, 4)]) fail(`immutable migration mismatch: ${name}`);
+if (migrationFiles.length !== 23 || migrationFiles.some((name, index) => !name.startsWith(String(index + 1).padStart(4, "0"))) || migrationFiles[22] !== "0023_runtime_intake_reconciliation_commands.sql") fail("migration ledger is not exactly 0001-0023");
+for (const name of migrationFiles.slice(0, 22)) if (sha(readFileSync(join(base, "db/migrations", name))) !== expectedMigrations[name.slice(0, 4)]) fail(`immutable migration mismatch: ${name}`);
 if (sha(readFileSync(join(base, "package-lock.json"))) !== "2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a") fail("package-lock changed");
 const sourcePaths = ["src/operational-pilot", "scripts/run-operational-pilot-golden-path.ts"].flatMap((entry) => {
   const path = join(base, entry); return entry.endsWith(".ts") ? [path] : readdirSync(path, { recursive: true }).filter((name) => /\.(ts|js|html|css)$/.test(String(name))).map((name) => join(path, String(name)));
@@ -47,7 +47,7 @@ if (observed.counts.originals !== 6 || observed.counts.selected !== 5 || observe
 if (!observed.gates.correctedFinalExact || observed.gates.queueBeforeSubmit !== 0 || observed.gates.queueAfterSubmit !== 1 || observed.gates.claimWinners !== 1) fail("controlling gate evidence mismatch");
 
 const behaviors = [
-  "exact entry refs","exact 0001-0022 ledger","migration bytes immutable","no 0023","reset replay twice","lockfile immutable","dependencies unchanged","78-path scope","exact subset reported","no rename/deletion/vendor",
+  "exact entry refs","exact 0001-0023 ledger","predecessor migration bytes immutable","exact authorized 0023 successor","reset replay twice","lockfile immutable","dependencies unchanged","78-path scope","exact subset reported","no rename/deletion/vendor",
   "loopback bind","no final listeners","restricted runtime role","session-derived actors","no browser authority","zero runtime table DML","zero PUBLIC execute","no outbound network","no provider credentials","no secret/path leakage","no base64 media JSON","unsafe evidence rejected",
   "versioned contracts","contract rejection rules","deterministic scenario","valid deterministic images","runtime commands","separate expected/observed","Markdown and JSON matrix","synthetic-only data",
   "Order/Hub/Appointment/Job/Workstream lineage","Mission Plan issued and hashed","offline Mission Plan readable","six verified captures","six immutable originals","five selected one rejected","selected manifest deterministic","five-item editor handoff","five returned versions with lineage","repeated return idempotent",

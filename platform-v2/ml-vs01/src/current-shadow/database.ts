@@ -5,6 +5,8 @@ import { COMMERCIAL_SNAPSHOT_FIXTURES } from "../../db/fixtures/current-catalog-
 import { IDENTITY_FIXTURES, ORGANIZATION_FIXTURE, PEOPLE_FIXTURES } from "../../db/fixtures/identity-tenancy-fixtures.js";
 import { ORDER_FOUNDATION_PROPERTY_ID, ORDER_FOUNDATION_PROPERTY_SNAPSHOT_ID } from "../../db/fixtures/order-foundation-fixtures.js";
 import type { CurrentEraNormalizedListingV1 } from "./contracts.js";
+import type { PrivateCurrentEraIntakeV1 } from "../runtime-intake/contracts.js";
+import { reconcileCustomerPersonIntake, reconcilePropertySnapshotIntake } from "../runtime-intake/index.js";
 
 export const CURRENT_SHADOW_DATABASE = Object.freeze({
   host: "/tmp/mlvs01-p02m16a-pg", port: 55447, database: "medialab_p02m16a_test",
@@ -17,6 +19,24 @@ export interface PlatformShadowObservationV1 {
   readBackLineCount: number;
   financialEligibilityRecorded: boolean;
   commands: readonly { command: string; status: "ACCEPTED" | "REJECTED" }[];
+}
+
+export interface PlatformIntakeReproofObservationV1 {
+  customerOutcome: "CREATED" | "REUSED" | "AMBIGUOUS";
+  customerIdentityBasis: "EMAIL" | "EXTERNAL_REFERENCE" | "INSUFFICIENT_EVIDENCE";
+  externalReferenceOutcome: "CREATED" | "REUSED" | "NOT_APPLICABLE";
+  membershipOutcome: "CREATED" | "REUSED" | "NOT_APPLICABLE";
+  propertyEvidenceComplete: boolean;
+  propertyOutcome: "PROPERTY_CREATED" | "PROPERTY_REUSED" | "NOT_ATTEMPTED";
+  snapshotOutcome: "SNAPSHOT_CREATED" | "SNAPSHOT_REUSED" | "NOT_ATTEMPTED";
+  orderCreated: boolean;
+  orderReadBack: boolean;
+  customerPartyReferenceMatches: boolean;
+  propertyReferenceMatches: boolean;
+  snapshotReferenceMatches: boolean;
+  readBackLineCount: number;
+  financialEligibilityRecorded: boolean;
+  commands: readonly { command: string; status: "ACCEPTED" | "REJECTED" | "NOT_ATTEMPTED" }[];
 }
 
 function assertDatabaseBoundary(): void {
@@ -56,6 +76,17 @@ function fixtureParties(): Array<Record<string, string>> {
     { role: "ORDERING_PERSON", person_id: PEOPLE_FIXTURES[1].id },
     { role: "CUSTOMER", person_id: PEOPLE_FIXTURES[0].id },
     { role: "BILLING_PARTY", person_id: PEOPLE_FIXTURES[0].id },
+    { role: "COMMERCIAL_OWNER", person_id: PEOPLE_FIXTURES[1].id },
+    { role: "ORGANIZATION", organization_id: ORGANIZATION_FIXTURE.id },
+    { role: "AUTHORIZED_ACTOR", person_id: PEOPLE_FIXTURES[1].id },
+  ];
+}
+
+function intakeParties(customerPersonId: string): Array<Record<string, string>> {
+  return [
+    { role: "ORDERING_PERSON", person_id: PEOPLE_FIXTURES[1].id },
+    { role: "CUSTOMER", person_id: customerPersonId },
+    { role: "BILLING_PARTY", person_id: customerPersonId },
     { role: "COMMERCIAL_OWNER", person_id: PEOPLE_FIXTURES[1].id },
     { role: "ORGANIZATION", organization_id: ORGANIZATION_FIXTURE.id },
     { role: "AUTHORIZED_ACTOR", person_id: PEOPLE_FIXTURES[1].id },
@@ -110,6 +141,103 @@ export class CurrentShadowDatabase {
       commands.push({ command: "current_shadow_reconstruction", status: "REJECTED" });
       const message = error instanceof Error ? error.message : "unknown runtime error";
       throw new Error(`CURRENT_SHADOW_VALIDATION_FAILURE: Platform reconstruction rejected for ${listing.scenarioId}: ${message.replace(/[A-Fa-f0-9]{16,}/g, "[REDACTED]")}`);
+    }
+  }
+
+  async reconstructWithIntake(
+    listing: CurrentEraNormalizedListingV1,
+    intake: PrivateCurrentEraIntakeV1,
+    token: string,
+  ): Promise<PlatformIntakeReproofObservationV1> {
+    const ordinal = listing.scenarioId.match(/_(\d{3})_V1$/)?.[1];
+    if (!ordinal) throw new Error("M16E_RUNTIME_COMMAND_RECONCILIATION_REQUIRED: invalid scenario identity");
+    const commands: { command: string; status: "ACCEPTED" | "REJECTED" | "NOT_ATTEMPTED" }[] = [];
+    try {
+      const customer = await reconcileCustomerPersonIntake(this.pool, token, {
+        ...intake.customer, idempotencyKey: "m16e-customer-" + ordinal,
+        organizationId: ORGANIZATION_FIXTURE.id,
+      });
+      commands.push({ command: "reconcile_customer_person_intake", status: "ACCEPTED" });
+      if (!customer.person_id || customer.outcome === "AMBIGUOUS") {
+        commands.push({ command: "reconcile_property_snapshot_intake", status: "NOT_ATTEMPTED" });
+        commands.push({ command: "create_order", status: "NOT_ATTEMPTED" });
+        return {
+          customerOutcome: customer.outcome, customerIdentityBasis: customer.identity_basis,
+          externalReferenceOutcome: customer.external_reference_outcome,
+          membershipOutcome: customer.membership_outcome ?? "NOT_APPLICABLE",
+          propertyEvidenceComplete: Boolean(intake.property), propertyOutcome: "NOT_ATTEMPTED",
+          snapshotOutcome: "NOT_ATTEMPTED", orderCreated: false, orderReadBack: false,
+          customerPartyReferenceMatches: false, propertyReferenceMatches: false,
+          snapshotReferenceMatches: false, readBackLineCount: 0,
+          financialEligibilityRecorded: false, commands,
+        };
+      }
+      if (!intake.property) {
+        commands.push({ command: "reconcile_property_snapshot_intake", status: "NOT_ATTEMPTED" });
+        commands.push({ command: "create_order", status: "NOT_ATTEMPTED" });
+        return {
+          customerOutcome: customer.outcome, customerIdentityBasis: customer.identity_basis,
+          externalReferenceOutcome: customer.external_reference_outcome,
+          membershipOutcome: customer.membership_outcome ?? "NOT_APPLICABLE",
+          propertyEvidenceComplete: false, propertyOutcome: "NOT_ATTEMPTED",
+          snapshotOutcome: "NOT_ATTEMPTED", orderCreated: false, orderReadBack: false,
+          customerPartyReferenceMatches: false, propertyReferenceMatches: false,
+          snapshotReferenceMatches: false, readBackLineCount: 0,
+          financialEligibilityRecorded: false, commands,
+        };
+      }
+      const property = await reconcilePropertySnapshotIntake(this.pool, token, {
+        ...intake.property, idempotencyKey: "m16e-property-" + ordinal,
+        organizationId: ORGANIZATION_FIXTURE.id,
+      });
+      commands.push({ command: "reconcile_property_snapshot_intake", status: "ACCEPTED" });
+      const lineItems = Array.from({ length: listing.shape.orderLineCardinality }, (_, index) => ({
+        position: index + 1, commercial_snapshot_id: COMMERCIAL_SNAPSHOT_FIXTURES[1].id,
+      }));
+      const created = await this.pool.query<{ create_order: string }>(
+        `SELECT medialab_core.create_order(
+           $1,$2,'REAL_ESTATE',$3,$4,$5,'PAY_NOW','USD',
+           'CURRENT_SHADOW_LOCAL_EVIDENCE','ORDER',$6,$7::jsonb,$8::jsonb,0,NULL,NULL,NULL,NULL)`,
+        [token, "m16e-order-" + ordinal, ORGANIZATION_FIXTURE.id, property.property_id,
+          property.property_snapshot_id, listing.opaqueSourceReferenceHash,
+          JSON.stringify(intakeParties(customer.person_id)), JSON.stringify(lineItems)],
+      );
+      commands.push({ command: "create_order", status: "ACCEPTED" });
+      const orderId = created.rows[0]?.create_order;
+      if (!orderId) throw new Error("create_order returned no opaque local result");
+      const record = await this.pool.query<{ get_order_record: {
+        order: { id: string; property_id: string; property_snapshot_id: string };
+        parties: Array<{ party_role: string; person_id: string | null }>; items: unknown[];
+      } }>("SELECT medialab_core.get_order_record($1,$2::uuid)", [token, orderId]);
+      commands.push({ command: "get_order_record", status: "ACCEPTED" });
+      const readBack = record.rows[0]?.get_order_record;
+      if (!readBack || readBack.order.id !== orderId) throw new Error("order read-back failed");
+      const customerParty = readBack.parties.find((party) => party.party_role === "CUSTOMER");
+      const billingParty = readBack.parties.find((party) => party.party_role === "BILLING_PARTY");
+      await this.pool.query(
+        `SELECT medialab_core.record_delivery_financial_eligibility(
+           $1,$2,$3::uuid,'ELIGIBLE','BOUNDED_SETTLEMENT_AUTHORITY',$4,NULL,$5)`,
+        [token, "m16e-financial-" + ordinal, orderId, "CURRENT_SHADOW." + ordinal,
+          "Local read-only current-era settlement evidence; external values withheld."],
+      );
+      commands.push({ command: "record_delivery_financial_eligibility", status: "ACCEPTED" });
+      return {
+        customerOutcome: customer.outcome, customerIdentityBasis: customer.identity_basis,
+        externalReferenceOutcome: customer.external_reference_outcome,
+        membershipOutcome: customer.membership_outcome ?? "NOT_APPLICABLE",
+        propertyEvidenceComplete: true, propertyOutcome: property.property_outcome,
+        snapshotOutcome: property.snapshot_outcome, orderCreated: true, orderReadBack: true,
+        customerPartyReferenceMatches: customerParty?.person_id === customer.person_id &&
+          billingParty?.person_id === customer.person_id,
+        propertyReferenceMatches: readBack.order.property_id === property.property_id,
+        snapshotReferenceMatches: readBack.order.property_snapshot_id === property.property_snapshot_id,
+        readBackLineCount: readBack.items.length, financialEligibilityRecorded: true, commands,
+      };
+    } catch (error) {
+      commands.push({ command: "current_era_intake_reproof", status: "REJECTED" });
+      const message = error instanceof Error ? error.message : "unknown runtime error";
+      throw new Error("M16E_VALIDATION_FAILURE: Platform intake re-proof rejected for " +
+        listing.scenarioId + ": " + message.replace(/[A-Fa-f0-9]{16,}/g, "[REDACTED]"));
     }
   }
 

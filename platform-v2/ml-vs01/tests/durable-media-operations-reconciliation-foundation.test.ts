@@ -111,7 +111,8 @@ describe('P02-M09-A Durable Media Operations and Reconciliation foundation', () 
 
   it('replays thirteen migrations and exposes only exact controlled commands and safe projections', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(22);
+    expect(ledger.rows).toHaveLength(23);
+    expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[10]).toEqual({
       filename: '0011_media_asset_identity_and_lineage_foundation.sql',
       sha256: '1b9fbde392d801ffc8fb0a00a461447cac855bae0046f1d433ac0360b8c15c80'

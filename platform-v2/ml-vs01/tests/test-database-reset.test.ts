@@ -268,7 +268,10 @@ const EXACT_ROUTINE_NAMES = [
   'reject_job_service_evidence_mutation',
   'reject_order_evidence_mutation',
   'reject_property_hub_evidence_mutation',
+  'reject_person_external_reference_mutation',
   'reject_property_snapshot_mutation',
+  'reconcile_customer_person_intake',
+  'reconcile_property_snapshot_intake',
   'reject_scheduling_evidence_mutation',
   'replace_appointment_participant_assignment',
   'replace_catalog_bracket_set',
@@ -394,6 +397,7 @@ const EXACT_TRIGGERS = [
   ['order_relationships_insert_guard', 'order_relationships', 'guard_order_relationship_insert'],
   ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation'],
   ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
+  ['person_external_references_immutability_guard', 'person_external_references', 'reject_person_external_reference_mutation'],
   ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
   ['person_account_states_delete_guard', 'person_account_states', 'reject_contact_history_mutation'],
   ['person_account_states_insert_guard', 'person_account_states', 'guard_account_state_insert'],
@@ -560,7 +564,8 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(22);
+    expect(ledgerRes.rows).toHaveLength(23);
+    expect(ledgerRes.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
     expect(ledgerRes.rows[1].filename).toBe('0002_property_identity_and_snapshots.sql');

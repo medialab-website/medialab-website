@@ -50,7 +50,7 @@ const client = new pg.Client({
 await client.connect();
 try {
   const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-  if (ledger.rows.length !== 22 || ledger.rows[19].filename !== migration || ledger.rows[19].sha256 !== migrationHash || ledger.rows[20].filename !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql') fail('migration ledger identity mismatch');
+  if (ledger.rows.length !== 23 || ledger.rows[19].filename !== migration || ledger.rows[19].sha256 !== migrationHash || ledger.rows[20].filename !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql' || ledger.rows[22].filename !== '0023_runtime_intake_reconciliation_commands.sql') fail('migration ledger identity mismatch');
 
   const fn = await client.query(`SELECT p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner,
       pg_get_function_identity_arguments(p.oid) arguments,pg_get_functiondef(p.oid) definition,

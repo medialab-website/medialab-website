@@ -1,22 +1,25 @@
-# P02-M16-D Build State
+# P02-M16-E Build State
 
-- Controlling authority: P02-M16-D — Current-Era Controlled Shadow Reconstruction & Cohort Replay R01 under R87
-- Candidate state: uncommitted, unstaged, bounded current-era nonproduction review candidate
-- Base Platform commit: `b1e1f1ed60db129ca2a48bdba8d3b31c7e9f42db`
-- Base Platform tree: `adc28a5480efa73d9e10aa6373fef78b981d9e62`
+- Controlling authority: P02-M16-E Runtime Intake Reconciliation Commands & Current-Era Re-Proof R01 under R91, as amended by owner-approved P02-M16-E Scope Reconciliation R01
+- Candidate state: uncommitted, unstaged, bounded synthetic/test and local-private-source nonproduction review candidate
+- Base Platform commit: `5f456d2ae5e9262a7a2b6595ed33d92ade19767c`
+- Base Platform tree: `5f91a8c9b2d808572f6047ed4d5374e91d3c77c2`
 - Observed production/default `main`: `28517e4d2131014cfdf090fa3aa40d6bcf7b6398`; observational only
-- Local workspace: `/private/tmp/mlvs01-p02m16d-current-era-shadow-r01`
-- Local branch: `platform-v2-p02-m16-d-current-era-shadow-r01`
-- Source boundary: exact frozen local read-only workbook; the 42-member March 27, 2026-or-later reviewed cohort is represented only by non-reversible fingerprints in evidence
-- Database boundary: `medialab_p02m16a_test`; restricted runtime `medialab_p02m16a_test_app`; owner only for accepted reset, seed, and test-session bootstrap
+- Local workspace: `/private/tmp/mlvs01-p02m16e-runtime-intake-reproof-r01`
+- Local branch: `platform-v2-p02-m16-e-runtime-intake-reproof-r01`
+- Source boundary: exact frozen local read-only workbook, 222,765 bytes, SHA-256 `fe7c2f6628d4961c6181d5d00aa3df90e4de9ce5bcd291a02c282f8528f64189`; no source values enter repository or review evidence
+- Database boundary: disposable `medialab_p02m16a_test`; restricted runtime `medialab_p02m16a_test_app`; owner only for accepted reset, seed, migration, and test bootstrap
 - Socket/port: `/tmp/mlvs01-p02m16a-pg`, `55447`
-- Accepted migrations: exactly `0001` through `0022`; no migration `0023`
+- Migration boundary: predecessor migrations `0001`–`0022` remain byte-identical; exact authorized successor is `0023_runtime_intake_reconciliation_commands.sql`; no migration `0024`
+- Person law: canonical Person may have NULL email and no authentication Identity/account/credentials; non-null email retains accepted normalization and uniqueness law
+- Provenance law: exact source customer identity may enter only the canonical immutable `person_external_references` provenance table and never published review evidence
+- Runtime authority: the two intake commands are SECURITY DEFINER; restricted runtime and PUBLIC retain zero canonical-table DML; PUBLIC retains zero function EXECUTE
+- Re-proof result: exact 42-member cohort; 9 customer Persons created, 33 repeated-customer reuses, 40 Properties/Snapshots created, one exact Property/Snapshot reuse, 41 Order create/readbacks, one incomplete-address evidence limitation
+- Fixture boundary: M16-D customer Person, Property, and Property Snapshot fixture substitution is removed from the M16-E re-proof path
+- Market/Hub boundary: current market status is not invented and no Property Hub is created
 - Dependency boundary: byte-identical `package-lock.json`; no dependency changes
-- Pilot boundary: exactly six deterministic structural-diversity members selected before replay outcomes; every pilot member uses actual supported Platform commands
-- Full-cohort boundary: if the pilot mechanism passes, all remaining 36 continue through the same runtime reconstruction path in the same run
-- Market-status boundary: cohort membership is never treated as current-market-status evidence; no Property Hub is created
-- Evidence boundary: frozen review evidence is sanitized; raw current customer rows and external-system values remain local and are never uploaded
-- Identity-recovery law: START_FRESH records recovery intent for the same Person and Identity while preserving existing history.
-- Identity-recovery non-effect: it does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
-- Deferred scope: Actual profile/preferences reset behavior remains deferred until those models exist.
-- Prohibited actions: no staging, commit, push, PR, Platform/main mutation, deploy, production, live provider/network access, current-system mutation, canonical import, cutover, or later packet
+- START_FRESH records recovery intent for the same Person and Identity while preserving existing history.
+- It does not delete memberships, contacts, orders, payments, historical evidence, or profile/preferences data.
+- Actual profile/preferences reset behavior remains deferred until those models exist.
+- Evidence boundary: only sanitized aggregate/index/receipt evidence may be published; raw customer/address/external identifiers remain local/private
+- Prohibited actions: no staging, commit, push, PR, Platform/main mutation, deployment, production, live provider/network access, current-system mutation, canonical 42-row import, cutover, UI/Desktop work, or later packet

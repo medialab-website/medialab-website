@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +7,7 @@ import { scanHistoricalPrivacyArtifact, scanHistoricalPrivacyArtifacts } from ".
 import { CURRENT_ERA_SOURCE_IDENTITY } from "../src/current-shadow/source.js";
 
 const base = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repo = resolve(base, "../..");
 const outputRoot = resolve(process.argv.find((value) => value.startsWith("--output-root="))?.slice(14) ??
   process.env.P02_M16_D_OUTPUT_ROOT ?? "/tmp/mlvs01-p02m16d-output/verify-all");
 const comparisonRootArg = process.argv.find((value) => value.startsWith("--compare-root="))?.slice(15);
@@ -79,7 +81,11 @@ const directCanonicalDml = [...currentShadowSources.matchAll(/\b(?:INSERT\s+INTO
 if (directCanonicalDml.some((table) => table !== "development_sessions")) fail("direct canonical business-table DML detected");
 
 const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrations.length !== 22 || migrations[0]?.slice(0, 4) !== "0001" || migrations[21]?.slice(0, 4) !== "0022" || migrations.some((name) => name.startsWith("0023"))) fail("migration inventory changed");
+if (migrations.length !== 23 || migrations[0]?.slice(0, 4) !== "0001" || migrations[21]?.slice(0, 4) !== "0022" || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql") fail("migration inventory changed");
+for (const name of migrations.slice(0, 22)) {
+  const predecessor = execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
+  if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);
+}
 const lockHash = createHash("sha256").update(readFileSync(join(base, "package-lock.json"))).digest("hex");
 if (lockHash !== "2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a") fail("package-lock changed");
 const packageManifest = JSON.parse(readFileSync(join(base, "package.json"), "utf8"));

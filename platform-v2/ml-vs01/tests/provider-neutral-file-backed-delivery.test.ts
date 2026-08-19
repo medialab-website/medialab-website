@@ -169,7 +169,8 @@ describe('P02-M15-D provider-neutral file-backed delivery and local storage proo
 
   it('applies 0021 as one locked SECURITY DEFINER resolver with only restricted-runtime EXECUTE', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(22);
+    expect(ledger.rows).toHaveLength(23);
+    expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[20].filename).toBe('0021_provider_neutral_file_backed_disposable_delivery_foundation.sql');
     const fn = await owner.query(`SELECT p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner,
         pg_get_function_identity_arguments(p.oid) arguments,pg_get_functiondef(p.oid) definition,

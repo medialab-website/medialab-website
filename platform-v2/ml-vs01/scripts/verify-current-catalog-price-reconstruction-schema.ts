@@ -44,6 +44,7 @@ const expectedMigrations = [
   ['0020_disposable_delivery_surface_local_fixture_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0020_disposable_delivery_surface_local_fixture_foundation.sql'))).digest('hex')],
   ['0021_provider_neutral_file_backed_disposable_delivery_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'))).digest('hex')]
   ,['0022_organization_records_dashboard_audited_export_foundation.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0022_organization_records_dashboard_audited_export_foundation.sql'))).digest('hex')]
+  ,['0023_runtime_intake_reconciliation_commands.sql', crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations/0023_runtime_intake_reconciliation_commands.sql'))).digest('hex')]
 ] as const;
 
 const packetTables = [

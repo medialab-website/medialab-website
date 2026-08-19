@@ -2,9 +2,9 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { P02_M16_D_ALLOWLIST } from './p02-m16-d-changed-files.js';
+import { P02_M16_E_ALLOWLIST } from './p02-m16-e-changed-files.js';
 
-// P02_M16_C_ALLOWLIST remains the frozen predecessor definition; current enforcement is P02_M16_D_ALLOWLIST.
+// P02_M16_C_ALLOWLIST and other predecessor allowlists remain frozen historical definitions; current enforcement is P02_M16_E_ALLOWLIST.
 
 console.log('Running verify-changed-files.ts...');
 
@@ -59,8 +59,8 @@ if (missingInMd) {
 }
 
 for (const actualPath of actualGitFiles) {
-  if (!P02_M16_D_ALLOWLIST.includes(actualPath)) {
-    console.error(`ERROR: Actual Git candidate file '${actualPath}' is outside the P02-M16-D 14-path allowlist.`);
+  if (!P02_M16_E_ALLOWLIST.includes(actualPath)) {
+    console.error(`ERROR: Actual Git candidate file '${actualPath}' is outside the reconciled P02-M16-E 69-path maximum allowlist.`);
     process.exit(1);
   }
 }

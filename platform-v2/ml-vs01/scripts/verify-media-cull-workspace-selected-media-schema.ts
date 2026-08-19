@@ -15,6 +15,7 @@ const fifthSuccessorMigration = '0019_temporary_download_center_access_credentia
 const sixthSuccessorMigration = '0020_disposable_delivery_surface_local_fixture_foundation.sql';
 const seventhSuccessorMigration = '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql';
 const eighthSuccessorMigration = '0022_organization_records_dashboard_audited_export_foundation.sql';
+const runtimeIntakeSuccessorMigration = '0023_runtime_intake_reconciliation_commands.sql';
 const predecessors = [
   ['0001_identity_and_tenancy.sql','29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31'],
   ['0002_property_identity_and_snapshots.sql','d3ca6e17cde090eceb2e3b4ac5581af3cf3431a4d64f668f80ab01725d777a83'],
@@ -54,7 +55,7 @@ const bytes=fs.readFileSync(path.join(migrationDir,packetMigration));
 const packetHash=crypto.createHash('sha256').update(bytes).digest('hex');
 const sql=bytes.toString('utf8');
 exact('Migration inventory',fs.readdirSync(migrationDir).filter(x=>x.endsWith('.sql')),
-  [...predecessors.map(x=>x[0]),packetMigration,successorMigration,secondSuccessorMigration,thirdSuccessorMigration,fourthSuccessorMigration,fifthSuccessorMigration,sixthSuccessorMigration,seventhSuccessorMigration,eighthSuccessorMigration]);
+  [...predecessors.map(x=>x[0]),packetMigration,successorMigration,secondSuccessorMigration,thirdSuccessorMigration,fourthSuccessorMigration,fifthSuccessorMigration,sixthSuccessorMigration,seventhSuccessorMigration,eighthSuccessorMigration,runtimeIntakeSuccessorMigration]);
 exact('Packet tables',[...sql.matchAll(/CREATE TABLE medialab_core\.([a-z0-9_]+)/g)].map(x=>x[1]),tables);
 exact('Packet functions',[...sql.matchAll(/CREATE OR REPLACE FUNCTION medialab_core\.([a-z0-9_]+)/g)].map(x=>x[1]),[...publicFunctions,...helpers]);
 for (const required of ['PHOTO','VIDEO','ORIGINAL','INVENTORY_SEALED','KEEP','REJECT','CULL_SELECTION',
@@ -78,6 +79,7 @@ try {
   const sixthSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,sixthSuccessorMigration))).digest('hex');
   const seventhSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,seventhSuccessorMigration))).digest('hex');
   const eighthSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,eighthSuccessorMigration))).digest('hex');
+  const runtimeIntakeSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,runtimeIntakeSuccessorMigration))).digest('hex');
   const expected=[...predecessors.map(([filename,sha256])=>({filename,sha256})),{filename:packetMigration,sha256:packetHash},
     {filename:successorMigration,sha256:successorHash},
     {filename:secondSuccessorMigration,sha256:secondSuccessorHash},
@@ -86,8 +88,9 @@ try {
     {filename:fifthSuccessorMigration,sha256:fifthSuccessorHash},
     {filename:sixthSuccessorMigration,sha256:sixthSuccessorHash},
     {filename:seventhSuccessorMigration,sha256:seventhSuccessorHash},
-    {filename:eighthSuccessorMigration,sha256:eighthSuccessorHash}];
-  if (JSON.stringify(ledger.rows)!==JSON.stringify(expected)) fail('Twenty-two-row migration ledger mismatch');
+    {filename:eighthSuccessorMigration,sha256:eighthSuccessorHash},
+    {filename:runtimeIntakeSuccessorMigration,sha256:runtimeIntakeSuccessorHash}];
+  if (JSON.stringify(ledger.rows)!==JSON.stringify(expected)) fail('Twenty-three-row migration ledger mismatch');
   const dbTables=await client.query("SELECT tablename,tableowner FROM pg_tables WHERE schemaname='medialab_core' AND tablename LIKE 'cull_%' ORDER BY tablename");
   exact('Database tables',dbTables.rows.map(r=>r.tablename),tables);
   if (dbTables.rows.some(r=>r.tableowner!=='medialab_p02m16a_test_owner')) fail('Packet table ownership mismatch');

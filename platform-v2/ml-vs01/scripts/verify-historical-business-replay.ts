@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +7,7 @@ import { COVERAGE_DIMENSIONS } from "../src/business-replay/coverage.js";
 import { FROZEN_SOURCES } from "../src/historical-replay/index.js";
 
 const base = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repo = resolve(base, "../..");
 const outputRoot = resolve(process.argv.find((value) => value.startsWith("--output-root="))?.slice(14) ??
   process.env.P02_M16_C_OUTPUT_ROOT ?? "/tmp/mlvs01-p02m16c-output/verify-all");
 const vaultRoot = resolve(process.argv.find((value) => value.startsWith("--vault-root="))?.slice(13) ??
@@ -46,7 +48,12 @@ for (const source of Object.values(FROZEN_SOURCES)) {
   const hash = createHash("sha256").update(readFileSync(join(vaultRoot, source.relativePath))).digest("hex");
   if (hash !== source.sha256) fail(`post-run raw identity changed: ${source.relativePath}`);
 }
-if (readdirSync(join(base, "db/migrations")).some((name) => name.startsWith("0023"))) fail("migration 0023 exists");
+const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
+if (migrations.length !== 23 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql") fail("migration inventory is not exact 0001-0023");
+for (const name of migrations.slice(0, 22)) {
+  const predecessor = execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
+  if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);
+}
 const lockHash = createHash("sha256").update(readFileSync(join(base, "package-lock.json"))).digest("hex");
 if (lockHash !== "2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a") fail("package-lock changed");
 const source = readFileSync(join(base, "src/historical-replay/index.ts"), "utf8");

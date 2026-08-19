@@ -3,9 +3,9 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
-import { P02_M16_D_ALLOWLIST } from './p02-m16-d-changed-files.js';
+import { P02_M16_E_ALLOWLIST } from './p02-m16-e-changed-files.js';
 
-// P02_M16_C_ALLOWLIST remains the frozen predecessor definition; current enforcement is P02_M16_D_ALLOWLIST.
+// P02_M16_C_ALLOWLIST and other predecessor allowlists remain frozen historical definitions; current enforcement is P02_M16_E_ALLOWLIST.
 
 console.log('Running verify-foundation-closeout.ts...');
 
@@ -16,8 +16,8 @@ const worktreeRoot = path.resolve(baseDir, '../../');
 
 let errors = false;
 
-// 1. P02-M16-D bounded changed-file maximum allowlist
-const ALLOWLIST = [...P02_M16_D_ALLOWLIST];
+// 1. P02-M16-E reconciled bounded changed-file maximum allowlist
+const ALLOWLIST = [...P02_M16_E_ALLOWLIST];
 
 // 2. Determine actual changed-path set from Git status
 const gitStatusRaw = execSync('git status --porcelain -uall platform-v2/ml-vs01', {
@@ -40,7 +40,7 @@ for (const line of lines) {
 
   // Every changed path must be contained in the allowlist
   if (!ALLOWLIST.includes(gitPath)) {
-    console.error(`ERROR: Changed file '${gitPath}' is outside the P02-M16-D 14-path allowlist.`);
+    console.error(`ERROR: Changed file '${gitPath}' is outside the reconciled P02-M16-E 69-path maximum allowlist.`);
     errors = true;
   }
 
@@ -121,6 +121,8 @@ const testFiles = [
   'tests/test-database-reset.test.ts',
   'tests/provider-neutral-file-backed-delivery.test.ts'
   ,'tests/organization-records-dashboard-audited-export-foundation.test.ts'
+  ,'tests/runtime-intake-reconciliation.test.ts'
+  ,'tests/current-era-intake-reproof.test.ts'
 ];
 
 for (const tf of testFiles) {

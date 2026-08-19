@@ -46,6 +46,7 @@ const TEMPORARY_DOWNLOAD_CENTER_ACCESS_GATEWAY_PACKET_MIGRATION = '0019_temporar
 const DISPOSABLE_DELIVERY_SURFACE_PACKET_MIGRATION = '0020_disposable_delivery_surface_local_fixture_foundation.sql';
 const PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_PACKET_MIGRATION = '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql';
 const ORGANIZATION_RECORDS_AUDITED_EXPORT_PACKET_MIGRATION = '0022_organization_records_dashboard_audited_export_foundation.sql';
+const RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION = '0023_runtime_intake_reconciliation_commands.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -278,6 +279,11 @@ const ORGANIZATION_RECORDS_AUDITED_EXPORT_PUBLIC_FUNCTIONS = [
   'medialab_core.revoke_personal_order_summary(text, text, uuid, text)'
 ];
 
+const RUNTIME_INTAKE_RECONCILIATION_PUBLIC_FUNCTIONS = [
+  'medialab_core.reconcile_customer_person_intake(text, text, uuid, text, text, text, text, text, text, text)',
+  'medialab_core.reconcile_property_snapshot_intake(text, text, uuid, text, text, text, text, text, text, text, text, integer)'
+];
+
 export function validateMigrationFilenames(filenames: string[]): void {
   const filenameRegex = /^[0-9]{4}_[a-z0-9_]+\.sql$/;
   const prefixes = new Set<string>();
@@ -348,7 +354,8 @@ async function applyRuntimePrivilegePolicy(
   includeTemporaryDownloadCenterAccessGatewayFunctions = false,
   includeDisposableDeliverySurfaceFunctions = false,
   includeProviderNeutralFileBackedDeliveryFunctions = false,
-  includeOrganizationRecordsAuditedExportFunctions = false
+  includeOrganizationRecordsAuditedExportFunctions = false,
+  includeRuntimeIntakeReconciliationFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -383,7 +390,8 @@ async function applyRuntimePrivilegePolicy(
       ...(includeTemporaryDownloadCenterAccessGatewayFunctions ? TEMPORARY_DOWNLOAD_CENTER_ACCESS_GATEWAY_PUBLIC_FUNCTIONS : []),
       ...(includeDisposableDeliverySurfaceFunctions ? DISPOSABLE_DELIVERY_SURFACE_PUBLIC_FUNCTIONS : []),
       ...(includeProviderNeutralFileBackedDeliveryFunctions ? PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_PUBLIC_FUNCTIONS : []),
-      ...(includeOrganizationRecordsAuditedExportFunctions ? ORGANIZATION_RECORDS_AUDITED_EXPORT_PUBLIC_FUNCTIONS : [])
+      ...(includeOrganizationRecordsAuditedExportFunctions ? ORGANIZATION_RECORDS_AUDITED_EXPORT_PUBLIC_FUNCTIONS : []),
+      ...(includeRuntimeIntakeReconciliationFunctions ? RUNTIME_INTAKE_RECONCILIATION_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -572,6 +580,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -613,7 +625,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           sqlFiles.includes(TEMPORARY_DOWNLOAD_CENTER_ACCESS_GATEWAY_PACKET_MIGRATION),
           sqlFiles.includes(DISPOSABLE_DELIVERY_SURFACE_PACKET_MIGRATION),
           sqlFiles.includes(PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_PACKET_MIGRATION),
-          sqlFiles.includes(ORGANIZATION_RECORDS_AUDITED_EXPORT_PACKET_MIGRATION)
+          sqlFiles.includes(ORGANIZATION_RECORDS_AUDITED_EXPORT_PACKET_MIGRATION),
+          sqlFiles.includes(RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {

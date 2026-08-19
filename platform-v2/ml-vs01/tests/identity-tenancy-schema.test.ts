@@ -268,7 +268,10 @@ const EXACT_ROUTINE_NAMES = [
   'reject_mission_plan_evidence_mutation',
   'reject_order_evidence_mutation',
   'reject_property_hub_evidence_mutation',
+  'reject_person_external_reference_mutation',
   'reject_property_snapshot_mutation',
+  'reconcile_customer_person_intake',
+  'reconcile_property_snapshot_intake',
   'reject_scheduling_evidence_mutation',
   'replace_appointment_participant_assignment',
   'replace_mission_plan_draft_contacts',
@@ -400,6 +403,7 @@ const EXACT_TRIGGERS = [
   ['order_relationships_insert_guard', 'order_relationships', 'guard_order_relationship_insert'],
   ['orders_immutability_guard', 'orders', 'reject_order_evidence_mutation'],
   ['people_contact_bootstrap', 'people', 'bootstrap_person_contact'],
+  ['person_external_references_immutability_guard', 'person_external_references', 'reject_person_external_reference_mutation'],
   ['people_primary_email_update_guard', 'people', 'guard_people_primary_email_update'],
   ['person_account_states_delete_guard', 'person_account_states', 'reject_contact_history_mutation'],
   ['person_account_states_insert_guard', 'person_account_states', 'guard_account_state_insert'],
@@ -533,6 +537,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0020_disposable_delivery_surface_local_fixture_foundation.sql'
       ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
       ,'0022_organization_records_dashboard_audited_export_foundation.sql'
+      ,'0023_runtime_intake_reconciliation_commands.sql'
     ]);
   });
 
@@ -625,7 +630,7 @@ describe('M02 Identity and Tenancy Schema', () => {
           'people': [
             { col: 'id', type: 'uuid', nullable: 'NO', def: null },
             { col: 'display_name', type: 'text', nullable: 'NO', def: null },
-            { col: 'email', type: 'text', nullable: 'NO', def: null },
+            { col: 'email', type: 'text', nullable: 'YES', def: null },
             { col: 'title', type: 'text', nullable: 'YES', def: null },
             { col: 'created_at', type: 'timestamp with time zone', nullable: 'NO', def: 'clock_timestamp()' },
             { col: 'updated_at', type: 'timestamp with time zone', nullable: 'NO', def: 'clock_timestamp()' }

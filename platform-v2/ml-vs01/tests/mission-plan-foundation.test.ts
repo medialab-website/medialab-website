@@ -142,7 +142,8 @@ describe('P02-M07-A Mission Plan foundation', () => {
 
   it('1. applies ten immutable migrations and preserves the accepted 0009 predecessor hash', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(22);
+    expect(ledger.rows).toHaveLength(23);
+    expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[8]).toEqual({
       filename: '0009_job_and_service_workstream_foundation.sql',
       sha256: '188cd691645a4ac039c83cf5939885d8b63997ab81ccb37be4667a5011738a66'
