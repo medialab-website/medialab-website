@@ -68,18 +68,19 @@ describe("P02-M18-A Operations Home, scheduling, and assignment", () => {
     runInNewContext(`${source}\n;globalThis.__formatOperationalDateTime = operationalDateTime;`, sandbox);
     const format = sandbox.__formatOperationalDateTime as (localStartsAt: string, ianaTimezone: string) => string;
     const rendered = format("2026-08-21T09:00:00", "America/Los_Angeles");
-    expect(rendered).toContain("9:00");
-    expect(rendered).toContain("America/Los_Angeles");
+    expect(rendered).toBe("Friday, August 21 · 9:00 a.m.");
     expect(rendered).not.toContain("12:00");
+    expect(rendered).not.toContain("America/Los_Angeles");
     expect(source).not.toMatch(/new Date\((?:item\.appointment|windowRecord|appointment)\.startsAt\)\.toLocaleString/u);
   });
 
-  it("applies exact 0001-0024 authority with no PUBLIC, table-read/write, or sequence grant expansion", async () => {
+  it("preserves exact 0001-0024 authority under the additive M19 read projection with no table-read/write or sequence grant expansion", async () => {
     const client = new pg.Client(owner); await client.connect();
     try {
       const ledger = await client.query<{ filename: string }>("SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename");
-      expect(ledger.rows).toHaveLength(24);
+      expect(ledger.rows).toHaveLength(25);
       expect(ledger.rows[23]!.filename).toBe("0024_operations_home_scheduling_assignment_console.sql");
+      expect(ledger.rows[24]!.filename).toBe("0025_operations_mission_plan_draft_controls.sql");
       const grants = await client.query<{ name: string }>(`SELECT p.proname AS name FROM pg_proc p
         JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='medialab_core'
         AND p.proname IN ('get_operations_home','get_operations_order_context','list_operations_assignment_candidates')
@@ -152,6 +153,9 @@ describe("P02-M18-A Operations Home, scheduling, and assignment", () => {
     const database = new OperationsConsoleDatabase();
     try {
       const initial = await database.getOperationsContext(token, orderId);
+      expect(initial.customer.contacts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ contactType: "EMAIL", displayValue: expect.any(String) }),
+      ]));
       const requestId = initial.scheduling!.requestId;
       const requested = await database.addRequestedWindow(token, orderId, requestId, {
         startsAt: "2026-08-21T13:00:00.000Z", endsAt: "2026-08-21T14:30:00.000Z",

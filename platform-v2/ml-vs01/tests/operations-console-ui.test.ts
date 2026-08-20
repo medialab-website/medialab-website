@@ -36,7 +36,10 @@ describe("P02-M17-A Operations Console browser surface", () => {
 
   it("uses only same-origin static assets, safe DOM construction, and no raw JSON presentation", () => {
     const assetUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
-    expect(assetUrls).toEqual(["/styles.css", "/app.js", "#console-main", "/", "/operations", "/operations"]);
+    expect(assetUrls.filter((url) => !url.startsWith("mailto:"))).toEqual(["/styles.css", "/app.js", "#console-main", "/brand-logo.jpg", "/operations", "/"]);
+    expect(assetUrls.filter((url) => url.startsWith("mailto:"))).toEqual([
+      "mailto:solutions@medialab.fyi?subject=Help%20with%20a%20MediaLab%20service%20request",
+    ]);
     expect(html).not.toMatch(/\sstyle=|<script(?![^>]*\bsrc=)|<iframe|<pre\b/i);
     expect(javascript).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\s*\(|new\s+Function\s*\(/);
     expect(javascript).toContain("document.createElement");
@@ -130,11 +133,48 @@ describe("P02-M17-A Operations Console browser surface", () => {
   it("makes the nonproduction authority boundary and excluded follow-on work unmistakable", () => {
     expect(html).toMatch(/Nonproduction environment/);
     expect(html).toMatch(/reconstructed nonproduction evidence/i);
-    expect(html).toMatch(/manage canonical scheduling and crew assignment/i);
-    expect(html).toMatch(/does not create Mission Plans, process media, contact providers, collect payment, or touch production/i);
+    expect(html).toMatch(/manage canonical scheduling, crew assignment, and Mission Plans/i);
+    expect(html).toMatch(/does not process media, contact providers, collect payment, deploy, or touch production/i);
     expect(html).toMatch(/No appointment or assignment was created with the order/i);
-    expect(html).toMatch(/Continue in Operations/i);
+    expect(html).toMatch(/Continue in Mission Control/i);
     expect(javascript).toMatch(/No payment was processed by this console/i);
     expect(html).not.toMatch(/production[- ]ready|live customer|live provider/i);
+  });
+
+  it("uses the approved MediaLab brand and gives Mission Plans a clean owner-visible workspace", () => {
+    expect(html).toContain('class="brand-logo" src="/brand-logo.jpg" alt="MediaLab"');
+    expect(css).toContain("--canvas: #121212");
+    expect(css).toContain("--paper: #1e1e1e");
+    expect(css).toContain("--gold: #ffc107");
+    expect(css).toContain("grid-template-columns: minmax(19rem, 36fr) minmax(34rem, 64fr)");
+    expect(javascript).not.toContain("operationalTabs");
+    expect(javascript).toContain("missionControlSummary");
+    expect(javascript).toContain("Generate Mission Plan");
+    expect(javascript).toContain("Save Mission Plan version");
+    expect(javascript).toContain("Offline packet");
+    expect(javascript).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\s*\(|new\s+Function\s*\(/);
+  });
+
+  it("uses the owner-approved package-first service flow and streamlined Operations views", () => {
+    expect(html).toContain("Start with the property package that fits the square footage");
+    expect(html).toContain("Email a service request");
+    expect(javascript).toContain('const groups = ["Video", "Photo", "Matterport", "Zillow 3D Home", "CubiCasa & floor plans"]');
+    expect(javascript).toContain("Recommended for this square footage");
+    expect(javascript).toContain("What’s included");
+    expect(html).toContain('data-queue="attention"');
+    expect(html).toContain('data-queue="completed"');
+    expect(javascript).toContain("Appointment confirmed. Crew and services are ready.");
+    expect(javascript).toContain("Crew assignment saved.");
+    expect(javascript).toContain("Save Mission Plan Offline");
+    expect(javascript).toContain("Cancel this appointment?");
+    expect(javascript).toContain("Get Directions");
+    expect(javascript).toContain("Appointment & Scheduling");
+    expect(javascript).toContain("Order Scope");
+    expect(javascript).toContain("Customer Information");
+    expect(javascript).not.toContain("Property route");
+    expect(javascript).toContain("Edit crew");
+    expect(javascript).toContain("Live weather is not connected in this nonproduction build.");
+    expect(css).toContain('.catalog-choice.is-selected { background: #27230f');
+    expect(css).toContain('.field input[type="text"]');
   });
 });

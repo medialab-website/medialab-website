@@ -157,7 +157,7 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     const ledger = await owner.query(
       'SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename'
     );
-    expect(ledger.rows).toHaveLength(24);
+    expect(ledger.rows).toHaveLength(25);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows.slice(0, 3)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },

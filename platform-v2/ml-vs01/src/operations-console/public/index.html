@@ -12,6 +12,7 @@
     <a class="skip-link" href="#console-main">Skip to listing form</a>
 
     <header class="site-header">
+      <img class="brand-logo" src="/brand-logo.jpg" alt="MediaLab">
       <div class="header-copy">
         <p class="eyebrow">MediaLab · Internal Operations</p>
         <h1>New listing</h1>
@@ -23,16 +24,11 @@
       </div>
     </header>
 
-    <nav class="app-nav" aria-label="Operations Console">
-      <a href="/">New listing</a>
-      <a href="/operations">Operations</a>
-    </nav>
-
     <div class="boundary-notice" role="note" aria-labelledby="boundary-heading">
       <div aria-hidden="true" class="notice-mark">i</div>
       <div>
         <h2 id="boundary-heading">Bounded development console</h2>
-        <p>This local surface uses reconstructed nonproduction evidence. It can create listings and manage canonical scheduling and crew assignment; it does not create Mission Plans, process media, contact providers, collect payment, or touch production.</p>
+        <p>This local surface uses reconstructed nonproduction evidence. It can create listings and manage canonical scheduling, crew assignment, and Mission Plans; it does not process media, contact providers, collect payment, deploy, or touch production.</p>
       </div>
     </div>
 
@@ -134,7 +130,7 @@
         <div class="step-heading">
           <p class="step-kicker">Step 3 of 6</p>
           <h2 id="services-heading" tabindex="-1">Choose services</h2>
-          <p>Select one or more available catalog choices. Package quantity is fixed at one; individual services allow 1–99.</p>
+          <p>Start with the property package that fits the square footage, or choose à la carte for a special request. Add-ons come next.</p>
         </div>
         <form id="services-form" novalidate>
           <fieldset>
@@ -142,6 +138,11 @@
             <div id="catalog-status" class="catalog-status" role="status">Catalog choices will appear when the local session is ready.</div>
             <div id="catalog-choices" class="catalog-choices"></div>
           </fieldset>
+          <details class="service-help">
+            <summary>Not sure what to order?</summary>
+            <p>Tell MediaLab what you need and we’ll help assemble the right services. This nonproduction console does not send messages yet.</p>
+            <a class="button button-secondary button-compact" href="mailto:solutions@medialab.fyi?subject=Help%20with%20a%20MediaLab%20service%20request">Email a service request</a>
+          </details>
           <p id="catalog-disclosure" class="catalog-disclosure">Catalog names and calculated amounts shown here are server-provided, reconstructed nonproduction evidence—not production pricing authority.</p>
           <div class="form-actions">
             <button class="button button-secondary" type="button" data-back="property">Back</button>
@@ -186,8 +187,8 @@
         <div id="confirmation-content" class="confirmation-content" aria-live="polite"></div>
         <div class="next-step-note">
           <h3>Scheduling comes next</h3>
-          <p>No appointment or assignment was created with the order. Continue in Operations when you are ready.</p>
-          <a id="open-order-operations" class="button button-primary" href="/operations">Open operations</a>
+          <p>No appointment or assignment was created with the order. Continue in Mission Control when you are ready.</p>
+          <a id="open-order-operations" class="button button-primary" href="/operations">Open Mission Control</a>
         </div>
       </section>
 
@@ -198,31 +199,44 @@
       <div id="operations-error" class="error-summary" role="alert" tabindex="-1" hidden>
         <h2>We couldn’t continue</h2><p id="operations-error-message"></p>
       </div>
+      <div id="operations-success" class="operations-success" role="status" aria-live="polite" hidden>
+        <span aria-hidden="true">✓</span><p id="operations-success-message"></p>
+      </div>
       <section class="operations-hero">
-        <div><p class="eyebrow">Daily command center</p><h2>Operations</h2>
-          <p>See what is scheduled, what is coming up, and what needs an owner.</p></div>
-        <button id="refresh-operations" class="button button-secondary" type="button">Refresh</button>
+        <div><p class="eyebrow">Daily command center</p><h2>Mission Control</h2>
+          <p>See today, upcoming work, completed orders, and anything that needs attention.</p></div>
+        <div class="hero-actions"><a class="button button-primary" href="/">New listing</a>
+          <button id="refresh-operations" class="button button-secondary" type="button">Refresh</button></div>
       </section>
       <div id="operations-status" class="startup-status" role="status" aria-live="polite">
-        <span class="spinner" aria-hidden="true"></span><span>Opening the operations queue…</span>
+        <span class="spinner" aria-hidden="true"></span><span>Opening Mission Control…</span>
       </div>
-      <nav class="queue-tabs" aria-label="Operations views">
-        <button type="button" data-queue="today" aria-pressed="true">Today <span id="today-count">0</span></button>
+      <nav class="queue-tabs" aria-label="Mission Control views">
+        <button type="button" data-queue="attention" aria-pressed="true">Needs attention <span id="attention-count">0</span></button>
+        <button type="button" data-queue="today" aria-pressed="false">Today <span id="today-count">0</span></button>
         <button type="button" data-queue="upcoming" aria-pressed="false">Upcoming <span id="upcoming-count">0</span></button>
-        <button type="button" data-queue="attention" aria-pressed="false">Needs attention <span id="attention-count">0</span></button>
+        <button type="button" data-queue="completed" aria-pressed="false">Completed <span id="completed-count">0</span></button>
       </nav>
       <div class="operations-layout">
         <section class="queue-panel" aria-labelledby="queue-heading">
           <h3 id="queue-heading">Today</h3><div id="operations-list" class="operations-list"></div>
         </section>
         <aside id="operations-detail" class="operations-detail" aria-live="polite">
-          <div class="empty-detail"><h3>Select an order</h3><p>Open any item to schedule work, confirm an appointment, or assign crew.</p></div>
+          <div class="empty-detail"><h3>Select an order</h3><p>Open any item to schedule work, assign crew, or prepare its Mission Plan.</p></div>
         </aside>
       </div>
     </main>
 
+    <dialog id="operations-dialog" class="operations-dialog" aria-labelledby="operations-dialog-heading">
+      <form method="dialog" class="dialog-card">
+        <div class="dialog-heading"><p class="eyebrow">Confirm the next step</p><h2 id="operations-dialog-heading">Confirm</h2></div>
+        <div id="operations-dialog-content"></div>
+        <div id="operations-dialog-actions" class="dialog-actions"></div>
+      </form>
+    </dialog>
+
     <footer>
-      <p>Internal nonproduction console · Listings, scheduling &amp; crew assignment</p>
+      <p>Internal nonproduction console · Listings, scheduling, crew assignment &amp; Mission Plans</p>
     </footer>
   </body>
 </html>

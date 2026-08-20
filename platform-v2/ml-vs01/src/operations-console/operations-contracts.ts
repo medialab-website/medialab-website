@@ -3,6 +3,7 @@ import { OperationsConsoleRequestValidationError } from "./contracts.js";
 export const OPERATIONS_SCHEMA = "ML_INTERNAL_OPERATIONS_CONSOLE_V1" as const;
 export type OperationalRole = "PRIMARY_OPERATOR" | "ADDITIONAL_OPERATOR" | "COORDINATOR";
 export type AcceptanceMethod = "PHONE" | "TEXT" | "EMAIL" | "IN_PERSON" | "OTHER";
+export type MissionPlanVisibility = "INTERNAL_STAFF_ONLY" | "ASSIGNED_CREW_ONLY" | "POTENTIALLY_CUSTOMER_VISIBLE";
 
 export interface OperationsWindowInput {
   startsAt: string;
@@ -22,13 +23,88 @@ export interface RescheduleAppointmentInput extends OperationsWindowInput {
 }
 export interface AssignmentInput { personId: string; operationalRole: OperationalRole }
 export interface ReplacementInput { replacementPersonId: string; reason: string }
+export interface MissionPlanSectionInput { label: string; content: string; visibility: MissionPlanVisibility }
+export interface ReviseMissionPlanInput { sections: MissionPlanSectionInput[] }
+export interface MissionPlanNoteInput { note: string; visibility: MissionPlanVisibility }
+export interface MissionPlanVersionSelectionInput { versionId: string }
+export interface MissionPlanWorkstreamSelectionInput { workstreamIds: string[] }
+export interface MissionPlanContactSelectionInput { contacts: Array<{
+  personId: string; contactMethodId: string; contactRole: string; visibility: MissionPlanVisibility;
+}> }
+
+export interface MissionPlanRecord {
+  mission_plan_id: string;
+  organization_id: string;
+  order_id: string;
+  property_hub_id: string;
+  job_id: string;
+  appointment_id: string;
+  job_appointment_id: string;
+  audience_scope: "INTERNAL_STAFF" | "ASSIGNED_CREW";
+  draft: null | {
+    schema_version: number;
+    draft_generation: number;
+    source_fingerprint_sha256: string;
+    content: { sections: MissionPlanSectionInput[] };
+    weather_status: "AVAILABLE" | "UNAVAILABLE" | "NOT_REQUESTED";
+    weather_evidence: Record<string, unknown> | null;
+    weather_unavailable_reason: string | null;
+  };
+  versions: Array<{
+    mission_plan_version_id: string;
+    version_number: number;
+    supersedes_version_id: string | null;
+    canonical_json_sha256: string;
+    issued_at: string;
+    content: {
+      schema_version: number;
+      mission_plan_id: string;
+      mission_plan_version_id: string;
+      version_number: number;
+      relationship: Record<string, unknown>;
+      weather: Record<string, unknown>;
+      selected_workstreams: Array<Record<string, unknown>>;
+      sections: MissionPlanSectionInput[];
+      contacts: Array<Record<string, unknown>>;
+      notes: Array<Record<string, unknown>>;
+    };
+  }>;
+  open_events: Array<Record<string, unknown>>;
+}
+
+export interface MissionPlanWorkspace {
+  schema: typeof OPERATIONS_SCHEMA;
+  contract: "MissionPlanWorkspaceV1";
+  readiness: "READY" | "NEEDS_CONFIRMED_APPOINTMENT" | "NEEDS_JOB_APPOINTMENT_LINK";
+  context: OperationsContext;
+  plan: MissionPlanRecord | null;
+  controls: MissionPlanDraftControls | null;
+}
+export interface MissionPlanDraftControls {
+  missionPlanId: string;
+  stale: boolean;
+  eligibleWorkstreams: Array<{ workstreamId: string; displayName: string; state: string; selected: boolean }>;
+  eligibleContacts: Array<{ personId: string; contactMethodId: string; displayName: string; contactType: string;
+    displayValue: string; contactRole: string; selected: boolean; visibility: MissionPlanVisibility }>;
+  notes: Array<{ noteId: string; visibility: MissionPlanVisibility; text: string; authoredAt: string }>;
+}
+export interface MissionPlanActionReceipt {
+  schema: typeof OPERATIONS_SCHEMA;
+  contract: "MissionPlanActionReceiptV1";
+  action: string;
+  replaySafe: true;
+  plan: MissionPlanRecord;
+}
+export interface MissionPlanOfflinePacket { filename: string; html: string }
 
 export interface OperationsContext {
   orderId: string;
   organizationId: string;
   orderStatus: string;
   createdAt: string;
-  customer: { personId: string; displayName: string; email: string };
+  customer: { personId: string; displayName: string; email: string; contacts?: Array<{
+    contactType: "EMAIL" | "PHONE"; displayValue: string;
+  }> };
   property: {
     propertyId: string; propertySnapshotId: string; addressLine1: string; addressLine2: string | null;
     locality: string; administrativeArea: string; postalCode: string; countryCode: string; squareFeet: number | null;
@@ -72,6 +148,7 @@ export interface OperationsActionReceipt {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const DATABASE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?$/u;
 
 function fail(path: string, message: string): never {
@@ -97,6 +174,11 @@ function uuid(value: unknown, path: string): string {
   const result = string(value, path, 36).toLowerCase();
   if (!UUID.test(result)) return fail(path, "must be a canonical UUID");
   return result;
+}
+
+function databaseUuid(value: unknown, path: string): string {
+  if (typeof value !== "string" || !DATABASE_UUID.test(value)) return fail(path, "must be a database UUID");
+  return value.toLowerCase();
 }
 function instant(value: unknown, path: string): string {
   const result = string(value, path, 40);
@@ -164,4 +246,61 @@ export function parseReplacement(value: unknown): ReplacementInput {
   const root = object(value, ["replacementPersonId", "reason"]);
   return Object.freeze({ replacementPersonId: uuid(root.replacementPersonId, "$.replacementPersonId"),
     reason: string(root.reason, "$.reason", 500) });
+}
+
+function visibility(value: unknown, path: string): MissionPlanVisibility {
+  const result = string(value, path, 40) as MissionPlanVisibility;
+  if (!["INTERNAL_STAFF_ONLY", "ASSIGNED_CREW_ONLY", "POTENTIALLY_CUSTOMER_VISIBLE"].includes(result)) {
+    return fail(path, "is invalid");
+  }
+  return result;
+}
+
+export function parseMissionPlanRevision(value: unknown): ReviseMissionPlanInput {
+  const root = object(value, ["sections"]);
+  if (!Array.isArray(root.sections) || root.sections.length < 1 || root.sections.length > 12) {
+    return fail("$.sections", "must contain 1-12 sections");
+  }
+  const sections = root.sections.map((candidate, index) => {
+    const section = object(candidate, ["label", "content", "visibility"]);
+    return Object.freeze({
+      label: string(section.label, `$.sections[${index}].label`, 120),
+      content: string(section.content, `$.sections[${index}].content`, 5000),
+      visibility: visibility(section.visibility, `$.sections[${index}].visibility`),
+    });
+  });
+  return Object.freeze({ sections: Object.freeze(sections) as MissionPlanSectionInput[] });
+}
+
+export function parseMissionPlanNote(value: unknown): MissionPlanNoteInput {
+  const root = object(value, ["note", "visibility"]);
+  return Object.freeze({ note: string(root.note, "$.note", 4000), visibility: visibility(root.visibility, "$.visibility") });
+}
+
+export function parseMissionPlanVersionSelection(value: unknown): MissionPlanVersionSelectionInput {
+  const root = object(value, ["versionId"]);
+  return Object.freeze({ versionId: uuid(root.versionId, "$.versionId") });
+}
+
+export function parseMissionPlanWorkstreamSelection(value: unknown): MissionPlanWorkstreamSelectionInput {
+  const root = object(value, ["workstreamIds"]);
+  if (!Array.isArray(root.workstreamIds) || root.workstreamIds.length < 1 || root.workstreamIds.length > 100) {
+    return fail("$.workstreamIds", "must contain 1-100 canonical Workstream IDs");
+  }
+  const workstreamIds = root.workstreamIds.map((value, index) => uuid(value, `$.workstreamIds[${index}]`));
+  if (new Set(workstreamIds).size !== workstreamIds.length) return fail("$.workstreamIds", "must not contain duplicates");
+  return Object.freeze({ workstreamIds: Object.freeze(workstreamIds) as string[] });
+}
+
+export function parseMissionPlanContactSelection(value: unknown): MissionPlanContactSelectionInput {
+  const root = object(value, ["contacts"]);
+  if (!Array.isArray(root.contacts) || root.contacts.length > 20) return fail("$.contacts", "must contain no more than 20 contacts");
+  const contacts = root.contacts.map((candidate, index) => {
+    const contact = object(candidate, ["personId", "contactMethodId", "contactRole", "visibility"]);
+    return Object.freeze({ personId: uuid(contact.personId, `$.contacts[${index}].personId`),
+      contactMethodId: databaseUuid(contact.contactMethodId, `$.contacts[${index}].contactMethodId`),
+      contactRole: string(contact.contactRole, `$.contacts[${index}].contactRole`, 100),
+      visibility: visibility(contact.visibility, `$.contacts[${index}].visibility`) });
+  });
+  return Object.freeze({ contacts: Object.freeze(contacts) as MissionPlanContactSelectionInput["contacts"] });
 }

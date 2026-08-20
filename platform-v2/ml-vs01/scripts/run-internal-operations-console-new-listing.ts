@@ -38,6 +38,10 @@ import {
   JOB_SERVICE_PERMISSION_FIXTURES,
   JOB_SERVICE_PERMISSION_SET_PERMISSION_FIXTURES,
 } from "../db/fixtures/job-service-workstream-foundation-fixtures.js";
+import {
+  MISSION_PLAN_PERMISSION_FIXTURES,
+  MISSION_PLAN_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/mission-plan-foundation-fixtures.js";
 import { startOperationsConsole } from "../src/operations-console/server.js";
 import { OperationsConsoleService } from "../src/operations-console/service.js";
 import {
@@ -170,7 +174,7 @@ function assertEvidencePrivacy(label: string, serialized: string): void {
 
 function exactMigrationLedger(ledger: BootstrapObservation["ledger"]): boolean {
   return Array.isArray(ledger)
-    && ledger.length === 24
+    && ledger.length === 25
     && ledger.every((entry, index) => (
       typeof entry?.filename === "string"
       && entry.filename.startsWith(`${String(index + 1).padStart(4, "0")}_`)
@@ -267,7 +271,7 @@ function directRuntimeSources(
   const http = observations.httpFlow;
   const authority = observations.authority;
 
-  if (id === 5) add("runtime:migration-ledger", "Both fresh reset ledgers contain the exact ordered 0001 through 0023 inventory with matching hashes.");
+  if (id === 5) add("runtime:migration-ledger", "Both fresh reset ledgers contain the exact ordered 0001 through 0025 inventory with matching hashes.");
   if (id === 6) add("runtime:double-reset", `Fresh reset observations 1 and 2 each seeded deterministic rows (${observations.bootstrap.firstReset.seededRows}, ${observations.bootstrap.secondReset.seededRows}).`);
   if (id === 13) add("runtime:loopback-http", "The complete HTTP scenario succeeded on the fixed 127.0.0.1:4317 boundary.");
   if (id === 14) add("runtime:restricted-role", `Business execution used the fixed ${observations.boundary.runtimeRole} role boundary.`);
@@ -578,6 +582,7 @@ async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
     ...PROPERTY_HUB_PERMISSION_FIXTURES,
     ...SCHEDULING_PERMISSION_FIXTURES,
     ...JOB_SERVICE_PERMISSION_FIXTURES,
+    ...MISSION_PLAN_PERMISSION_FIXTURES,
   ]);
   inserted += await insertRows(client, "permission_sets", [PERMISSION_SET_FIXTURE]);
   inserted += await insertRows(client, "permission_set_permissions", [
@@ -587,6 +592,7 @@ async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
     ...PROPERTY_HUB_PERMISSION_SET_PERMISSION_FIXTURES,
     ...SCHEDULING_PERMISSION_SET_PERMISSION_FIXTURES,
     ...JOB_SERVICE_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...MISSION_PLAN_PERMISSION_SET_PERMISSION_FIXTURES,
   ]);
   inserted += await insertRows(client, "membership_permission_sets", MEMBERSHIP_PERMISSION_SET_FIXTURES);
   for (const fixtureTable of CURRENT_REAL_ESTATE_CATALOG_TABLES) {
@@ -612,7 +618,7 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
       database: OPERATIONS_CONSOLE_DATABASE.database,
       user: OWNER_ROLE,
     });
-    if (migration.failed || migration.applied.length !== 24 || migration.skipped.length !== 0) {
+    if (migration.failed || migration.applied.length !== 25 || migration.skipped.length !== 0) {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     await client.query("BEGIN");
@@ -627,7 +633,7 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
     const ledger = await client.query<{ filename: string; sha256: string }>(
       "SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename",
     );
-    if (ledger.rows.length !== 24 || !ledger.rows[0]?.filename.startsWith("0001_") || !ledger.rows[23]?.filename.startsWith("0024_")) {
+    if (ledger.rows.length !== 25 || !ledger.rows[0]?.filename.startsWith("0001_") || !ledger.rows[24]?.filename.startsWith("0025_")) {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     return { ledger: ledger.rows, resetNumber, seededRows };

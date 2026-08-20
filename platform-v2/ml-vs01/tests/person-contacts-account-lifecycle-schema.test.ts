@@ -238,7 +238,9 @@ const RUNTIME_INTAKE_APIS = [
 
 const OPERATIONS_HOME_APIS = [
   'get_operations_home',
+  'get_operations_mission_plan_draft_controls',
   'get_operations_order_context',
+  'get_operations_order_customer_contacts',
   'list_operations_assignment_candidates'
 ];
 
@@ -481,6 +483,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0022_organization_records_dashboard_audited_export_foundation.sql'
       ,'0023_runtime_intake_reconciliation_commands.sql'
       ,'0024_operations_home_scheduling_assignment_console.sql'
+      ,'0025_operations_mission_plan_draft_controls.sql'
     ]);
 
     const result = await runMigrations({
@@ -514,6 +517,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0022_organization_records_dashboard_audited_export_foundation.sql'
       ,'0023_runtime_intake_reconciliation_commands.sql'
       ,'0024_operations_home_scheduling_assignment_console.sql'
+      ,'0025_operations_mission_plan_draft_controls.sql'
     ]);
   });
 
@@ -913,7 +917,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(249);
+      expect(searchPaths.rows).toHaveLength(251);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

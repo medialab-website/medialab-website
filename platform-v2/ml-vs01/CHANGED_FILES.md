@@ -1,11 +1,11 @@
-# P02-M18-A Changed Files
+# P02-M19-A Changed Files
 
-The uncommitted and unstaged candidate contains this exact 69-path set. Migrations `0001`–`0023` and `package-lock.json` remain byte-identical; additive migration `0024` is the only new migration; dependencies are unchanged.
+The uncommitted and unstaged owner-directed Mission Control candidate contains this exact 71-path set. Accepted migrations `0001`–`0024` and `package-lock.json` remain byte-identical; additive projection migration `0025` is the only new migration; dependencies are unchanged. Changes remain within the existing Operations Console, permission-checked read projections, contracts, verification, and documentation paths—no canonical storage or provider surface was added.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
 - platform-v2/ml-vs01/db/migrate.ts
-- platform-v2/ml-vs01/db/migrations/0024_operations_home_scheduling_assignment_console.sql
+- platform-v2/ml-vs01/db/migrations/0025_operations_mission_plan_draft_controls.sql
 - platform-v2/ml-vs01/package.json
 - platform-v2/ml-vs01/scripts/run-internal-operations-console-new-listing.ts
 - platform-v2/ml-vs01/scripts/verify-business-replay-harness.ts
@@ -26,6 +26,7 @@ The uncommitted and unstaged candidate contains this exact 69-path set. Migratio
 - platform-v2/ml-vs01/scripts/verify-mission-plan-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-operational-pilot-golden-path.ts
 - platform-v2/ml-vs01/scripts/verify-operations-home-scheduling-assignment.ts
+- platform-v2/ml-vs01/scripts/verify-operations-mission-plan-workspace.ts
 - platform-v2/ml-vs01/scripts/verify-order-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-organization-records-dashboard-audited-export.ts
 - platform-v2/ml-vs01/scripts/verify-person-contacts-account-lifecycle-schema.ts
@@ -39,7 +40,6 @@ The uncommitted and unstaged candidate contains this exact 69-path set. Migratio
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-access-credential-gateway-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-external-sharing-schema.ts
 - platform-v2/ml-vs01/src/operations-console/app.ts
-- platform-v2/ml-vs01/src/operations-console/contracts.ts
 - platform-v2/ml-vs01/src/operations-console/database.ts
 - platform-v2/ml-vs01/src/operations-console/operations-contracts.ts
 - platform-v2/ml-vs01/src/operations-console/public/app.js
@@ -57,8 +57,10 @@ The uncommitted and unstaged candidate contains this exact 69-path set. Migratio
 - platform-v2/ml-vs01/tests/media-cull-workspace-selected-media-foundation.test.ts
 - platform-v2/ml-vs01/tests/migration-engine.test.ts
 - platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts
+- platform-v2/ml-vs01/tests/operations-console-security.test.ts
 - platform-v2/ml-vs01/tests/operations-console-ui.test.ts
 - platform-v2/ml-vs01/tests/operations-home-scheduling-assignment.test.ts
+- platform-v2/ml-vs01/tests/operations-mission-plan-workspace.test.ts
 - platform-v2/ml-vs01/tests/order-foundation.test.ts
 - platform-v2/ml-vs01/tests/organization-records-dashboard-audited-export-foundation.test.ts
 - platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts

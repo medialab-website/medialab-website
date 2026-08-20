@@ -29,7 +29,7 @@ const status = execFileSync("git", ["status", "--porcelain", "-uall", "platform-
 const changed = status.split("\n").filter(Boolean).map((line) => ({ index: line[0], path: line.slice(3).trim() }));
 if (changed.some((item) => item.index !== " " && item.index !== "?")) fail("candidate contains staged paths");
 const migrationFiles = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrationFiles.length !== 24 || migrationFiles.some((name, index) => !name.startsWith(String(index + 1).padStart(4, "0"))) || migrationFiles[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrationFiles[23] !== "0024_operations_home_scheduling_assignment_console.sql") fail("migration ledger is not exactly 0001-0024");
+if (migrationFiles.length !== 25 || migrationFiles.some((name, index) => !name.startsWith(String(index + 1).padStart(4, "0"))) || migrationFiles[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrationFiles[23] !== "0024_operations_home_scheduling_assignment_console.sql" || migrationFiles[24] !== "0025_operations_mission_plan_draft_controls.sql") fail("migration ledger is not exactly 0001-0025");
 for (const name of migrationFiles.slice(0, 22)) if (sha(readFileSync(join(base, "db/migrations", name))) !== expectedMigrations[name.slice(0, 4)]) fail(`immutable migration mismatch: ${name}`);
 if (sha(readFileSync(join(base, "package-lock.json"))) !== "2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a") fail("package-lock changed");
 const sourcePaths = ["src/operational-pilot", "scripts/run-operational-pilot-golden-path.ts"].flatMap((entry) => {

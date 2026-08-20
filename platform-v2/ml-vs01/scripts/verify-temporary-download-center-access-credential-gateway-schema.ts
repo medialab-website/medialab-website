@@ -87,7 +87,7 @@ const client = new pg.Client({
 await client.connect();
 try {
   const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-  if (ledger.rows.length !== 24 || ledger.rows[18].filename !== migration || ledger.rows[18].sha256 !== packetHash || ledger.rows[19].filename !== '0020_disposable_delivery_surface_local_fixture_foundation.sql' || ledger.rows[20].filename !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql' || ledger.rows[22].filename !== '0023_runtime_intake_reconciliation_commands.sql') fail('migration ledger identity mismatch');
+  if (ledger.rows.length !== 25 || ledger.rows[18].filename !== migration || ledger.rows[18].sha256 !== packetHash || ledger.rows[19].filename !== '0020_disposable_delivery_surface_local_fixture_foundation.sql' || ledger.rows[20].filename !== '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql' || ledger.rows[22].filename !== '0023_runtime_intake_reconciliation_commands.sql') fail('migration ledger identity mismatch');
 
   const tableInventory = await client.query(
     "SELECT tablename,tableowner FROM pg_tables WHERE schemaname='medialab_core' AND tablename=ANY($1::text[]) ORDER BY tablename",

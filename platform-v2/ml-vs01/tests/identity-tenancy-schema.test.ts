@@ -220,6 +220,8 @@ const EXACT_ROUTINE_NAMES = [
   'get_mission_plan_record',
   'get_mission_plan_sensitive_envelopes',
   'get_operations_home',
+  'get_operations_mission_plan_draft_controls',
+  'get_operations_order_customer_contacts',
   'get_operations_order_context',
   'get_order_record',
   'get_property_hub_record',
@@ -543,6 +545,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0022_organization_records_dashboard_audited_export_foundation.sql'
       ,'0023_runtime_intake_reconciliation_commands.sql'
       ,'0024_operations_home_scheduling_assignment_console.sql'
+      ,'0025_operations_mission_plan_draft_controls.sql'
     ]);
   });
 

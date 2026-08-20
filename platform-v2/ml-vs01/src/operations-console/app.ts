@@ -26,6 +26,11 @@ import {
   parseCancel,
   parseConfirm,
   parseEmpty,
+  parseMissionPlanNote,
+  parseMissionPlanContactSelection,
+  parseMissionPlanRevision,
+  parseMissionPlanVersionSelection,
+  parseMissionPlanWorkstreamSelection,
   parseProposedWindow,
   parseReplacement,
   parseRequestedWindow,
@@ -35,6 +40,11 @@ import {
   type AssignmentInput,
   type CancelAppointmentInput,
   type ConfirmAppointmentInput,
+  type MissionPlanActionReceipt,
+  type MissionPlanNoteInput,
+  type MissionPlanOfflinePacket,
+  type MissionPlanSectionInput,
+  type MissionPlanWorkspace,
   type OperationsActionReceipt,
   type OperationsContext,
   type OperationsHome,
@@ -44,6 +54,7 @@ import {
 } from "./operations-contracts.js";
 
 const publicRoot = join(dirname(fileURLToPath(import.meta.url)), "public");
+const brandAssetsRoot = join(dirname(fileURLToPath(import.meta.url)), "../../../../assets/logos");
 const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 const SECURITY_HEADERS = Object.freeze({
@@ -75,6 +86,16 @@ export interface OperationsConsoleApplicationService {
   rescheduleAppointment?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: RescheduleAppointmentInput): Promise<OperationsActionReceipt>;
   assignParticipant?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: AssignmentInput): Promise<OperationsActionReceipt>;
   replaceParticipant?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, assignmentId: string, input: ReplacementInput): Promise<OperationsActionReceipt>;
+  missionPlanWorkspace?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanWorkspace>;
+  createMissionPlanDraft?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanActionReceipt>;
+  reviseMissionPlanDraft?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, sections: MissionPlanSectionInput[]): Promise<MissionPlanActionReceipt>;
+  addMissionPlanNote?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, input: MissionPlanNoteInput): Promise<MissionPlanActionReceipt>;
+  replaceMissionPlanWorkstreams?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, workstreamIds: string[]): Promise<MissionPlanActionReceipt>;
+  replaceMissionPlanContacts?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, contacts: Array<{ personId: string; contactMethodId: string; contactRole: string; visibility: "INTERNAL_STAFF_ONLY" | "ASSIGNED_CREW_ONLY" | "POTENTIALLY_CUSTOMER_VISIBLE" }>): Promise<MissionPlanActionReceipt>;
+  refreshMissionPlanDraft?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string): Promise<MissionPlanActionReceipt>;
+  issueMissionPlanVersion?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string): Promise<MissionPlanActionReceipt>;
+  supersedeMissionPlanVersion?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, baseVersionId: string): Promise<MissionPlanActionReceipt>;
+  missionPlanOfflinePacket?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, versionId: string): Promise<MissionPlanOfflinePacket>;
   close?(): Promise<void>;
 }
 
@@ -208,10 +229,52 @@ export function createOperationsConsoleApp(options: OperationsConsoleApplication
   app.post<{ Params: { orderId: string; appointmentId: string; assignmentId: string }; Body: unknown }>("/api/operations/orders/:orderId/appointments/:appointmentId/assignments/:assignmentId/replace", async (request) =>
     options.service.replaceParticipant!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.appointmentId), canonicalId(request.params.assignmentId), parseReplacement(request.body)));
 
+  app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId/mission-plan", async (request) =>
+    options.service.missionPlanWorkspace!(authenticated(options.sessions, request), canonicalId(request.params.orderId)));
+  app.post<{ Params: { orderId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plan", async (request) => {
+    parseEmpty(request.body); return options.service.createMissionPlanDraft!(authenticated(options.sessions, request), canonicalId(request.params.orderId));
+  });
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/revise", async (request) =>
+    options.service.reviseMissionPlanDraft!(authenticated(options.sessions, request), canonicalId(request.params.orderId),
+      canonicalId(request.params.missionPlanId), parseMissionPlanRevision(request.body).sections));
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/notes", async (request) =>
+    options.service.addMissionPlanNote!(authenticated(options.sessions, request), canonicalId(request.params.orderId),
+      canonicalId(request.params.missionPlanId), parseMissionPlanNote(request.body)));
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/workstreams", async (request) => {
+    const input = parseMissionPlanWorkstreamSelection(request.body);
+    return options.service.replaceMissionPlanWorkstreams!(authenticated(options.sessions, request), canonicalId(request.params.orderId),
+      canonicalId(request.params.missionPlanId), input.workstreamIds);
+  });
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/contacts", async (request) => {
+    const input = parseMissionPlanContactSelection(request.body);
+    return options.service.replaceMissionPlanContacts!(authenticated(options.sessions, request), canonicalId(request.params.orderId),
+      canonicalId(request.params.missionPlanId), input.contacts);
+  });
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/refresh", async (request) => {
+    parseEmpty(request.body); return options.service.refreshMissionPlanDraft!(authenticated(options.sessions, request),
+      canonicalId(request.params.orderId), canonicalId(request.params.missionPlanId));
+  });
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/issue", async (request) => {
+    parseEmpty(request.body); return options.service.issueMissionPlanVersion!(authenticated(options.sessions, request),
+      canonicalId(request.params.orderId), canonicalId(request.params.missionPlanId));
+  });
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/supersede", async (request) => {
+    const input = parseMissionPlanVersionSelection(request.body);
+    return options.service.supersedeMissionPlanVersion!(authenticated(options.sessions, request), canonicalId(request.params.orderId),
+      canonicalId(request.params.missionPlanId), input.versionId);
+  });
+  app.post<{ Params: { orderId: string; missionPlanId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plans/:missionPlanId/offline-packet", async (request, reply) => {
+    const input = parseMissionPlanVersionSelection(request.body);
+    const packet = await options.service.missionPlanOfflinePacket!(authenticated(options.sessions, request),
+      canonicalId(request.params.orderId), canonicalId(request.params.missionPlanId), input.versionId);
+    return reply.type("text/html; charset=utf-8").header("content-disposition", `attachment; filename="${packet.filename}"`).send(packet.html);
+  });
+
   app.get("/", async (_request, reply) => reply.type("text/html; charset=utf-8").send(await readFile(join(publicRoot, "index.html"))));
   app.get("/operations", async (_request, reply) => reply.type("text/html; charset=utf-8").send(await readFile(join(publicRoot, "index.html"))));
   app.get("/app.js", async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(await readFile(join(publicRoot, "app.js"))));
   app.get("/styles.css", async (_request, reply) => reply.type("text/css; charset=utf-8").send(await readFile(join(publicRoot, "styles.css"))));
+  app.get("/brand-logo.jpg", async (_request, reply) => reply.type("image/jpeg").send(await readFile(join(brandAssetsRoot, "flatlogo.jpg"))));
 
   return app;
 }

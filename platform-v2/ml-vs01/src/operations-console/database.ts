@@ -9,6 +9,10 @@ import type {
   OperationsContext,
   OperationsHome,
   OperationsWindowInput,
+  MissionPlanRecord,
+  MissionPlanDraftControls,
+  MissionPlanSectionInput,
+  MissionPlanVisibility,
   ReplacementInput,
   RescheduleAppointmentInput,
 } from "./operations-contracts.js";
@@ -32,6 +36,8 @@ type RawOperationsContext = OperationsContext & {
   appointmentLineageIds: string[];
   assignmentLineageIds: string[];
 };
+type RawJobRecord = { appointments: Array<{ id: string; appointment_id: string }> };
+type MissionPlanSummary = { mission_plan_id: string; appointment_id: string };
 
 export interface CatalogProjectionRow {
   product_id: string;
@@ -564,7 +570,7 @@ export class OperationsConsoleDatabase {
     if (error instanceof OperationsConsoleDatabaseError) return error;
     const code = (error as { code?: string }).code;
     if (code === "42501") return new OperationsConsoleDatabaseError("AUTHORITY", "The operator is not authorized for this operational action.");
-    if (code === "23505" || code === "23514") return new OperationsConsoleDatabaseError("CONFLICT", "The operational state changed; refresh and review it before trying again.");
+    if (code === "23505" || code === "23514" || code === "40001") return new OperationsConsoleDatabaseError("CONFLICT", "The operational state changed; refresh and review it before trying again.");
     if (code?.startsWith("22") || code?.startsWith("23")) return new OperationsConsoleDatabaseError("VALIDATION", "The canonical command rejected incomplete or inconsistent operational evidence.");
     return new OperationsConsoleDatabaseError("UNAVAILABLE", "The operational action could not be completed.");
   }
@@ -579,7 +585,13 @@ export class OperationsConsoleDatabase {
   }
 
   async getOperationsContext(databaseSessionToken: string, orderId: string): Promise<RawOperationsContext> {
-    try { return await this.#context(this.pool, databaseSessionToken, orderId); }
+    try {
+      const context = await this.#context(this.pool, databaseSessionToken, orderId);
+      const result = await this.pool.query<{ get_operations_order_customer_contacts: Array<{
+        contactType: "EMAIL" | "PHONE"; displayValue: string;
+      }> }>("SELECT medialab_core.get_operations_order_customer_contacts($1,$2::uuid)", [databaseSessionToken, orderId]);
+      return { ...context, customer: { ...context.customer, contacts: result.rows[0]!.get_operations_order_customer_contacts } };
+    }
     catch (error) { throw this.#databaseError(error); }
   }
 
@@ -777,6 +789,158 @@ export class OperationsConsoleDatabase {
       await client.query("SELECT medialab_core.replace_appointment_participant_assignment($1,$2,$3::uuid,$4::uuid,$5)",
         [token, key, assignmentId, input.replacementPersonId, input.reason]);
     }, { action: "REPLACE_PARTICIPANT", assignmentId, input });
+  }
+
+  async #missionPlanRelationship(
+    token: string,
+    orderId: string,
+  ): Promise<{ context: RawOperationsContext; jobAppointmentId: string | null; plan: MissionPlanRecord | null; controls: MissionPlanDraftControls | null }> {
+    const context = await this.#context(this.pool, token, orderId);
+    if (!context.job || !context.appointment) return { context, jobAppointmentId: null, plan: null, controls: null };
+    const [jobResult, plansResult] = await Promise.all([
+      this.pool.query<{ get_job_record: RawJobRecord }>(
+        "SELECT medialab_core.get_job_record($1,$2::uuid)", [token, context.job.jobId],
+      ),
+      this.pool.query<{ list_mission_plans: MissionPlanSummary[] }>(
+        "SELECT medialab_core.list_mission_plans($1,$2::uuid,NULL::uuid)", [token, context.job.jobId],
+      ),
+    ]);
+    const jobAppointmentId = jobResult.rows[0]?.get_job_record.appointments
+      .find((item) => item.appointment_id === context.appointment?.appointmentId)?.id ?? null;
+    const summary = plansResult.rows[0]?.list_mission_plans
+      .find((item) => item.appointment_id === context.appointment?.appointmentId);
+    if (!summary) return { context, jobAppointmentId, plan: null, controls: null };
+    const record = await this.pool.query<{ get_mission_plan_record: MissionPlanRecord }>(
+      "SELECT medialab_core.get_mission_plan_record($1,$2::uuid)", [token, summary.mission_plan_id],
+    );
+    const controls = await this.getMissionPlanControls(token, summary.mission_plan_id);
+    return { context, jobAppointmentId, plan: record.rows[0]!.get_mission_plan_record, controls };
+  }
+
+  async getMissionPlanWorkspace(token: string, orderId: string): Promise<{
+    context: RawOperationsContext; jobAppointmentId: string | null; plan: MissionPlanRecord | null; controls: MissionPlanDraftControls | null;
+  }> {
+    try { return await this.#missionPlanRelationship(token, orderId); }
+    catch (error) { throw this.#databaseError(error); }
+  }
+
+  async createMissionPlanDraft(
+    token: string,
+    orderId: string,
+    sections: MissionPlanSectionInput[],
+  ): Promise<{ context: RawOperationsContext; jobAppointmentId: string | null; plan: MissionPlanRecord | null; controls: MissionPlanDraftControls | null }> {
+    try {
+      const relationship = await this.#missionPlanRelationship(token, orderId);
+      if (relationship.plan) return relationship;
+      if (!relationship.jobAppointmentId || !relationship.context.appointment ||
+          !["CONFIRMED", "WEATHER_DELAYED"].includes(relationship.context.appointment.state)) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "Confirm and link an active appointment before creating its Mission Plan.");
+      }
+      const key = `m19a-create-${sha256Evidence({ orderId, sections })}`;
+      const result = await this.pool.query<{ create_mission_plan_draft: string }>(
+        "SELECT medialab_core.create_mission_plan_draft($1,$2,$3::uuid,$4::jsonb,'UNAVAILABLE',NULL::jsonb,$5)",
+        [token, key, relationship.jobAppointmentId, JSON.stringify({ sections }), "Live weather is not connected in this nonproduction packet."],
+      );
+      const planId = result.rows[0]!.create_mission_plan_draft;
+      const record = await this.pool.query<{ get_mission_plan_record: MissionPlanRecord }>(
+        "SELECT medialab_core.get_mission_plan_record($1,$2::uuid)", [token, planId],
+      );
+      return { ...relationship, plan: record.rows[0]!.get_mission_plan_record,
+        controls: await this.getMissionPlanControls(token, planId) };
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async reviseMissionPlanDraft(token: string, missionPlanId: string, sections: MissionPlanSectionInput[]): Promise<MissionPlanRecord> {
+    try {
+      const key = `m19a-revise-${sha256Evidence({ missionPlanId, sections })}`;
+      await this.pool.query(
+        "SELECT medialab_core.revise_mission_plan_draft($1,$2,$3::uuid,$4::jsonb,'UNAVAILABLE',NULL::jsonb,$5)",
+        [token, key, missionPlanId, JSON.stringify({ sections }), "Live weather is not connected in this nonproduction packet."],
+      );
+      return await this.getMissionPlanRecord(token, missionPlanId);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async addMissionPlanNote(token: string, missionPlanId: string, visibility: MissionPlanVisibility, note: string): Promise<MissionPlanRecord> {
+    try {
+      const key = `m19a-note-${sha256Evidence({ missionPlanId, visibility, note })}`;
+      await this.pool.query("SELECT medialab_core.add_mission_plan_note($1,$2,$3::uuid,$4,$5)",
+        [token, key, missionPlanId, visibility, note]);
+      return await this.getMissionPlanRecord(token, missionPlanId);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async refreshMissionPlanDraft(token: string, missionPlanId: string): Promise<MissionPlanRecord> {
+    try {
+      const record = await this.getMissionPlanRecord(token, missionPlanId);
+      const generation = record.draft?.draft_generation ?? 0;
+      await this.pool.query("SELECT medialab_core.refresh_mission_plan_draft($1,$2,$3::uuid)",
+        [token, `m19a-refresh-${sha256Evidence({ missionPlanId, generation })}`, missionPlanId]);
+      return await this.getMissionPlanRecord(token, missionPlanId);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async issueMissionPlanVersion(token: string, missionPlanId: string): Promise<MissionPlanRecord> {
+    try {
+      const record = await this.getMissionPlanRecord(token, missionPlanId);
+      const generation = record.draft?.draft_generation ?? 0;
+      await this.pool.query("SELECT medialab_core.issue_mission_plan_version($1,$2,$3::uuid)",
+        [token, `m19a-issue-${sha256Evidence({ missionPlanId, generation })}`, missionPlanId]);
+      return await this.getMissionPlanRecord(token, missionPlanId);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async supersedeMissionPlanVersion(token: string, missionPlanId: string, baseVersionId: string): Promise<MissionPlanRecord> {
+    try {
+      await this.pool.query("SELECT medialab_core.create_mission_plan_superseding_draft($1,$2,$3::uuid,$4::uuid)",
+        [token, `m19a-supersede-${sha256Evidence({ missionPlanId, baseVersionId })}`, missionPlanId, baseVersionId]);
+      return await this.getMissionPlanRecord(token, missionPlanId);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async recordMissionPlanDownload(token: string, missionPlanId: string, versionId: string): Promise<void> {
+    try {
+      await this.pool.query("SELECT medialab_core.record_mission_plan_open_event($1,$2,$3::uuid,$4::uuid,'OPENED',$5::jsonb)",
+        [token, `m19a-download-${sha256Evidence({ missionPlanId, versionId })}`, missionPlanId, versionId,
+          JSON.stringify({ channel: "OPERATIONS_CONSOLE_OFFLINE_FIELD_PACKET", nonproduction: true })]);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async getMissionPlanRecord(token: string, missionPlanId: string): Promise<MissionPlanRecord> {
+    const result = await this.pool.query<{ get_mission_plan_record: MissionPlanRecord }>(
+      "SELECT medialab_core.get_mission_plan_record($1,$2::uuid)", [token, missionPlanId],
+    );
+    return result.rows[0]!.get_mission_plan_record;
+  }
+
+  async getMissionPlanControls(token: string, missionPlanId: string): Promise<MissionPlanDraftControls> {
+    const result = await this.pool.query<{ get_operations_mission_plan_draft_controls: MissionPlanDraftControls }>(
+      "SELECT medialab_core.get_operations_mission_plan_draft_controls($1,$2::uuid)", [token, missionPlanId],
+    );
+    return result.rows[0]!.get_operations_mission_plan_draft_controls;
+  }
+
+  async replaceMissionPlanWorkstreams(token: string, missionPlanId: string, workstreamIds: string[]): Promise<MissionPlanRecord> {
+    try {
+      const key = `m19a-workstreams-${sha256Evidence({ missionPlanId, workstreamIds })}`;
+      await this.pool.query("SELECT medialab_core.replace_mission_plan_draft_workstreams($1,$2,$3::uuid,$4::uuid[])",
+        [token, key, missionPlanId, workstreamIds]);
+      return await this.getMissionPlanRecord(token, missionPlanId);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async replaceMissionPlanContacts(token: string, missionPlanId: string, contacts: Array<{
+    personId: string; contactMethodId: string; contactRole: string; visibility: MissionPlanVisibility;
+  }>): Promise<MissionPlanRecord> {
+    try {
+      const canonicalContacts = contacts.map((contact) => ({ person_id: contact.personId,
+        contact_method_id: contact.contactMethodId, contact_role: contact.contactRole,
+        visibility_classification: contact.visibility }));
+      const key = `m19a-contacts-${sha256Evidence({ missionPlanId, canonicalContacts })}`;
+      await this.pool.query("SELECT medialab_core.replace_mission_plan_draft_contacts($1,$2,$3::uuid,$4::jsonb)",
+        [token, key, missionPlanId, JSON.stringify(canonicalContacts)]);
+      return await this.getMissionPlanRecord(token, missionPlanId);
+    } catch (error) { throw this.#databaseError(error); }
   }
 
   async close(): Promise<void> {

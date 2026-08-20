@@ -28,6 +28,12 @@ import {
   type AssignmentInput,
   type CancelAppointmentInput,
   type ConfirmAppointmentInput,
+  type MissionPlanActionReceipt,
+  type MissionPlanNoteInput,
+  type MissionPlanOfflinePacket,
+  type MissionPlanRecord,
+  type MissionPlanSectionInput,
+  type MissionPlanWorkspace,
   type OperationsActionReceipt,
   type OperationsContext,
   type OperationsHome,
@@ -38,7 +44,7 @@ import {
 
 const CATALOG_TTL_MS = 10 * 60 * 1_000;
 const PREVIEW_TTL_MS = 15 * 60 * 1_000;
-const DISCLOSURE = "Controlled nonproduction reconstruction evidence. No scheduling, assignment, Mission Plan, payment, media, review, or delivery is created.";
+const DISCLOSURE = "Controlled nonproduction reconstruction evidence. Listing creation does not itself schedule, assign crew, create a Mission Plan, process payment or media, review work, or deliver files.";
 
 interface BoundCatalogState {
   effectiveAt: string;
@@ -69,6 +75,11 @@ interface BoundConfirmationState {
 
 function opaque(bytes: number): string {
   return randomBytes(bytes).toString("base64url");
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
 function cents(value: string | number | unknown): number {
@@ -104,10 +115,8 @@ export class OperationsConsoleService {
     const now = this.#now();
     const effectiveAt = new Date(now).toISOString();
     const projection = await this.#database.getCatalog(session.databaseSessionToken, effectiveAt);
-    const inclusionCodes = new Set(projection.inclusions.map((row) => row.package_product_code));
     const grouped = new Map<string, typeof projection.rows>();
     for (const row of projection.rows) {
-      if (row.product_kind === "PACKAGE" && !inclusionCodes.has(row.product_code)) continue;
       const rows = grouped.get(row.product_code) ?? [];
       rows.push(row);
       grouped.set(row.product_code, rows);
@@ -378,6 +387,174 @@ export class OperationsConsoleService {
   }
   replaceParticipant(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, assignmentId: string, input: ReplacementInput): Promise<OperationsActionReceipt> {
     return this.#action("REPLACE_PARTICIPANT", () => this.#database.replaceParticipant(session.databaseSessionToken, orderId, appointmentId, assignmentId, input));
+  }
+
+  async missionPlanWorkspace(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanWorkspace> {
+    try {
+      const result = await this.#database.getMissionPlanWorkspace(session.databaseSessionToken, orderId);
+      const readiness = !result.context.job || !result.context.appointment
+        ? "NEEDS_CONFIRMED_APPOINTMENT" as const
+        : !result.jobAppointmentId
+          ? "NEEDS_JOB_APPOINTMENT_LINK" as const
+          : "READY" as const;
+      return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "MissionPlanWorkspaceV1" as const,
+        readiness, context: this.#safeContext(result.context), plan: result.plan, controls: result.controls });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  #defaultMissionPlanSections(context: OperationsContext): MissionPlanSectionInput[] {
+    const appointment = context.appointment!;
+    const address = [context.property.addressLine1, context.property.addressLine2, context.property.locality,
+      context.property.administrativeArea, context.property.postalCode].filter(Boolean).join(", ");
+    const crew = appointment.assignments.length
+      ? appointment.assignments.map((assignment) => `${assignment.displayName} — ${assignment.operationalRole.toLowerCase().replaceAll("_", " ")}`).join("\n")
+      : "Crew assignment is still pending.";
+    return [
+      { label: "Pre-shoot checklist", visibility: "ASSIGNED_CREW_ONLY",
+        content: "Confirm camera bodies, charged batteries, formatted cards, lenses, tripod, gimbal, lighting, and any service-specific gear. Review access and priority shots before departure." },
+      { label: "End-of-shoot checklist", visibility: "ASSIGNED_CREW_ONLY",
+        content: "Confirm every requested area and service was captured. Count cards, batteries, lenses, and support gear. Walk the property, gather equipment, and leave doors, lights, and access points as instructed." },
+      { label: "Directions and arrival", visibility: "ASSIGNED_CREW_ONLY", content: address },
+      { label: "Shoot priorities", visibility: "POTENTIALLY_CUSTOMER_VISIBLE",
+        content: context.services.map((service) => `${service.displayName} × ${service.quantity}`).join("\n") },
+      { label: "Access and property notes", visibility: "INTERNAL_STAFF_ONLY",
+        content: "Add only verified arrival and access instructions. Never place alarm codes, lockbox codes, or credentials in this section." },
+      { label: "Internal notes", visibility: "INTERNAL_STAFF_ONLY",
+        content: `Assigned crew\n${crew}\n\nAdd internal coordination notes and reference-media guidance here.` },
+    ];
+  }
+
+  #missionPlanReceipt(action: string, plan: MissionPlanRecord): MissionPlanActionReceipt {
+    return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "MissionPlanActionReceiptV1" as const,
+      action, replaySafe: true as const, plan });
+  }
+
+  async createMissionPlanDraft(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanActionReceipt> {
+    try {
+      const workspace = await this.#database.getMissionPlanWorkspace(session.databaseSessionToken, orderId);
+      let plan = workspace.plan;
+      if (!plan) {
+        const created = await this.#database.createMissionPlanDraft(
+          session.databaseSessionToken, orderId, this.#defaultMissionPlanSections(workspace.context));
+        plan = created.plan;
+        const workstreams = created.controls?.eligibleWorkstreams ?? [];
+        if (plan && workstreams.length) {
+          plan = await this.#database.replaceMissionPlanWorkstreams(session.databaseSessionToken, plan.mission_plan_id,
+            workstreams.map((workstream) => workstream.workstreamId));
+        }
+        const contacts = created.controls?.eligibleContacts ?? [];
+        if (plan && contacts.length) {
+          plan = await this.#database.replaceMissionPlanContacts(session.databaseSessionToken, plan.mission_plan_id,
+            contacts.map((contact) => ({ personId: contact.personId, contactMethodId: contact.contactMethodId,
+              contactRole: contact.contactRole, visibility: "ASSIGNED_CREW_ONLY" as const })));
+        }
+      }
+      if (!plan) throw new OperationsConsoleDatabaseError("CONFLICT", "The Mission Plan could not be created for this appointment.");
+      return this.#missionPlanReceipt("CREATE_MISSION_PLAN_DRAFT", plan);
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async #requireMissionPlan(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string): Promise<MissionPlanRecord> {
+    const workspace = await this.#database.getMissionPlanWorkspace(session.databaseSessionToken, orderId);
+    if (!workspace.plan || workspace.plan.mission_plan_id !== missionPlanId) {
+      throw new OperationsConsoleDatabaseError("AUTHORITY", "The requested Mission Plan is not part of this operational order.");
+    }
+    return workspace.plan;
+  }
+
+  async reviseMissionPlanDraft(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string,
+    sections: MissionPlanSectionInput[]): Promise<MissionPlanActionReceipt> {
+    try {
+      await this.#requireMissionPlan(session, orderId, missionPlanId);
+      return this.#missionPlanReceipt("REVISE_MISSION_PLAN_DRAFT",
+        await this.#database.reviseMissionPlanDraft(session.databaseSessionToken, missionPlanId, sections));
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async addMissionPlanNote(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string,
+    input: MissionPlanNoteInput): Promise<MissionPlanActionReceipt> {
+    try {
+      await this.#requireMissionPlan(session, orderId, missionPlanId);
+      return this.#missionPlanReceipt("ADD_MISSION_PLAN_NOTE", await this.#database.addMissionPlanNote(
+        session.databaseSessionToken, missionPlanId, input.visibility, input.note));
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async replaceMissionPlanWorkstreams(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string,
+    workstreamIds: string[]): Promise<MissionPlanActionReceipt> {
+    try {
+      await this.#requireMissionPlan(session, orderId, missionPlanId);
+      return this.#missionPlanReceipt("REPLACE_MISSION_PLAN_WORKSTREAMS",
+        await this.#database.replaceMissionPlanWorkstreams(session.databaseSessionToken, missionPlanId, workstreamIds));
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async replaceMissionPlanContacts(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string,
+    contacts: Array<{ personId: string; contactMethodId: string; contactRole: string;
+      visibility: "INTERNAL_STAFF_ONLY" | "ASSIGNED_CREW_ONLY" | "POTENTIALLY_CUSTOMER_VISIBLE" }>): Promise<MissionPlanActionReceipt> {
+    try {
+      await this.#requireMissionPlan(session, orderId, missionPlanId);
+      return this.#missionPlanReceipt("REPLACE_MISSION_PLAN_CONTACTS",
+        await this.#database.replaceMissionPlanContacts(session.databaseSessionToken, missionPlanId, contacts));
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async refreshMissionPlanDraft(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string): Promise<MissionPlanActionReceipt> {
+    try {
+      await this.#requireMissionPlan(session, orderId, missionPlanId);
+      return this.#missionPlanReceipt("REFRESH_MISSION_PLAN_DRAFT",
+        await this.#database.refreshMissionPlanDraft(session.databaseSessionToken, missionPlanId));
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async issueMissionPlanVersion(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string): Promise<MissionPlanActionReceipt> {
+    try {
+      await this.#requireMissionPlan(session, orderId, missionPlanId);
+      return this.#missionPlanReceipt("ISSUE_MISSION_PLAN_VERSION",
+        await this.#database.issueMissionPlanVersion(session.databaseSessionToken, missionPlanId));
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async supersedeMissionPlanVersion(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string,
+    baseVersionId: string): Promise<MissionPlanActionReceipt> {
+    try {
+      const plan = await this.#requireMissionPlan(session, orderId, missionPlanId);
+      if (!plan.versions.some((version) => version.mission_plan_version_id === baseVersionId)) {
+        throw new OperationsConsoleDatabaseError("AUTHORITY", "The selected issued version is unavailable.");
+      }
+      return this.#missionPlanReceipt("CREATE_MISSION_PLAN_SUPERSEDING_DRAFT",
+        await this.#database.supersedeMissionPlanVersion(session.databaseSessionToken, missionPlanId, baseVersionId));
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async missionPlanOfflinePacket(session: ResolvedDevelopmentOperatorSession, orderId: string,
+    missionPlanId: string, versionId: string): Promise<MissionPlanOfflinePacket> {
+    try {
+      const workspace = await this.#database.getMissionPlanWorkspace(session.databaseSessionToken, orderId);
+      const plan = workspace.plan;
+      if (!plan || plan.mission_plan_id !== missionPlanId) {
+        throw new OperationsConsoleDatabaseError("AUTHORITY", "The requested Mission Plan is not part of this operational order.");
+      }
+      const version = plan.versions.find((candidate) => candidate.mission_plan_version_id === versionId);
+      if (!version) throw new OperationsConsoleDatabaseError("AUTHORITY", "The selected issued version is unavailable.");
+      await this.#database.recordMissionPlanDownload(session.databaseSessionToken, missionPlanId, versionId);
+      const sections = version.content.sections.filter((section) => section.visibility !== "INTERNAL_STAFF_ONLY");
+      const workstreams = version.content.selected_workstreams.map((item) =>
+        `<li>${escapeHtml(item.source_description)} · ${escapeHtml(item.state)}</li>`).join("");
+      const sectionHtml = sections.map((section) =>
+        `<section><p class="kicker">${escapeHtml(section.visibility.replaceAll("_", " "))}</p><h2>${escapeHtml(section.label)}</h2><p>${escapeHtml(section.content).replaceAll("\n", "<br>")}</p></section>`).join("");
+      const visibleContacts = version.content.contacts.filter((contact) => contact.visibility !== "INTERNAL_STAFF_ONLY");
+      const contactHtml = visibleContacts.map((contact) => {
+        const kind = String(contact.contact_type ?? "").toUpperCase(); const value = String(contact.normalized_value ?? "");
+        const href = kind === "EMAIL" ? `mailto:${escapeHtml(value)}` : kind === "PHONE" ? `tel:${escapeHtml(value)}` : "";
+        return `<li>${href ? `<a href="${href}">${escapeHtml(kind === "EMAIL" ? "Email" : "Call")}</a> · ` : ""}${escapeHtml(value)}</li>`;
+      }).join("");
+      const visibleNotes = version.content.notes.filter((note) => note.visibility !== "INTERNAL_STAFF_ONLY");
+      const noteHtml = visibleNotes.map((note) => `<li>${escapeHtml(note.text)}</li>`).join("");
+      const weather = version.content.weather; const appointment = workspace.context.appointment!;
+      const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MediaLab Mission Plan v${version.version_number}</title><style>body{margin:0;background:#121212;color:#f5f5f5;font:16px/1.5 Inter,Roboto,system-ui,sans-serif}main{max-width:860px;margin:auto;padding:48px 28px}.brand,a{color:#ffc107}.brand{font-weight:900;letter-spacing:.12em;text-transform:uppercase}.meta{color:#8e8e8e}section{margin:20px 0;padding:22px;background:#1e1e1e;border:1px solid #333;border-radius:8px}h1,h2{line-height:1.15}h1{font-size:34px}h2{font-size:20px}.kicker{color:#ffc107;font-size:12px;text-transform:uppercase;letter-spacing:.08em}footer{margin-top:40px;color:#8e8e8e;border-top:1px solid #333;padding-top:20px}@media print{body{background:#fff;color:#111}section{background:#fff;border-color:#bbb}.meta,footer{color:#444}}</style></head><body><main><header><p class="brand">MediaLab · Field Operations</p><h1>Mission Plan</h1><p class="meta">Version ${version.version_number} · issued ${escapeHtml(version.issued_at)} · offline nonproduction packet</p><p>${escapeHtml(appointment.localStartsAt)} · ${escapeHtml(appointment.ianaTimezone)}</p></header>${sectionHtml}<section><p class="kicker">Assigned services</p><h2>Workstreams</h2><ul>${workstreams}</ul></section><section><p class="kicker">Safe contact actions</p><h2>Contacts</h2><ul>${contactHtml || "<li>No field-visible contact selected.</li>"}</ul></section><section><p class="kicker">Field notes</p><h2>Notes</h2><ul>${noteHtml || "<li>No field-visible notes.</li>"}</ul></section><section><p class="kicker">Weather evidence</p><h2>${escapeHtml(weather.status)}</h2><p>${escapeHtml(weather.unavailable_reason ?? "Canonical weather evidence is attached.")}</p></section><footer>Schema ${escapeHtml(version.content.schema_version)} · canonical evidence ${escapeHtml(version.canonical_json_sha256)} · This packet excludes internal-only sections and protected credentials.</footer></main></body></html>`;
+      return { filename: `medialab-mission-plan-v${version.version_number}.html`, html };
+    } catch (error) { return this.#translateOperationsError(error); }
   }
 
   #confirmation(preview: BoundPreviewState, transaction: ListingTransactionResult, replayed: boolean): CanonicalOrderConfirmationV1 {

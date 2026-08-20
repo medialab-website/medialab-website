@@ -65,7 +65,7 @@ if (adapterDml.length !== 1 || !/INSERT INTO medialab_core\.development_sessions
 const diff = BunLikeGitDiff();
 if (/\bGRANT\b[^;]*\bPUBLIC\b/i.test(diff)) fail("new PUBLIC authority detected");
 const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrations.length !== 24 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrations[23] !== "0024_operations_home_scheduling_assignment_console.sql") fail("migration inventory is not exact 0001-0024");
+if (migrations.length !== 25 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrations[23] !== "0024_operations_home_scheduling_assignment_console.sql" || migrations[24] !== "0025_operations_mission_plan_draft_controls.sql") fail("migration inventory is not exact 0001-0025");
 for (const name of migrations.slice(0, 22)) {
   const predecessor = requireChildProcess().execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
   if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);

@@ -78,7 +78,7 @@ describe("M17-A session, HTTP, runtime, and source authority", () => {
   });
 
   it("sets the complete security policy on HTML, assets, JSON, and errors", async () => {
-    for (const url of ["/", "/app.js", "/styles.css", "/health", "/missing"]) {
+    for (const url of ["/", "/app.js", "/styles.css", "/brand-logo.jpg", "/health", "/missing"]) {
       const response = await app.inject({ method: "GET", url, headers: { host: HOST_HEADERS.host } });
       expect(response.headers["cache-control"]).toBe("no-store, max-age=0");
       expect(response.headers["x-content-type-options"]).toBe("nosniff");

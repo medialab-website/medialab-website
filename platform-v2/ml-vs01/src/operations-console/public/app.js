@@ -12,6 +12,7 @@ const state = {
   previewing: false,
   creating: false,
   ready: false,
+  serviceMode: "PACKAGE",
 };
 
 const byId = (id) => document.getElementById(id);
@@ -169,11 +170,120 @@ function normalizeChoice(raw, index) {
   return {
     choiceHandle: raw.choiceHandle,
     name: firstString(raw, ["displayName", "name", "title", "frozenName"], `Catalog choice ${index + 1}`),
-    description: firstString(raw, ["description", "summary"], "Available for this nonproduction listing."),
-    amountLabel: moneyLabel(raw) || firstString(raw, ["displayAmount", "priceLabel", "formattedPrice"], "Calculated by the server at review"),
+    description: firstString(raw, ["description", "summary"], "Available for this property."),
+    amountLabel: moneyLabel(raw) || (Array.isArray(raw.priceBrackets) && raw.priceBrackets.length === 1
+      ? moneyLabel({ displayedPriceCents: raw.priceBrackets[0].amountCents, currencyCode: raw.priceBrackets[0].currencyCode }) : "Calculated at review"),
     isPackage: raw.isPackage === true || kind.includes("PACKAGE"),
     requiresSquareFeet: basis === "SQUARE_FEET" || raw.requiresSquareFeet === true,
+    inclusions: Array.isArray(raw.inclusions) ? raw.inclusions : [],
+    priceBrackets: Array.isArray(raw.priceBrackets) ? raw.priceBrackets : [],
   };
+}
+
+function isStandardPropertyPackage(choice) {
+  return choice.isPackage && choice.inclusions.length > 0;
+}
+
+function propertyPackageOrder(choice) {
+  const bracket = choice.priceBrackets[0];
+  if (!bracket || bracket.basis !== "SQUARE_FEET") return Number.MAX_SAFE_INTEGER;
+  return bracket.lowerBound === null ? 0 : Number(bracket.lowerBound);
+}
+
+function addOnGroup(choice) {
+  const name = choice.name.toLowerCase();
+  if (name === "3d video" || /gla report|cad files/.test(name)) return "CubiCasa & floor plans";
+  if (/matterport/.test(name)) return "Matterport";
+  if (/zillow/.test(name)) return "Zillow 3D Home";
+  if (/video|agent intro/.test(name)) return "Video";
+  return "Photo";
+}
+
+function packageRangeLabel(choice) {
+  const bracket = choice.priceBrackets[0];
+  if (!bracket) return choice.requiresSquareFeet ? "Square-foot pricing" : "Property package";
+  if (bracket.basis !== "SQUARE_FEET") return "Land and non-home properties";
+  const lower = bracket.lowerBound === null ? null : Number(bracket.lowerBound);
+  const upper = bracket.upperBound === null ? null : Number(bracket.upperBound);
+  if ((lower === null || lower <= 0) && upper !== null) return `${bracket.upperInclusive ? "Up to" : "Under"} ${upper.toLocaleString()} sq ft`;
+  if (lower !== null && upper === null) return `Over ${lower.toLocaleString()} sq ft`;
+  if (lower !== null && upper !== null) return `${lower.toLocaleString()}–${upper.toLocaleString()} sq ft`;
+  return "Square-foot pricing";
+}
+
+function packageMatchesSquareFeet(choice, squareFeet) {
+  const bracket = choice.priceBrackets.find((item) => item.basis === "SQUARE_FEET");
+  if (!bracket || !Number.isSafeInteger(squareFeet) || squareFeet <= 0) return false;
+  const lower = bracket.lowerBound === null ? null : Number(bracket.lowerBound);
+  const upper = bracket.upperBound === null ? null : Number(bracket.upperBound);
+  const lowerOk = lower === null || (bracket.lowerInclusive ? squareFeet >= lower : squareFeet > lower);
+  const upperOk = upper === null || (bracket.upperInclusive ? squareFeet <= upper : squareFeet < upper);
+  return lowerOk && upperOk;
+}
+
+function renderCatalogChoice(choice, index, compact = false) {
+  const card = element("div", `catalog-choice${compact ? " is-compact" : ""}`);
+  card.dataset.standardPackage = String(isStandardPropertyPackage(choice));
+  const checkId = `service-choice-${index}`;
+  const descriptionId = `service-description-${index}`;
+  const control = element("label", "choice-control");
+  const checkbox = document.createElement("input");
+  checkbox.id = checkId;
+  checkbox.type = "checkbox";
+  checkbox.name = "serviceChoice";
+  checkbox.value = String(index);
+  checkbox.dataset.choiceIndex = String(index);
+  checkbox.setAttribute("aria-describedby", descriptionId);
+  const copy = element("span", "choice-copy");
+  const titleRow = element("span", "choice-title-row");
+  titleRow.append(element("strong", "choice-name", choice.name), element("span", "choice-amount", choice.amountLabel));
+  copy.append(titleRow);
+  copy.append(element("span", "choice-description", isStandardPropertyPackage(choice) ? packageRangeLabel(choice) : choice.description));
+  if (isStandardPropertyPackage(choice) && packageMatchesSquareFeet(choice, readProperty().squareFeet)) {
+    copy.append(element("span", "recommended-chip", "Recommended for this square footage"));
+  }
+  control.append(checkbox, copy);
+
+  const details = element("div", "choice-details");
+  details.id = descriptionId;
+  if (choice.inclusions.length) {
+    const inclusion = document.createElement("details"); inclusion.className = "package-inclusions";
+    const summary = document.createElement("summary"); summary.textContent = "What’s included"; inclusion.append(summary);
+    const list = element("ul", ""); choice.inclusions.forEach((item) => list.append(element("li", "", `${item.displayName} × ${item.quantity}`)));
+    inclusion.append(list); details.append(inclusion);
+  }
+  const quantityLabel = document.createElement("label");
+  quantityLabel.className = `choice-quantity${choice.isPackage ? " is-fixed" : ""}`;
+  quantityLabel.setAttribute("for", `service-quantity-${index}`);
+  quantityLabel.textContent = "Quantity";
+  const quantity = document.createElement("input");
+  quantity.id = `service-quantity-${index}`;
+  quantity.type = "number";
+  quantity.inputMode = "numeric";
+  quantity.min = "1";
+  quantity.max = choice.isPackage ? "1" : "99";
+  quantity.step = "1";
+  quantity.value = "1";
+  quantity.disabled = true;
+  quantity.readOnly = choice.isPackage;
+  quantity.dataset.quantityIndex = String(index);
+  quantityLabel.append(quantity);
+  details.append(quantityLabel);
+  card.append(control, details);
+  return card;
+}
+
+function updateServiceMode() {
+  document.querySelectorAll("[data-service-mode]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.serviceMode === state.serviceMode)));
+  const packages = byId("standard-package-section");
+  if (packages) packages.hidden = state.serviceMode !== "PACKAGE";
+  const addOns = byId("add-on-section");
+  const selectedPackage = document.querySelector('.catalog-choice[data-standard-package="true"] input[name="serviceChoice"]:checked');
+  if (addOns) addOns.hidden = state.serviceMode === "PACKAGE" && !selectedPackage;
+  const addOnHeading = byId("add-on-heading");
+  if (addOnHeading) addOnHeading.textContent = state.serviceMode === "PACKAGE" ? "2. Add anything else" : "Choose the services needed";
+  const prompt = byId("add-on-prompt");
+  if (prompt) prompt.hidden = state.serviceMode !== "PACKAGE" || Boolean(selectedPackage);
 }
 
 function renderCatalog(payload) {
@@ -192,47 +302,44 @@ function renderCatalog(payload) {
   status.hidden = true;
   byId("services-continue").disabled = false;
 
-  state.choices.forEach((choice, index) => {
-    const card = element("div", "catalog-choice");
-    const checkId = `service-choice-${index}`;
-    const descriptionId = `service-description-${index}`;
-    const control = element("label", "choice-control");
-    const checkbox = document.createElement("input");
-    checkbox.id = checkId;
-    checkbox.type = "checkbox";
-    checkbox.name = "serviceChoice";
-    checkbox.value = String(index);
-    checkbox.dataset.choiceIndex = String(index);
-    checkbox.setAttribute("aria-describedby", descriptionId);
-    const copy = element("span", "choice-copy");
-    const titleRow = element("span", "choice-title-row");
-    titleRow.append(element("strong", "choice-name", choice.name));
-    titleRow.append(element("span", "choice-kind", choice.isPackage ? "Package" : "Service"));
-    copy.append(titleRow, element("span", "choice-description", choice.description), element("span", "choice-amount", choice.amountLabel));
-    control.append(checkbox, copy);
-
-    const details = element("div", "choice-details");
-    details.id = descriptionId;
-    if (choice.requiresSquareFeet) details.append(element("p", "basis-note", "Uses the property square footage for the server calculation."));
-    const quantityLabel = document.createElement("label");
-    quantityLabel.setAttribute("for", `service-quantity-${index}`);
-    quantityLabel.textContent = "Quantity";
-    const quantity = document.createElement("input");
-    quantity.id = `service-quantity-${index}`;
-    quantity.type = "number";
-    quantity.inputMode = "numeric";
-    quantity.min = "1";
-    quantity.max = choice.isPackage ? "1" : "99";
-    quantity.step = "1";
-    quantity.value = "1";
-    quantity.disabled = true;
-    quantity.readOnly = choice.isPackage;
-    quantity.dataset.quantityIndex = String(index);
-    quantityLabel.append(quantity);
-    details.append(quantityLabel);
-    card.append(control, details);
-    container.append(card);
+  const path = element("div", "service-path");
+  path.append(element("p", "service-path-title", "How would you like to start?"));
+  const pathButtons = element("div", "service-path-buttons");
+  [["PACKAGE", "Choose a property package"], ["A_LA_CARTE", "Choose à la carte"]].forEach(([value, label]) => {
+    const button = element("button", "service-path-button", label); button.type = "button"; button.dataset.serviceMode = value;
+    button.addEventListener("click", () => {
+      state.serviceMode = value;
+      if (value === "A_LA_CARTE") {
+        document.querySelectorAll('.catalog-choice[data-standard-package="true"] input[name="serviceChoice"]:checked').forEach((checkbox) => {
+          checkbox.checked = false; checkbox.closest(".catalog-choice")?.classList.remove("is-selected");
+        });
+      }
+      state.preview = null; state.previewReceipt = null; updateServiceMode();
+    }); pathButtons.append(button);
   });
+  path.append(pathButtons); container.append(path);
+
+  const packageSection = element("section", "catalog-section"); packageSection.id = "standard-package-section";
+  packageSection.append(element("h3", "", "1. Choose the property package"), element("p", "section-intro", "Home packages are matched to square footage. Choose Land Package for land-only work."));
+  const packageGrid = element("div", "package-grid");
+  state.choices.map((choice, index) => ({ choice, index })).filter(({ choice }) => isStandardPropertyPackage(choice))
+    .sort((left, right) => propertyPackageOrder(left.choice) - propertyPackageOrder(right.choice))
+    .forEach(({ choice, index }) => packageGrid.append(renderCatalogChoice(choice, index)));
+  packageSection.append(packageGrid); container.append(packageSection);
+
+  const addOnPrompt = element("p", "add-on-prompt", "Choose a property package to reveal its add-ons."); addOnPrompt.id = "add-on-prompt"; container.append(addOnPrompt);
+  const addOnSection = element("section", "catalog-section"); addOnSection.id = "add-on-section";
+  const addOnHeading = element("h3", "", "2. Add anything else"); addOnHeading.id = "add-on-heading";
+  addOnSection.append(addOnHeading, element("p", "section-intro", "Open only the group you need. Quantities can be adjusted for individual services."));
+  const groups = ["Video", "Photo", "Matterport", "Zillow 3D Home", "CubiCasa & floor plans"];
+  groups.forEach((groupName) => {
+    const choices = state.choices.map((choice, index) => ({ choice, index })).filter(({ choice }) => !isStandardPropertyPackage(choice) && addOnGroup(choice) === groupName);
+    if (!choices.length) return;
+    const group = document.createElement("details"); group.className = "add-on-group";
+    const summary = document.createElement("summary"); summary.append(element("span", "", groupName), element("span", "group-count", `${choices.length} option${choices.length === 1 ? "" : "s"}`)); group.append(summary);
+    const grid = element("div", "add-on-grid"); choices.forEach(({ choice, index }) => grid.append(renderCatalogChoice(choice, index, true))); group.append(grid); addOnSection.append(group);
+  });
+  container.append(addOnSection); updateServiceMode();
 }
 
 function selectedServices() {
@@ -447,7 +554,7 @@ function renderConfirmation(payload) {
   const record = canonicalRecord(payload);
   const operationsLink = byId("open-order-operations");
   const canonicalOrderId = extractOrderId(record);
-  if (operationsLink && canonicalOrderId) operationsLink.href = `/operations?orderId=${encodeURIComponent(canonicalOrderId)}`;
+  if (operationsLink && canonicalOrderId) operationsLink.href = `/operations?queue=attention&orderId=${encodeURIComponent(canonicalOrderId)}`;
   const container = byId("confirmation-content");
   clearNode(container);
 
@@ -610,6 +717,7 @@ function bindEvents() {
     state.preview = null;
     state.previewReceipt = null;
     state.pendingOrderId = null;
+    if (state.catalog) renderCatalog(state.catalog);
     showStep("services");
   });
 
@@ -621,12 +729,19 @@ function bindEvents() {
   byId("catalog-choices").addEventListener("change", (event) => {
     const checkbox = event.target.closest('input[name="serviceChoice"]');
     if (!checkbox) return;
+    const choice = state.choices[Number(checkbox.dataset.choiceIndex)];
+    if (checkbox.checked && isStandardPropertyPackage(choice)) {
+      document.querySelectorAll('.catalog-choice[data-standard-package="true"] input[name="serviceChoice"]:checked').forEach((other) => {
+        if (other !== checkbox) { other.checked = false; other.closest(".catalog-choice")?.classList.remove("is-selected"); }
+      });
+    }
     const quantity = byId(`service-quantity-${checkbox.dataset.choiceIndex}`);
     if (quantity) quantity.disabled = !checkbox.checked;
     checkbox.closest(".catalog-choice")?.classList.toggle("is-selected", checkbox.checked);
     state.preview = null;
     state.previewReceipt = null;
     hideError();
+    updateServiceMode();
   });
 
   document.querySelectorAll("[data-back]").forEach((button) => {
@@ -655,13 +770,21 @@ function bindEvents() {
   byId("retry-startup").addEventListener("click", initialize);
 }
 
-const operationsState = { queue: "today", home: null, selectedOrderId: null, candidates: [] };
+const operationsState = { queue: "attention", home: null, selectedOrderId: null, candidates: [] };
 
 function operationsError(message) {
   byId("operations-error-message").textContent = message;
   byId("operations-error").hidden = false;
   byId("operations-error").focus();
 }
+
+function operationsSuccess(message) {
+  byId("operations-success-message").textContent = message;
+  byId("operations-success").hidden = false;
+  announce(message);
+}
+
+function clearOperationsSuccess() { byId("operations-success").hidden = true; }
 
 function operationsAddress(context) {
   return [context.property.addressLine1, context.property.addressLine2, context.property.locality,
@@ -684,24 +807,28 @@ function operationalDateTime(localStartsAt, ianaTimezone) {
   const parsed = new Date(`${local.slice(0, 19)}Z`);
   if (Number.isNaN(parsed.valueOf())) return `${localStartsAt} · ${ianaTimezone}`;
   // UTC formatting preserves the canonical local wall clock instead of applying the viewer's browser timezone.
-  return `${new Intl.DateTimeFormat([], { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(parsed)} · ${ianaTimezone}`;
+  return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric",
+    minute: "2-digit", hour12: true, timeZone: "UTC" }).format(parsed)
+    .replace(/\s+at\s+/u, " · ").replace(/\bAM\b/u, "a.m.").replace(/\bPM\b/u, "p.m.");
 }
 
 function queueItems() {
   const sections = operationsState.home?.sections;
   if (!sections) return [];
   if (operationsState.queue === "attention") return sections.needsAttention;
-  if (operationsState.queue === "today") return sections.today;
-  return sections.upcoming;
+  if (operationsState.queue === "completed") return (operationsState.home.items || []).filter((item) => item.job?.state === "COMPLETED");
+  if (operationsState.queue === "today") return sections.today.filter((item) => item.job?.state !== "COMPLETED");
+  return sections.upcoming.filter((item) => item.job?.state !== "COMPLETED");
 }
 
 function renderOperationsQueue() {
   const counts = operationsState.home?.counts || { today: 0, upcoming: 0, needsAttention: 0 };
-  byId("today-count").textContent = String(counts.today);
-  byId("upcoming-count").textContent = String(counts.upcoming);
+  byId("today-count").textContent = String((operationsState.home?.sections.today || []).filter((item) => item.job?.state !== "COMPLETED").length);
+  byId("upcoming-count").textContent = String((operationsState.home?.sections.upcoming || []).filter((item) => item.job?.state !== "COMPLETED").length);
   byId("attention-count").textContent = String(counts.needsAttention);
+  byId("completed-count").textContent = String((operationsState.home?.items || []).filter((item) => item.job?.state === "COMPLETED").length);
   byId("queue-heading").textContent = operationsState.queue === "attention" ? "Needs attention" :
-    operationsState.queue === "upcoming" ? "Upcoming" : "Today";
+    operationsState.queue === "upcoming" ? "Upcoming" : operationsState.queue === "completed" ? "Completed" : "Today";
   const list = byId("operations-list"); clearNode(list);
   const items = queueItems();
   if (!items.length) {
@@ -713,10 +840,10 @@ function renderOperationsQueue() {
     const button = element("button", `operation-card${operationsState.selectedOrderId === item.orderId ? " is-selected" : ""}`);
     button.type = "button"; button.dataset.orderId = item.orderId;
     const top = element("span", "operation-card-top");
-    top.append(element("strong", "", item.customer.displayName || "Customer"),
+    top.append(element("strong", "", operationsAddress(item)),
       element("span", "appointment-time", item.appointment ? operationalDateTime(item.appointment.localStartsAt, item.appointment.ianaTimezone) : "Not scheduled"));
     const services = item.services.map((service) => service.displayName).join(" · ");
-    button.append(top, element("span", "operation-address", operationsAddress(item)), element("span", "operation-services", services));
+    button.append(top, element("span", "operation-address", item.customer.displayName || "Customer"), element("span", "operation-services", services));
     if (item.attention.length) {
       const alerts = element("span", "operation-alerts");
       item.attention.slice(0, 2).forEach((code) => alerts.append(element("span", "attention-chip", attentionLabel(code))));
@@ -746,15 +873,32 @@ function selectField(label, name, choices) {
 
 function actionButton(label) { const button = element("button", "button button-primary", label); button.type = "submit"; return button; }
 
-async function runOperation(path, body, button) {
-  markBusy(button, true, "Saving…"); byId("operations-error").hidden = true;
+async function runOperation(path, body, button, options = {}) {
+  markBusy(button, true, "Saving…"); byId("operations-error").hidden = true; clearOperationsSuccess();
   try {
     const receipt = await fetchJson(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     operationsState.selectedOrderId = receipt.context.orderId;
-    await loadOperationsHome(false); await openOperationsDetail(receipt.context.orderId, receipt.context);
-    announce("Operational change saved.");
+    await loadOperationsHome(false);
+    if (!queueItems().some((item) => item.orderId === receipt.context.orderId)) {
+      const destinations = ["attention", "today", "upcoming", "completed"];
+      const destination = destinations.find((queue) => { operationsState.queue = queue; return queueItems().some((item) => item.orderId === receipt.context.orderId); });
+      if (!destination) operationsState.queue = "attention";
+      document.querySelectorAll("[data-queue]").forEach((item) => item.setAttribute("aria-pressed", String(item.dataset.queue === operationsState.queue)));
+      renderOperationsQueue();
+    }
+    await openOperationsDetail(receipt.context.orderId);
+    operationsSuccess(options.message || "Operational change saved.");
   } catch (error) { operationsError(error instanceof Error ? error.message : "The operational change could not be saved."); }
   finally { markBusy(button, false, "Saving…"); }
+}
+
+function openOperationsDialog(heading, contentNode, confirmLabel, onConfirm) {
+  const dialog = byId("operations-dialog"); byId("operations-dialog-heading").textContent = heading;
+  const content = byId("operations-dialog-content"); const actions = byId("operations-dialog-actions"); clearNode(content); clearNode(actions);
+  content.append(contentNode);
+  const cancel = element("button", "button button-secondary", "Not yet"); cancel.type = "button"; cancel.addEventListener("click", () => dialog.close());
+  const confirm = element("button", "button button-primary", confirmLabel); confirm.type = "button";
+  confirm.addEventListener("click", () => { dialog.close(); onConfirm(confirm); }); actions.append(cancel, confirm); dialog.showModal();
 }
 
 function schedulingForm(context) {
@@ -783,21 +927,31 @@ function schedulingForm(context) {
       row.append(element("span", "", `${windowRecord.kind === "REQUESTED" ? "Requested" : "Staff alternate"} · ${operationalDateTime(windowRecord.localStartsAt, windowRecord.ianaTimezone)}`));
       if (!context.appointment && windowRecord.kind === "REQUESTED") {
         const confirm = element("button", "button button-secondary button-compact", "Confirm"); confirm.type = "button";
-        confirm.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/confirm`,
-          { windowId: windowRecord.windowId, reason: "Requested operational window confirmed" }, confirm)); row.append(confirm);
+        confirm.addEventListener("click", () => openOperationsDialog("Confirm this appointment", element("p", "", `${operationalDateTime(windowRecord.localStartsAt, windowRecord.ianaTimezone)} will become the canonical appointment.`), "Confirm time", (dialogButton) =>
+          runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/confirm`,
+            { windowId: windowRecord.windowId, reason: "Requested operational window confirmed" }, dialogButton,
+            { tab: "crew", message: "Appointment confirmed. Crew and services are ready." }))); row.append(confirm);
       }
       if (!context.appointment && windowRecord.kind === "STAFF_PROPOSED") {
         if (windowRecord.accepted) {
           const confirm = element("button", "button button-secondary button-compact", "Confirm accepted time"); confirm.type = "button";
-          confirm.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/confirm`,
-            { windowId: windowRecord.windowId, reason: "Accepted staff alternate confirmed" }, confirm)); row.append(confirm);
+          confirm.addEventListener("click", () => openOperationsDialog("Confirm the accepted time", element("p", "", `${operationalDateTime(windowRecord.localStartsAt, windowRecord.ianaTimezone)} will become the canonical appointment.`), "Confirm time", (dialogButton) =>
+            runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/confirm`,
+              { windowId: windowRecord.windowId, reason: "Accepted staff alternate confirmed" }, dialogButton,
+              { tab: "crew", message: "Appointment confirmed. Crew and services are ready." }))); row.append(confirm);
         } else {
-          const acceptance = element("form", "inline-action");
-          acceptance.append(selectField("Acceptance recorded by", "acceptanceMethod", [["PHONE", "Phone"], ["TEXT", "Text"], ["EMAIL", "Email"], ["IN_PERSON", "In person"], ["OTHER", "Other"]]),
-            field("Acceptance note", "text", "note"), actionButton("Record acceptance"));
-          acceptance.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(acceptance);
-            runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/accept-proposal`, { windowId: windowRecord.windowId,
-              acceptanceMethod: String(data.get("acceptanceMethod")), note: String(data.get("note")) }, acceptance.querySelector("button")); });
+          const acceptance = element("button", "button button-secondary button-compact", "Record acceptance"); acceptance.type = "button";
+          acceptance.addEventListener("click", () => {
+            const fields = element("div", "operation-form");
+            const method = selectField("Acceptance recorded by", "acceptanceMethod", [["PHONE", "Phone"], ["TEXT", "Text"], ["EMAIL", "Email"], ["IN_PERSON", "In person"], ["OTHER", "Other"]]);
+            const note = field("Acceptance note", "text", "note", "", false); fields.append(element("p", "operation-field-wide", operationalDateTime(windowRecord.localStartsAt, windowRecord.ianaTimezone)), method, note);
+            openOperationsDialog("Record customer acceptance", fields, "Record acceptance", (dialogButton) => {
+              const noteValue = note.querySelector("input").value.trim(); const payload = { windowId: windowRecord.windowId,
+                acceptanceMethod: method.querySelector("select").value }; if (noteValue) payload.note = noteValue;
+              runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/accept-proposal`, payload, dialogButton,
+                { tab: "schedule", message: "Customer acceptance recorded. Confirm the accepted time when ready." });
+            });
+          });
           row.append(acceptance);
         }
       }
@@ -810,14 +964,18 @@ function schedulingForm(context) {
 function appointmentSection(context) {
   if (!context.appointment) return null;
   const appointment = context.appointment;
-  const section = detailSection("Appointment", `${operationalDateTime(appointment.localStartsAt, appointment.ianaTimezone)} · ${appointment.state}`);
   if (!["CONFIRMED", "WEATHER_DELAYED"].includes(appointment.state)) {
-    section.append(element("p", "state-note", "This appointment is terminal; further appointment and crew controls are closed."));
-    return section;
+    return element("p", "state-note", "This appointment is closed; appointment and crew controls are unavailable.");
   }
-  const cancel = element("form", "inline-action"); cancel.append(field("Cancellation reason", "text", "reason"), actionButton("Cancel appointment"));
-  cancel.addEventListener("submit", (event) => { event.preventDefault(); const button = cancel.querySelector("button");
-    runOperation(`/api/operations/orders/${context.orderId}/appointments/${appointment.appointmentId}/cancel`, { reason: String(new FormData(cancel).get("reason")) }, button); });
+  const actions = element("div", "compact-actions");
+  const cancel = element("button", "button button-secondary button-compact", "Cancel appointment"); cancel.type = "button";
+  cancel.addEventListener("click", () => openOperationsDialog("Cancel this appointment?",
+    element("p", "", "This will cancel the confirmed appointment. The order will remain in Mission Control for follow-up."),
+    "Cancel appointment", (dialogButton) => runOperation(
+      `/api/operations/orders/${context.orderId}/appointments/${appointment.appointmentId}/cancel`,
+      { reason: "Cancelled from Mission Control after operator confirmation" }, dialogButton)));
+  const rescheduleDetails = document.createElement("details"); rescheduleDetails.className = "inline-editor";
+  const rescheduleSummary = document.createElement("summary"); rescheduleSummary.className = "button button-secondary button-compact"; rescheduleSummary.textContent = "Reschedule";
   const reschedule = element("form", "operation-form");
   reschedule.append(field("New start", "datetime-local", "startsAt"), field("New end", "datetime-local", "endsAt"),
     selectField("Customer acceptance", "acceptanceMethod", [["PHONE", "Phone"], ["TEXT", "Text"], ["EMAIL", "Email"], ["IN_PERSON", "In person"], ["OTHER", "Other"]]),
@@ -827,48 +985,262 @@ function appointmentSection(context) {
       ianaTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", localStartsAt: starts, localEndsAt: ends,
       acceptanceMethod: String(data.get("acceptanceMethod")), reason: String(data.get("reason")) }; if (note) payload.note = note;
     runOperation(`/api/operations/orders/${context.orderId}/appointments/${appointment.appointmentId}/reschedule`, payload, reschedule.querySelector("button")); });
-  section.append(cancel, reschedule); return section;
+  rescheduleDetails.append(rescheduleSummary, reschedule); actions.append(rescheduleDetails, cancel); return actions;
 }
 
 function assignmentSection(context) {
   if (!context.appointment || !["CONFIRMED", "WEATHER_DELAYED"].includes(context.appointment.state)) return null;
-  const section = detailSection("Crew assignment", "Only active members of this organization can be assigned.");
+  const section = element("div", "");
   const candidateChoices = operationsState.candidates.map((person) => [person.personId, `${person.displayName}${person.title ? ` · ${person.title}` : ""}`]);
+  const assigned = context.appointment.assignments;
+  const summary = element("div", "info-list");
+  if (assigned.length) assigned.forEach((assignment) => summary.append(element("p", "", `${assignment.displayName} · ${assignment.operationalRole.toLowerCase().replaceAll("_", " ")}`)));
+  else summary.append(element("p", "state-note", "No crew assigned yet."));
+  section.append(summary);
+  const editor = document.createElement("details"); editor.className = "inline-editor";
+  const editorSummary = document.createElement("summary"); editorSummary.className = "button button-secondary button-compact";
+  editorSummary.textContent = assigned.length ? "Edit crew" : "Assign"; editor.append(editorSummary);
   const form = element("form", "operation-form");
   form.append(selectField("Crew member", "personId", candidateChoices), selectField("Role", "operationalRole", [
     ["PRIMARY_OPERATOR", "Primary operator"], ["ADDITIONAL_OPERATOR", "Additional operator"], ["COORDINATOR", "Coordinator"]]), actionButton("Assign crew"));
   form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form);
-    runOperation(`/api/operations/orders/${context.orderId}/appointments/${context.appointment.appointmentId}/assignments`, { personId: String(data.get("personId")), operationalRole: String(data.get("operationalRole")) }, form.querySelector("button")); });
-  section.append(form);
-  context.appointment.assignments.forEach((assignment) => {
+    runOperation(`/api/operations/orders/${context.orderId}/appointments/${context.appointment.appointmentId}/assignments`, { personId: String(data.get("personId")), operationalRole: String(data.get("operationalRole")) }, form.querySelector("button"),
+      { message: "Crew assignment saved." }); });
+  editor.append(form);
+  assigned.forEach((assignment) => {
     const row = element("form", "assignment-row"); row.append(element("div", "", `${assignment.displayName} · ${attentionLabel(assignment.operationalRole).replace("Needs attention", assignment.operationalRole.toLowerCase().replaceAll("_", " "))}`));
     row.append(selectField("Replacement", "replacementPersonId", candidateChoices), field("Reason", "text", "reason"), actionButton("Replace"));
     row.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(row);
       runOperation(`/api/operations/orders/${context.orderId}/appointments/${context.appointment.appointmentId}/assignments/${assignment.assignmentId}/replace`,
-        { replacementPersonId: String(data.get("replacementPersonId")), reason: String(data.get("reason")) }, row.querySelector("button")); });
-    section.append(row);
-  }); return section;
+        { replacementPersonId: String(data.get("replacementPersonId")), reason: String(data.get("reason")) }, row.querySelector("button"),
+        { message: "Crew replacement saved." }); });
+    editor.append(row);
+  }); section.append(editor); return section;
 }
 
-async function openOperationsDetail(orderId, supplied) {
+function textareaField(label, name, value, rows = 4) {
+  const wrapper = element("label", "operation-field operation-field-wide"); wrapper.append(element("span", "", label));
+  const textarea = document.createElement("textarea"); textarea.name = name; textarea.value = value; textarea.rows = rows;
+  textarea.maxLength = 5000; textarea.required = true; wrapper.append(textarea); return wrapper;
+}
+
+async function runMissionPlan(path, body, button, context, pane, busyLabel = "Saving…") {
+  markBusy(button, true, busyLabel); byId("operations-error").hidden = true; clearOperationsSuccess();
+  try {
+    await fetchJson(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    await loadMissionPlanPane(context, pane); operationsSuccess("Mission Plan change saved.");
+  } catch (error) { operationsError(error instanceof Error ? error.message : "The Mission Plan change could not be saved."); }
+  finally { markBusy(button, false, busyLabel); }
+}
+
+function directionsUrl(context) {
+  const destination = [context.property.addressLine1, context.property.addressLine2, context.property.locality,
+    context.property.administrativeArea, context.property.postalCode].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}
+
+async function downloadMissionPlanPacket(context, plan, version) {
+  const response = await fetch(`/api/operations/orders/${context.orderId}/mission-plans/${plan.mission_plan_id}/offline-packet`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ versionId: version.mission_plan_version_id }),
+  });
+  if (!response.ok) { const failure = await response.json(); throw new Error(failure?.error?.message || "The offline packet could not be prepared."); }
+  const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement("a");
+  link.href = url; link.download = `medialab-mission-plan-v${version.version_number}.html`; document.body.append(link); link.click(); link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadMissionPlan(context, plan, version, button) {
+  markBusy(button, true, "Preparing…");
+  try { await downloadMissionPlanPacket(context, plan, version); announce("Offline Mission Plan downloaded."); }
+  catch (error) { operationsError(error instanceof Error ? error.message : "The offline packet could not be prepared."); }
+  finally { markBusy(button, false, "Preparing…"); }
+}
+
+async function saveMissionPlanOffline(context, plan, latest, button, pane) {
+  markBusy(button, true, "Saving…"); byId("operations-error").hidden = true; clearOperationsSuccess();
+  try {
+    let downloadablePlan = plan; let downloadableVersion = latest;
+    if (!downloadableVersion) {
+      const receipt = await fetchJson(`/api/operations/orders/${context.orderId}/mission-plans/${plan.mission_plan_id}/issue`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}),
+      });
+      downloadablePlan = receipt.plan; downloadableVersion = downloadablePlan.versions.at(-1);
+    }
+    if (!downloadableVersion) throw new Error("Save this Mission Plan as a version before using it offline.");
+    await downloadMissionPlanPacket(context, downloadablePlan, downloadableVersion);
+    await loadMissionPlanPane(context, pane); operationsSuccess("Mission Plan saved for offline use.");
+  } catch (error) { operationsError(error instanceof Error ? error.message : "The offline Mission Plan could not be saved."); }
+  finally { markBusy(button, false, "Saving…"); }
+}
+
+function missionPlanEditor(context, workspace, pane) {
+  const plan = workspace.plan;
+  const controls = workspace.controls;
+  if (!plan) {
+    const section = detailSection("Mission Plan", workspace.readiness === "READY"
+      ? "Generate a clean, offline-ready plan from the confirmed appointment, crew, property, and ordered services."
+      : "Confirm the appointment and its Job relationship before creating a Mission Plan.");
+    if (workspace.readiness === "READY") {
+      const create = actionButton("Generate Mission Plan");
+      create.addEventListener("click", () => runMissionPlan(`/api/operations/orders/${context.orderId}/mission-plan`, {}, create, context, pane, "Creating…"));
+      section.append(create);
+    }
+    pane.append(section); return;
+  }
+
+  const latest = plan.versions.at(-1);
+  const status = detailSection("Mission Plan", `${plan.draft ? "Ready to use" : "No active draft"} · ${plan.versions.length} saved version${plan.versions.length === 1 ? "" : "s"}`);
+  const statusRow = element("div", "mission-status-row");
+  statusRow.append(element("span", `mission-state ${latest ? "is-issued" : "is-draft"}`, latest ? `Latest issued · v${latest.version_number}` : "Draft only"));
+  if (plan.draft) {
+    const refresh = element("button", "button button-secondary button-compact", "Refresh Mission Plan"); refresh.type = "button";
+    refresh.addEventListener("click", () => runMissionPlan(`/api/operations/orders/${context.orderId}/mission-plans/${plan.mission_plan_id}/refresh`, {}, refresh, context, pane, "Refreshing…"));
+    statusRow.append(refresh);
+  }
+  const offline = element("button", "button button-primary button-compact", "Save Mission Plan Offline"); offline.type = "button";
+  offline.addEventListener("click", () => saveMissionPlanOffline(context, plan, latest, offline, pane)); statusRow.append(offline);
+  status.append(statusRow); pane.append(status);
+
+  if (controls?.stale) {
+    const stale = detailSection("Source changes need review", "The appointment, crew, contacts, or services changed after this draft was last refreshed. Refresh sources before issuing.");
+    stale.classList.add("mission-stale"); pane.append(stale);
+  }
+
+  if (plan.draft) {
+    const accordions = element("div", "mission-accordions");
+    const weather = document.createElement("details"); weather.className = "mission-accordion";
+    const weatherSummary = document.createElement("summary"); weatherSummary.textContent = "Weather";
+    weather.append(weatherSummary, element("p", "", plan.draft.weather_status === "AVAILABLE"
+      ? "Canonical weather evidence is attached." : "Live weather is not connected in this nonproduction build.")); accordions.append(weather);
+    plan.draft.content.sections.forEach((section) => {
+      const item = document.createElement("details"); item.className = "mission-accordion";
+      const summary = document.createElement("summary"); summary.textContent = section.label;
+      const content = element("p", "mission-accordion-content", section.content); item.append(summary, content); accordions.append(item);
+    }); pane.append(accordions);
+
+    const editDetails = document.createElement("details"); editDetails.className = "mission-edit-details";
+    const editSummary = document.createElement("summary"); editSummary.textContent = "Edit Mission Plan";
+    const editContent = element("div", ""); editDetails.append(editSummary, editContent); pane.append(editDetails);
+    const editor = detailSection("Mission Plan sections", "Refine the plan only when the generated information needs an exception or clarification.");
+    const form = element("form", "mission-editor");
+    plan.draft.content.sections.forEach((section, index) => {
+      const card = element("div", "mission-section-card");
+      const title = element("div", "mission-section-heading"); title.append(element("strong", "", section.label), element("span", "visibility-chip", section.visibility.replaceAll("_", " ")));
+      const label = field("Section title", "text", `label-${index}`, section.label); label.querySelector("input").maxLength = 120;
+      const visibility = selectField("Visibility", `visibility-${index}`, [
+        ["ASSIGNED_CREW_ONLY", "Assigned crew"], ["POTENTIALLY_CUSTOMER_VISIBLE", "Potentially customer visible"], ["INTERNAL_STAFF_ONLY", "Internal staff only"],
+      ]); visibility.querySelector("select").value = section.visibility;
+      card.append(title, label, visibility, textareaField("Content", `content-${index}`, section.content, 4)); form.append(card);
+    });
+    const issueRow = element("div", "mission-actions"); const save = actionButton("Save draft");
+    const issue = element("button", "button button-secondary", "Save Mission Plan version"); issue.type = "button";
+    issueRow.append(save, issue); form.append(issueRow);
+    form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form);
+      const sections = plan.draft.content.sections.map((_section, index) => ({ label: String(data.get(`label-${index}`)),
+        content: String(data.get(`content-${index}`)), visibility: String(data.get(`visibility-${index}`)) }));
+      runMissionPlan(`/api/operations/orders/${context.orderId}/mission-plans/${plan.mission_plan_id}/revise`, { sections }, save, context, pane); });
+    issue.addEventListener("click", () => runMissionPlan(`/api/operations/orders/${context.orderId}/mission-plans/${plan.mission_plan_id}/issue`, {}, issue, context, pane, "Issuing…"));
+    editor.append(form); editContent.append(editor);
+
+    const notes = detailSection("Add a Mission Plan note", "Notes become part of the next saved version.");
+    const noteForm = element("form", "operation-form mission-note-form");
+    noteForm.append(selectField("Visibility", "visibility", [["ASSIGNED_CREW_ONLY", "Assigned crew"], ["POTENTIALLY_CUSTOMER_VISIBLE", "Potentially customer visible"], ["INTERNAL_STAFF_ONLY", "Internal staff only"]]),
+      textareaField("Note", "note", "", 3), actionButton("Add note"));
+    noteForm.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(noteForm);
+      runMissionPlan(`/api/operations/orders/${context.orderId}/mission-plans/${plan.mission_plan_id}/notes`,
+        { visibility: String(data.get("visibility")), note: String(data.get("note")) }, noteForm.querySelector("button"), context, pane); });
+    notes.append(noteForm); editContent.append(notes);
+    if (controls?.notes.length) {
+      const history = element("div", "mission-note-list"); controls.notes.forEach((note) => {
+        const row = element("div", "mission-note-row"); row.append(element("span", "visibility-chip", note.visibility.replaceAll("_", " ")),
+          element("p", "", note.text)); history.append(row); }); notes.append(history);
+    }
+  }
+
+  if (plan.versions.length) {
+    const history = detailSection("Saved Mission Plan versions", "Saved versions remain immutable and available offline.");
+    const list = element("div", "mission-version-list");
+    [...plan.versions].reverse().forEach((version, index) => {
+      const row = element("div", "mission-version-row");
+      const copy = element("div", ""); copy.append(element("strong", "", `Version ${version.version_number}`),
+        element("span", "mission-version-meta", new Date(version.issued_at).toLocaleString())); row.append(copy);
+      const actions = element("div", "mission-version-actions"); const download = element("button", "button button-secondary button-compact", "Offline packet"); download.type = "button";
+      download.addEventListener("click", () => downloadMissionPlan(context, plan, version, download)); actions.append(download);
+      if (index === 0) { const supersede = element("button", "button button-secondary button-compact", "Revise from this version"); supersede.type = "button";
+        supersede.addEventListener("click", () => runMissionPlan(`/api/operations/orders/${context.orderId}/mission-plans/${plan.mission_plan_id}/supersede`,
+          { versionId: version.mission_plan_version_id }, supersede, context, pane, "Opening…")); actions.append(supersede); }
+      row.append(actions); list.append(row);
+    }); history.append(list); pane.append(history);
+  }
+}
+
+async function loadMissionPlanPane(context, pane) {
+  clearNode(pane); const loading = detailSection("Mission Plan", "Loading the canonical Mission Plan…"); pane.append(loading);
+  try {
+    const workspace = await fetchJson(`/api/operations/orders/${context.orderId}/mission-plan`); clearNode(pane); missionPlanEditor(context, workspace, pane);
+  } catch (error) { clearNode(pane); pane.append(detailSection("Mission Plan unavailable", error instanceof Error ? error.message : "The Mission Plan could not be loaded.")); }
+}
+
+function customerActions(context) {
+  const actions = element("div", "compact-actions");
+  const email = element("a", "button button-secondary button-compact", "Email"); email.href = `mailto:${context.customer.email}`; actions.append(email);
+  const phone = context.customer.contacts?.find((item) => item.contactType === "PHONE");
+  if (phone) {
+    const call = element("a", "button button-secondary button-compact", "Call"); call.href = `tel:${phone.displayValue}`;
+    const message = element("a", "button button-secondary button-compact", "Text"); message.href = `sms:${phone.displayValue}`; actions.prepend(call, message);
+  }
+  return actions;
+}
+
+function summaryField(label, content) {
+  const field = element("div", "summary-field"); field.append(element("span", "summary-label", label));
+  if (typeof content === "string") field.append(element("strong", "", content)); else field.append(content);
+  return field;
+}
+
+function missionControlSummary(context) {
+  const summary = element("section", "mission-control-summary");
+  const appointment = element("div", "summary-block"); appointment.append(element("h4", "", "Appointment & Scheduling"));
+  const appointmentGrid = element("div", "summary-information-grid");
+  appointmentGrid.append(summaryField("Date & time", context.appointment
+    ? operationalDateTime(context.appointment.localStartsAt, context.appointment.ianaTimezone) : "Not scheduled"),
+  summaryField("Status", context.appointment ? context.appointment.state.toLowerCase().replaceAll("_", " ") : "Not scheduled"));
+  const crewContent = assignmentSection(context);
+  appointmentGrid.append(summaryField("Assigned crew", crewContent || element("p", "state-note", "Crew becomes available after the appointment is confirmed.")));
+  appointment.append(appointmentGrid);
+  const appointmentActions = appointmentSection(context); if (appointmentActions) appointment.append(appointmentActions);
+  const services = element("div", "summary-block"); services.append(element("h4", "", "Order Scope"));
+  const serviceList = element("ul", "clean-list"); context.services.forEach((service) => serviceList.append(element("li", "", `${service.displayName}${service.quantity > 1 ? ` × ${service.quantity}` : ""}`))); services.append(serviceList);
+  const customer = element("div", "summary-block"); customer.append(element("h4", "", "Customer Information"));
+  const customerGrid = element("div", "summary-information-grid summary-customer-grid");
+  customerGrid.append(summaryField("Name", context.customer.displayName), summaryField("Contact", context.customer.email));
+  customer.append(customerGrid, customerActions(context));
+  summary.append(appointment, services, customer); return summary;
+}
+
+async function openOperationsDetail(orderId) {
   operationsState.selectedOrderId = orderId; renderOperationsQueue();
   try {
-    const context = supplied || await fetchJson(`/api/operations/orders/${encodeURIComponent(orderId)}`);
+    const context = await fetchJson(`/api/operations/orders/${encodeURIComponent(orderId)}`);
+    if (context.propertyHubId && context.scheduling && context.job) {
+      const candidates = await fetchJson(`/api/operations/assignment-candidates?organizationId=${encodeURIComponent(context.organizationId)}`);
+      operationsState.candidates = candidates.candidates || [];
+    }
     const detail = byId("operations-detail"); clearNode(detail);
-    const header = element("div", "detail-header"); header.append(element("p", "eyebrow", context.customer.displayName), element("h3", "", operationsAddress(context)),
-      element("p", "", context.services.map((service) => service.displayName).join(" · "))); detail.append(header);
+    const header = element("div", "detail-header"); const heading = element("div", "detail-header-copy");
+    heading.append(element("p", "eyebrow", "Selected property"), element("h3", "", operationsAddress(context)));
+    if (context.appointment) heading.append(element("span", "mission-state is-issued", context.appointment.state.toLowerCase().replaceAll("_", " ")));
+    const directions = element("a", "button button-primary", "Get Directions"); directions.href = directionsUrl(context);
+    directions.target = "_blank"; directions.rel = "noopener noreferrer"; header.append(heading, directions);
+    detail.append(header, missionControlSummary(context));
     if (context.attention.length) { const alerts = detailSection("Needs attention"); const chips = element("div", "detail-alerts");
       context.attention.forEach((code) => chips.append(element("span", "attention-chip", attentionLabel(code)))); alerts.append(chips); detail.append(alerts); }
     if (!context.propertyHubId || !context.scheduling || !context.job) {
       const setup = detailSection("Start operational context", "Create the canonical Property Hub, Scheduling Request, Job, and one Workstream per ordered service as a single replay-safe action.");
-      const button = actionButton("Start operations"); button.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/initialize`, {}, button)); setup.append(button); detail.append(setup); return;
+      const button = actionButton("Start Mission Control"); button.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/initialize`, {}, button)); setup.append(button); detail.append(setup); return;
     }
-    const candidates = await fetchJson(`/api/operations/assignment-candidates?organizationId=${encodeURIComponent(context.organizationId)}`);
-    operationsState.candidates = candidates.candidates || [];
-    detail.append(schedulingForm(context)); const appointment = appointmentSection(context); if (appointment) detail.append(appointment);
-    const assignment = assignmentSection(context); if (assignment) detail.append(assignment);
-    const work = detailSection("Job and services", `${context.job.state} · ${context.job.workstreams.length} service workstream${context.job.workstreams.length === 1 ? "" : "s"}`);
-    const list = element("ul", "workstream-list"); context.job.workstreams.forEach((item) => list.append(element("li", "", `${item.displayName} · ${item.state}`))); work.append(list); detail.append(work);
+    if (!context.appointment) detail.append(schedulingForm(context));
+    const missionPane = element("div", "mission-plan-pane"); detail.append(missionPane); loadMissionPlanPane(context, missionPane);
   } catch (error) { operationsError(error instanceof Error ? error.message : "Operational context could not be loaded."); }
 }
 
@@ -882,21 +1254,29 @@ async function loadOperationsHome(showStatus = true) {
 }
 
 async function initializeOperationsPage() {
-  document.title = "Operations · MediaLab Operations Console";
-  document.querySelector(".header-copy h1").textContent = "Operations";
-  document.querySelector(".header-copy .lede").textContent = "Schedule upcoming work, see exceptions, and keep every appointment owned.";
-  document.querySelector(".skip-link").href = "#operations-main"; document.querySelector(".skip-link").textContent = "Skip to operations";
+  document.title = "Mission Control · MediaLab";
+  document.querySelector(".header-copy h1").textContent = "Mission Control";
+  document.querySelector(".header-copy .lede").textContent = "Today, upcoming work, completed orders, and the next action in one place.";
+  document.querySelector(".skip-link").href = "#operations-main"; document.querySelector(".skip-link").textContent = "Skip to Mission Control";
   document.querySelector(".progress-shell").hidden = true; byId("console-main").hidden = true; byId("operations-main").hidden = false;
   try {
+    const params = new URLSearchParams(window.location.search); const requestedQueue = params.get("queue");
+    if (["attention", "today", "upcoming", "completed"].includes(requestedQueue)) operationsState.queue = requestedQueue;
+    document.querySelectorAll("[data-queue]").forEach((item) => item.setAttribute("aria-pressed", String(item.dataset.queue === operationsState.queue)));
     await fetchJson("/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
     await loadOperationsHome();
-    const orderId = new URLSearchParams(window.location.search).get("orderId"); if (orderId && UUID_PATTERN.test(orderId)) openOperationsDetail(orderId);
+    const orderId = params.get("orderId"); if (orderId && UUID_PATTERN.test(orderId)) openOperationsDetail(orderId);
   } catch (error) { operationsError(error instanceof Error ? error.message : "The local operator session is unavailable."); }
 }
 
 if (typeof window !== "undefined" && typeof document !== "undefined" && window.location.pathname === "/operations") {
   document.querySelectorAll("[data-queue]").forEach((button) => button.addEventListener("click", () => {
-    operationsState.queue = button.dataset.queue; document.querySelectorAll("[data-queue]").forEach((item) => item.setAttribute("aria-pressed", String(item === button))); renderOperationsQueue();
+    operationsState.queue = button.dataset.queue; document.querySelectorAll("[data-queue]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    if (operationsState.selectedOrderId && !queueItems().some((item) => item.orderId === operationsState.selectedOrderId)) {
+      operationsState.selectedOrderId = null; clearNode(byId("operations-detail"));
+      byId("operations-detail").append(element("div", "empty-detail", "Select an order in this view to open its details."));
+    }
+    renderOperationsQueue();
   }));
   byId("operations-list").addEventListener("click", (event) => { const card = event.target.closest("[data-order-id]"); if (card) openOperationsDetail(card.dataset.orderId); });
   byId("refresh-operations").addEventListener("click", () => loadOperationsHome());

@@ -22,7 +22,8 @@ for (const state of states) {
   if (state.path.endsWith("package-lock.json")) failures.push("package-lock.json must remain byte-identical");
   const relative = state.path.slice(root.length);
   const allowed = ["BUILD_STATE.md", "CHANGED_FILES.md", "package.json", "db/migrate.ts",
-    "db/migrations/0024_operations_home_scheduling_assignment_console.sql"].includes(relative)
+    "db/migrations/0024_operations_home_scheduling_assignment_console.sql",
+    "db/migrations/0025_operations_mission_plan_draft_controls.sql"].includes(relative)
     || relative.startsWith("src/operations-console/")
     || (relative.startsWith("tests/") && relative.endsWith(".test.ts"))
     || (relative.startsWith("scripts/") && relative.endsWith(".ts"));
@@ -31,7 +32,7 @@ for (const state of states) {
 if (actualPaths.length === 0) failures.push("candidate has no changed paths");
 
 const result = {
-  verifier: "P02-M18-A_CHANGED_FILES_V1",
+  verifier: "P02-M19-A_CHANGED_FILES_V1",
   pass: failures.length === 0,
   candidateMode: "uncommitted-unstaged-only",
   actualCount: actualPaths.length,
