@@ -26,6 +26,18 @@ import {
   ORDER_PERMISSION_FIXTURES,
   ORDER_PERMISSION_SET_PERMISSION_FIXTURES,
 } from "../db/fixtures/order-foundation-fixtures.js";
+import {
+  PROPERTY_HUB_PERMISSION_FIXTURES,
+  PROPERTY_HUB_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/property-hub-foundation-fixtures.js";
+import {
+  SCHEDULING_PERMISSION_FIXTURES,
+  SCHEDULING_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/scheduling-appointment-foundation-fixtures.js";
+import {
+  JOB_SERVICE_PERMISSION_FIXTURES,
+  JOB_SERVICE_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/job-service-workstream-foundation-fixtures.js";
 import { startOperationsConsole } from "../src/operations-console/server.js";
 import { OperationsConsoleService } from "../src/operations-console/service.js";
 import {
@@ -158,7 +170,7 @@ function assertEvidencePrivacy(label: string, serialized: string): void {
 
 function exactMigrationLedger(ledger: BootstrapObservation["ledger"]): boolean {
   return Array.isArray(ledger)
-    && ledger.length === 23
+    && ledger.length === 24
     && ledger.every((entry, index) => (
       typeof entry?.filename === "string"
       && entry.filename.startsWith(`${String(index + 1).padStart(4, "0")}_`)
@@ -563,12 +575,18 @@ async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
     ...PERMISSION_FIXTURES,
     ...CATALOG_PERMISSION_FIXTURES,
     ...ORDER_PERMISSION_FIXTURES,
+    ...PROPERTY_HUB_PERMISSION_FIXTURES,
+    ...SCHEDULING_PERMISSION_FIXTURES,
+    ...JOB_SERVICE_PERMISSION_FIXTURES,
   ]);
   inserted += await insertRows(client, "permission_sets", [PERMISSION_SET_FIXTURE]);
   inserted += await insertRows(client, "permission_set_permissions", [
     ...PERMISSION_SET_PERMISSION_FIXTURES,
     ...CATALOG_PERMISSION_SET_PERMISSION_FIXTURES,
     ...ORDER_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...PROPERTY_HUB_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...SCHEDULING_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...JOB_SERVICE_PERMISSION_SET_PERMISSION_FIXTURES,
   ]);
   inserted += await insertRows(client, "membership_permission_sets", MEMBERSHIP_PERMISSION_SET_FIXTURES);
   for (const fixtureTable of CURRENT_REAL_ESTATE_CATALOG_TABLES) {
@@ -594,7 +612,7 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
       database: OPERATIONS_CONSOLE_DATABASE.database,
       user: OWNER_ROLE,
     });
-    if (migration.failed || migration.applied.length !== 23 || migration.skipped.length !== 0) {
+    if (migration.failed || migration.applied.length !== 24 || migration.skipped.length !== 0) {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     await client.query("BEGIN");
@@ -609,7 +627,7 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
     const ledger = await client.query<{ filename: string; sha256: string }>(
       "SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename",
     );
-    if (ledger.rows.length !== 23 || !ledger.rows[0]?.filename.startsWith("0001_") || !ledger.rows[22]?.filename.startsWith("0023_")) {
+    if (ledger.rows.length !== 24 || !ledger.rows[0]?.filename.startsWith("0001_") || !ledger.rows[23]?.filename.startsWith("0024_")) {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     return { ledger: ledger.rows, resetNumber, seededRows };

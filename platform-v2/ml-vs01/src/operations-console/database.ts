@@ -1,5 +1,17 @@
 import { createHash } from "node:crypto";
 import pg from "pg";
+import type {
+  AssignmentCandidates,
+  AcceptProposalInput,
+  AssignmentInput,
+  CancelAppointmentInput,
+  ConfirmAppointmentInput,
+  OperationsContext,
+  OperationsHome,
+  OperationsWindowInput,
+  ReplacementInput,
+  RescheduleAppointmentInput,
+} from "./operations-contracts.js";
 
 const { Pool } = pg;
 
@@ -14,6 +26,12 @@ export const OPERATIONS_CONSOLE_ORGANIZATION_ID = "6d91cee6-91c1-52ea-937a-77c1d
 export const OPERATIONS_CONSOLE_OPERATOR_PERSON_ID = "d43d9499-efbd-5116-b561-67dd34d1df8d";
 const SNAPSHOT_NAMESPACE = "bd1c8468-6b68-5cbb-97d2-df8aeb4b3db1";
 const SOURCE_SYSTEM = "INTERNAL_OPERATIONS_CONSOLE";
+type RawOperationsContext = OperationsContext & {
+  scheduling: null | (NonNullable<OperationsContext["scheduling"]> & { customerIdentityId: string });
+  schedulingRequestLineageIds: string[];
+  appointmentLineageIds: string[];
+  assignmentLineageIds: string[];
+};
 
 export interface CatalogProjectionRow {
   product_id: string;
@@ -540,6 +558,225 @@ export class OperationsConsoleDatabase {
     } finally {
       client.release();
     }
+  }
+
+  #databaseError(error: unknown): OperationsConsoleDatabaseError {
+    if (error instanceof OperationsConsoleDatabaseError) return error;
+    const code = (error as { code?: string }).code;
+    if (code === "42501") return new OperationsConsoleDatabaseError("AUTHORITY", "The operator is not authorized for this operational action.");
+    if (code === "23505" || code === "23514") return new OperationsConsoleDatabaseError("CONFLICT", "The operational state changed; refresh and review it before trying again.");
+    if (code?.startsWith("22") || code?.startsWith("23")) return new OperationsConsoleDatabaseError("VALIDATION", "The canonical command rejected incomplete or inconsistent operational evidence.");
+    return new OperationsConsoleDatabaseError("UNAVAILABLE", "The operational action could not be completed.");
+  }
+
+  async #context(queryable: pg.Pool | pg.PoolClient, databaseSessionToken: string, orderId: string): Promise<RawOperationsContext> {
+    const result = await queryable.query<{ get_operations_order_context: RawOperationsContext | null }>(
+      "SELECT medialab_core.get_operations_order_context($1,$2::uuid)", [databaseSessionToken, orderId],
+    );
+    const context = result.rows[0]?.get_operations_order_context;
+    if (!context) throw new OperationsConsoleDatabaseError("AUTHORITY", "The requested operational context is unavailable.");
+    return context;
+  }
+
+  async getOperationsContext(databaseSessionToken: string, orderId: string): Promise<RawOperationsContext> {
+    try { return await this.#context(this.pool, databaseSessionToken, orderId); }
+    catch (error) { throw this.#databaseError(error); }
+  }
+
+  async getOperationsHome(databaseSessionToken: string, rangeStartsAt: string, rangeEndsAt: string): Promise<Omit<OperationsHome, "schema" | "contract">> {
+    try {
+      const result = await this.pool.query<{ get_operations_home: Omit<OperationsHome, "schema" | "contract"> }>(
+        "SELECT medialab_core.get_operations_home($1,$2::timestamptz,$3::timestamptz)",
+        [databaseSessionToken, rangeStartsAt, rangeEndsAt],
+      );
+      return result.rows[0]!.get_operations_home;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async listAssignmentCandidates(databaseSessionToken: string, organizationId: string): Promise<Omit<AssignmentCandidates, "schema" | "contract">> {
+    try {
+      const result = await this.pool.query<{ list_operations_assignment_candidates: Omit<AssignmentCandidates, "schema" | "contract"> }>(
+        "SELECT medialab_core.list_operations_assignment_candidates($1,$2::uuid)", [databaseSessionToken, organizationId],
+      );
+      return result.rows[0]!.list_operations_assignment_candidates;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async initializeOperations(databaseSessionToken: string, orderId: string): Promise<RawOperationsContext> {
+    const client = await this.pool.connect();
+    let open = false;
+    try {
+      await client.query("BEGIN"); open = true;
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [`M18A:${orderId}:INITIALIZE`]);
+      let context = await this.#context(client, databaseSessionToken, orderId);
+      const base = sha256Evidence({ action: "INITIALIZE_OPERATIONS", orderId });
+      let hubId = context.propertyHubId;
+      if (!hubId) {
+        const result = await client.query<{ create_property_hub: string }>(
+          "SELECT medialab_core.create_property_hub($1,$2,$3::uuid,$4::uuid,$5::uuid,$6,$7::jsonb,'[]'::jsonb,'[]'::jsonb)",
+          [databaseSessionToken, `m18a-hub-${base}`, context.organizationId, context.property.propertyId,
+            context.property.propertySnapshotId, SOURCE_SYSTEM, JSON.stringify([orderId])],
+        );
+        hubId = result.rows[0]!.create_property_hub;
+      }
+      if (!context.scheduling) {
+        await client.query("SELECT medialab_core.create_scheduling_request($1,$2,$3::uuid,$4::uuid,$5::uuid,$6)",
+          [databaseSessionToken, `m18a-request-${base}`, context.organizationId, hubId, orderId, SOURCE_SYSTEM]);
+      }
+      let jobId = context.job?.jobId;
+      if (!jobId) {
+        const result = await client.query<{ create_job: string }>(
+          "SELECT medialab_core.create_job($1,$2,$3::uuid,$4::uuid,$5::uuid,$6)",
+          [databaseSessionToken, `m18a-job-${base}`, context.organizationId, orderId, hubId, SOURCE_SYSTEM],
+        );
+        jobId = result.rows[0]!.create_job;
+      }
+      const existing = new Set(context.job?.workstreams.map((item) => item.sourceOrderItemId) ?? []);
+      for (const service of context.services) {
+        if (existing.has(service.orderItemId)) continue;
+        await client.query("SELECT medialab_core.create_service_workstream($1,$2,$3::uuid,$4::uuid,$5)",
+          [databaseSessionToken, `m18a-workstream-${sha256Evidence({ orderId, orderItemId: service.orderItemId })}`,
+            jobId, service.orderItemId, SOURCE_SYSTEM]);
+      }
+      context = await this.#context(client, databaseSessionToken, orderId);
+      await client.query("COMMIT"); open = false;
+      return context;
+    } catch (error) {
+      if (open) { try { await client.query("ROLLBACK"); } catch { /* preserve the primary failure */ } }
+      throw this.#databaseError(error);
+    } finally { client.release(); }
+  }
+
+  async #operationalCommand(
+    databaseSessionToken: string,
+    orderId: string,
+    target: unknown,
+    execute: (client: pg.PoolClient, context: RawOperationsContext, key: string) => Promise<void>,
+    evidence: unknown,
+  ): Promise<RawOperationsContext> {
+    const client = await this.pool.connect(); let open = false;
+    try {
+      await client.query("BEGIN"); open = true;
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [`M18A:${orderId}`]);
+      const context = await this.#context(client, databaseSessionToken, orderId);
+      const key = `m18a-${sha256Evidence({ orderId, target, evidence })}`;
+      await execute(client, context, key);
+      const updated = await this.#context(client, databaseSessionToken, orderId);
+      await client.query("COMMIT"); open = false;
+      return updated;
+    } catch (error) {
+      if (open) { try { await client.query("ROLLBACK"); } catch { /* preserve the primary failure */ } }
+      throw this.#databaseError(error);
+    } finally { client.release(); }
+  }
+
+  async #requireAssignmentCandidate(
+    client: pg.PoolClient, token: string, organizationId: string, personId: string,
+  ): Promise<void> {
+    const result = await client.query<{ list_operations_assignment_candidates: { candidates: Array<{ personId: string }> } }>(
+      "SELECT medialab_core.list_operations_assignment_candidates($1,$2::uuid)", [token, organizationId],
+    );
+    if (!result.rows[0]?.list_operations_assignment_candidates.candidates.some((candidate) => candidate.personId === personId)) {
+      throw new OperationsConsoleDatabaseError("AUTHORITY", "The selected person is not eligible for this appointment.");
+    }
+  }
+
+  addRequestedWindow(token: string, orderId: string, requestId: string, input: OperationsWindowInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { requestId }, async (client, context, key) => {
+      if (context.scheduling?.requestId !== requestId) throw new OperationsConsoleDatabaseError("CONFLICT", "The scheduling request changed; refresh before continuing.");
+      await client.query("SELECT medialab_core.add_scheduling_requested_window($1,$2,$3::uuid,$4::timestamptz,$5::timestamptz,$6,$7::timestamp,$8::timestamp)",
+        [token, key, requestId, input.startsAt, input.endsAt, input.ianaTimezone, input.localStartsAt, input.localEndsAt]);
+    }, { action: "ADD_REQUESTED_WINDOW", input });
+  }
+
+  proposeWindow(token: string, orderId: string, requestId: string, input: OperationsWindowInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { requestId }, async (client, context, key) => {
+      if (context.scheduling?.requestId !== requestId) throw new OperationsConsoleDatabaseError("CONFLICT", "The scheduling request changed; refresh before continuing.");
+      await client.query("SELECT medialab_core.propose_scheduling_window($1,$2,$3::uuid,$4::timestamptz,$5::timestamptz,$6,$7::timestamp,$8::timestamp,$9)",
+        [token, key, requestId, input.startsAt, input.endsAt, input.ianaTimezone, input.localStartsAt, input.localEndsAt, input.reason]);
+    }, { action: "PROPOSE_WINDOW", input });
+  }
+
+  acceptProposal(token: string, orderId: string, requestId: string, input: AcceptProposalInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { requestId, windowId: input.windowId }, async (client, context, key) => {
+      if (context.scheduling?.requestId !== requestId ||
+          !context.scheduling.windows.some((window) => window.windowId === input.windowId && window.kind === "STAFF_PROPOSED")) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "The proposed window is not part of this scheduling request.");
+      }
+      await client.query("SELECT medialab_core.record_scheduling_offline_acceptance($1,$2,$3::uuid,$4::uuid,$5,$6)",
+        [token, key, input.windowId, context.scheduling.customerIdentityId, input.acceptanceMethod, input.note ?? null]);
+    }, { action: "ACCEPT_PROPOSAL", input });
+  }
+
+  confirmAppointment(token: string, orderId: string, requestId: string, input: ConfirmAppointmentInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { requestId, windowId: input.windowId }, async (client, context, key) => {
+      const window = context.scheduling?.windows.find((candidate) => candidate.windowId === input.windowId);
+      if (context.scheduling?.requestId !== requestId || !window || (window.kind === "STAFF_PROPOSED" && !window.accepted) || !context.job) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "The selected window is not eligible for this scheduling request.");
+      }
+      const result = await client.query<{ confirm_appointment: string }>(
+        "SELECT medialab_core.confirm_appointment($1,$2,$3::uuid,$4::uuid,$5)",
+        [token, key, requestId, input.windowId, input.reason]);
+      const appointmentId = result.rows[0]!.confirm_appointment;
+      await client.query("SELECT medialab_core.link_job_appointment($1,$2,$3::uuid,$4::uuid,$5)",
+        [token, `${key}-link`, context.job.jobId, appointmentId, "Confirmed operational appointment linked to its canonical Job"]);
+    }, { action: "CONFIRM_APPOINTMENT", input });
+  }
+
+  cancelAppointment(token: string, orderId: string, appointmentId: string, input: CancelAppointmentInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { appointmentId }, async (client, context, key) => {
+      if (!context.appointmentLineageIds.includes(appointmentId)) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "The appointment is not part of this order.");
+      }
+      await client.query("SELECT medialab_core.cancel_appointment($1,$2,$3::uuid,$4)",
+        [token, key, appointmentId, input.reason]);
+    }, { action: "CANCEL_APPOINTMENT", input });
+  }
+
+  rescheduleAppointment(token: string, orderId: string, appointmentId: string, input: RescheduleAppointmentInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { appointmentId }, async (client, context, key) => {
+      if (!context.appointmentLineageIds.includes(appointmentId) || !context.scheduling || !context.job) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "The appointment is not part of this operational context.");
+      }
+      const result = await client.query<{ supersede_and_reschedule_appointment: string }>(
+        "SELECT medialab_core.supersede_and_reschedule_appointment($1,$2,$3::uuid,$4::uuid,$5,$6::timestamptz,$7::timestamptz,$8,$9::timestamp,$10::timestamp,$11,$12)",
+        [token, key, appointmentId, context.scheduling.customerIdentityId, input.acceptanceMethod,
+          input.startsAt, input.endsAt, input.ianaTimezone, input.localStartsAt, input.localEndsAt, input.reason, input.note ?? null]);
+      await client.query("SELECT medialab_core.link_job_appointment($1,$2,$3::uuid,$4::uuid,$5)",
+        [token, `${key}-link`, context.job.jobId, result.rows[0]!.supersede_and_reschedule_appointment,
+          "Replacement operational appointment linked to its canonical Job"]);
+    }, { action: "RESCHEDULE_APPOINTMENT", input });
+  }
+
+  assignParticipant(token: string, orderId: string, appointmentId: string, input: AssignmentInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { appointmentId }, async (client, context, key) => {
+      if (context.appointment?.appointmentId !== appointmentId || !["CONFIRMED", "WEATHER_DELAYED"].includes(context.appointment.state)) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "The appointment changed or is terminal; refresh before continuing.");
+      }
+      await this.#requireAssignmentCandidate(client, token, context.organizationId, input.personId);
+      if (context.appointment.assignments.some((assignment) =>
+        assignment.personId === input.personId && assignment.operationalRole === input.operationalRole)) return;
+      const assignmentKey = `${key}-${sha256Evidence({ assignmentLineageIds: context.assignmentLineageIds })}`;
+      await client.query("SELECT medialab_core.assign_appointment_participant($1,$2,$3::uuid,$4::uuid,$5)",
+        [token, assignmentKey, appointmentId, input.personId, input.operationalRole]);
+    }, { action: "ASSIGN_PARTICIPANT", input });
+  }
+
+  replaceParticipant(token: string, orderId: string, appointmentId: string, assignmentId: string, input: ReplacementInput): Promise<RawOperationsContext> {
+    return this.#operationalCommand(token, orderId, { appointmentId, assignmentId }, async (client, context, key) => {
+      if (context.appointment?.appointmentId !== appointmentId || !["CONFIRMED", "WEATHER_DELAYED"].includes(context.appointment.state) ||
+          !context.assignmentLineageIds.includes(assignmentId)) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "The active assignment is not part of this nonterminal appointment.");
+      }
+      const activeTarget = context.appointment.assignments.find((assignment) => assignment.assignmentId === assignmentId);
+      if (activeTarget && context.appointment.assignments.some((assignment) =>
+        assignment.personId === input.replacementPersonId && assignment.operationalRole === activeTarget.operationalRole)) {
+        throw new OperationsConsoleDatabaseError("CONFLICT", "That person already holds this active appointment role.");
+      }
+      await this.#requireAssignmentCandidate(client, token, context.organizationId, input.replacementPersonId);
+      await client.query("SELECT medialab_core.replace_appointment_participant_assignment($1,$2,$3::uuid,$4::uuid,$5)",
+        [token, key, assignmentId, input.replacementPersonId, input.reason]);
+    }, { action: "REPLACE_PARTICIPANT", assignmentId, input });
   }
 
   async close(): Promise<void> {

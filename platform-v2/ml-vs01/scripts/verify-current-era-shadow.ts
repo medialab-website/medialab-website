@@ -81,7 +81,7 @@ const directCanonicalDml = [...currentShadowSources.matchAll(/\b(?:INSERT\s+INTO
 if (directCanonicalDml.some((table) => table !== "development_sessions")) fail("direct canonical business-table DML detected");
 
 const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrations.length !== 23 || migrations[0]?.slice(0, 4) !== "0001" || migrations[21]?.slice(0, 4) !== "0022" || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql") fail("migration inventory changed");
+if (migrations.length !== 24 || migrations[0]?.slice(0, 4) !== "0001" || migrations[21]?.slice(0, 4) !== "0022" || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrations[23] !== "0024_operations_home_scheduling_assignment_console.sql") fail("migration inventory changed");
 for (const name of migrations.slice(0, 22)) {
   const predecessor = execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
   if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);

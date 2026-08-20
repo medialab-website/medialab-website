@@ -198,7 +198,7 @@ export interface CanonicalOrderConfirmationV1
   readonly propertyOutcome: "PROPERTY_CREATED" | "PROPERTY_REUSED";
   readonly propertySnapshotOutcome: "SNAPSHOT_CREATED" | "SNAPSHOT_REUSED";
   readonly replayed: boolean;
-  readonly nextStep: "SCHEDULING_NOT_INCLUDED";
+  readonly nextStep: "OPERATIONS_AVAILABLE";
   readonly nextStepMessage: string;
 }
 

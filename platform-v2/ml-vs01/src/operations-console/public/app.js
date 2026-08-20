@@ -445,6 +445,9 @@ function renderOutcomes(container, record) {
 
 function renderConfirmation(payload) {
   const record = canonicalRecord(payload);
+  const operationsLink = byId("open-order-operations");
+  const canonicalOrderId = extractOrderId(record);
+  if (operationsLink && canonicalOrderId) operationsLink.href = `/operations?orderId=${encodeURIComponent(canonicalOrderId)}`;
   const container = byId("confirmation-content");
   clearNode(container);
 
@@ -652,5 +655,252 @@ function bindEvents() {
   byId("retry-startup").addEventListener("click", initialize);
 }
 
-bindEvents();
-initialize();
+const operationsState = { queue: "today", home: null, selectedOrderId: null, candidates: [] };
+
+function operationsError(message) {
+  byId("operations-error-message").textContent = message;
+  byId("operations-error").hidden = false;
+  byId("operations-error").focus();
+}
+
+function operationsAddress(context) {
+  return [context.property.addressLine1, context.property.addressLine2, context.property.locality,
+    context.property.administrativeArea].filter(Boolean).join(", ");
+}
+
+function attentionLabel(code) {
+  return ({
+    OPERATIONAL_CONTEXT_NOT_STARTED: "Setup needed",
+    SCHEDULING_WINDOW_NEEDED: "Scheduling window needed",
+    APPOINTMENT_NOT_CONFIRMED: "Appointment not confirmed",
+    PRIMARY_OPERATOR_UNASSIGNED: "Primary operator unassigned",
+    JOB_BLOCKED: "Job blocked",
+    WORKSTREAM_BLOCKED: "Service blocked",
+  })[code] || "Needs attention";
+}
+
+function operationalDateTime(localStartsAt, ianaTimezone) {
+  const local = String(localStartsAt || "").replace(" ", "T");
+  const parsed = new Date(`${local.slice(0, 19)}Z`);
+  if (Number.isNaN(parsed.valueOf())) return `${localStartsAt} · ${ianaTimezone}`;
+  // UTC formatting preserves the canonical local wall clock instead of applying the viewer's browser timezone.
+  return `${new Intl.DateTimeFormat([], { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(parsed)} · ${ianaTimezone}`;
+}
+
+function queueItems() {
+  const sections = operationsState.home?.sections;
+  if (!sections) return [];
+  if (operationsState.queue === "attention") return sections.needsAttention;
+  if (operationsState.queue === "today") return sections.today;
+  return sections.upcoming;
+}
+
+function renderOperationsQueue() {
+  const counts = operationsState.home?.counts || { today: 0, upcoming: 0, needsAttention: 0 };
+  byId("today-count").textContent = String(counts.today);
+  byId("upcoming-count").textContent = String(counts.upcoming);
+  byId("attention-count").textContent = String(counts.needsAttention);
+  byId("queue-heading").textContent = operationsState.queue === "attention" ? "Needs attention" :
+    operationsState.queue === "upcoming" ? "Upcoming" : "Today";
+  const list = byId("operations-list"); clearNode(list);
+  const items = queueItems();
+  if (!items.length) {
+    const empty = element("div", "queue-empty");
+    empty.append(element("strong", "", "Nothing here right now"), element("p", "", "Choose another view or refresh the queue."));
+    list.append(empty); return;
+  }
+  items.forEach((item) => {
+    const button = element("button", `operation-card${operationsState.selectedOrderId === item.orderId ? " is-selected" : ""}`);
+    button.type = "button"; button.dataset.orderId = item.orderId;
+    const top = element("span", "operation-card-top");
+    top.append(element("strong", "", item.customer.displayName || "Customer"),
+      element("span", "appointment-time", item.appointment ? operationalDateTime(item.appointment.localStartsAt, item.appointment.ianaTimezone) : "Not scheduled"));
+    const services = item.services.map((service) => service.displayName).join(" · ");
+    button.append(top, element("span", "operation-address", operationsAddress(item)), element("span", "operation-services", services));
+    if (item.attention.length) {
+      const alerts = element("span", "operation-alerts");
+      item.attention.slice(0, 2).forEach((code) => alerts.append(element("span", "attention-chip", attentionLabel(code))));
+      button.append(alerts);
+    }
+    list.append(button);
+  });
+}
+
+function detailSection(title, copy) {
+  const section = element("section", "detail-section"); section.append(element("h4", "", title));
+  if (copy) section.append(element("p", "detail-copy", copy)); return section;
+}
+
+function field(label, type, name, value = "", required = true) {
+  const wrapper = element("label", "operation-field"); wrapper.append(element("span", "", label));
+  const input = document.createElement("input"); input.type = type; input.name = name; input.value = value; input.required = required;
+  wrapper.append(input); return wrapper;
+}
+
+function selectField(label, name, choices) {
+  const wrapper = element("label", "operation-field"); wrapper.append(element("span", "", label));
+  const select = document.createElement("select"); select.name = name; select.required = true;
+  choices.forEach(([value, display]) => { const option = document.createElement("option"); option.value = value; option.textContent = display; select.append(option); });
+  wrapper.append(select); return wrapper;
+}
+
+function actionButton(label) { const button = element("button", "button button-primary", label); button.type = "submit"; return button; }
+
+async function runOperation(path, body, button) {
+  markBusy(button, true, "Saving…"); byId("operations-error").hidden = true;
+  try {
+    const receipt = await fetchJson(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    operationsState.selectedOrderId = receipt.context.orderId;
+    await loadOperationsHome(false); await openOperationsDetail(receipt.context.orderId, receipt.context);
+    announce("Operational change saved.");
+  } catch (error) { operationsError(error instanceof Error ? error.message : "The operational change could not be saved."); }
+  finally { markBusy(button, false, "Saving…"); }
+}
+
+function schedulingForm(context) {
+  const section = detailSection("Scheduling", "Add a customer-requested window or a staff alternate. Times retain both instant and local timezone evidence.");
+  if (context.scheduling?.state === "REQUESTED") {
+    const form = element("form", "operation-form");
+    const kind = selectField("Window type", "kind", [["REQUESTED", "Customer requested"], ["STAFF_PROPOSED", "Staff alternate"]]);
+    form.append(kind, field("Starts", "datetime-local", "startsAt"), field("Ends", "datetime-local", "endsAt"), field("Reason for staff alternate", "text", "reason", "", false), actionButton("Add window"));
+    form.addEventListener("submit", (event) => {
+      event.preventDefault(); const data = new FormData(form); const starts = String(data.get("startsAt")); const ends = String(data.get("endsAt"));
+      const kindValue = String(data.get("kind")); const body = { startsAt: new Date(starts).toISOString(), endsAt: new Date(ends).toISOString(),
+        ianaTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", localStartsAt: starts, localEndsAt: ends };
+      const button = form.querySelector("button");
+      if (kindValue === "STAFF_PROPOSED") { body.reason = String(data.get("reason") || "Staff proposed an operational alternate").trim();
+        runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/proposed-windows`, body, button); }
+      else runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/requested-windows`, body, button);
+    });
+    section.append(form);
+  } else {
+    section.append(element("p", "state-note", `This scheduling request is ${String(context.scheduling?.state || "closed").toLowerCase()}.`));
+  }
+  if (context.scheduling?.windows.length) {
+    const windows = element("div", "window-list");
+    context.scheduling.windows.forEach((windowRecord) => {
+      const row = element("div", "window-row");
+      row.append(element("span", "", `${windowRecord.kind === "REQUESTED" ? "Requested" : "Staff alternate"} · ${operationalDateTime(windowRecord.localStartsAt, windowRecord.ianaTimezone)}`));
+      if (!context.appointment && windowRecord.kind === "REQUESTED") {
+        const confirm = element("button", "button button-secondary button-compact", "Confirm"); confirm.type = "button";
+        confirm.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/confirm`,
+          { windowId: windowRecord.windowId, reason: "Requested operational window confirmed" }, confirm)); row.append(confirm);
+      }
+      if (!context.appointment && windowRecord.kind === "STAFF_PROPOSED") {
+        if (windowRecord.accepted) {
+          const confirm = element("button", "button button-secondary button-compact", "Confirm accepted time"); confirm.type = "button";
+          confirm.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/confirm`,
+            { windowId: windowRecord.windowId, reason: "Accepted staff alternate confirmed" }, confirm)); row.append(confirm);
+        } else {
+          const acceptance = element("form", "inline-action");
+          acceptance.append(selectField("Acceptance recorded by", "acceptanceMethod", [["PHONE", "Phone"], ["TEXT", "Text"], ["EMAIL", "Email"], ["IN_PERSON", "In person"], ["OTHER", "Other"]]),
+            field("Acceptance note", "text", "note"), actionButton("Record acceptance"));
+          acceptance.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(acceptance);
+            runOperation(`/api/operations/orders/${context.orderId}/scheduling/${context.scheduling.requestId}/accept-proposal`, { windowId: windowRecord.windowId,
+              acceptanceMethod: String(data.get("acceptanceMethod")), note: String(data.get("note")) }, acceptance.querySelector("button")); });
+          row.append(acceptance);
+        }
+      }
+      windows.append(row);
+    }); section.append(windows);
+  }
+  return section;
+}
+
+function appointmentSection(context) {
+  if (!context.appointment) return null;
+  const appointment = context.appointment;
+  const section = detailSection("Appointment", `${operationalDateTime(appointment.localStartsAt, appointment.ianaTimezone)} · ${appointment.state}`);
+  if (!["CONFIRMED", "WEATHER_DELAYED"].includes(appointment.state)) {
+    section.append(element("p", "state-note", "This appointment is terminal; further appointment and crew controls are closed."));
+    return section;
+  }
+  const cancel = element("form", "inline-action"); cancel.append(field("Cancellation reason", "text", "reason"), actionButton("Cancel appointment"));
+  cancel.addEventListener("submit", (event) => { event.preventDefault(); const button = cancel.querySelector("button");
+    runOperation(`/api/operations/orders/${context.orderId}/appointments/${appointment.appointmentId}/cancel`, { reason: String(new FormData(cancel).get("reason")) }, button); });
+  const reschedule = element("form", "operation-form");
+  reschedule.append(field("New start", "datetime-local", "startsAt"), field("New end", "datetime-local", "endsAt"),
+    selectField("Customer acceptance", "acceptanceMethod", [["PHONE", "Phone"], ["TEXT", "Text"], ["EMAIL", "Email"], ["IN_PERSON", "In person"], ["OTHER", "Other"]]),
+    field("Reason", "text", "reason"), field("Acceptance note", "text", "note"), actionButton("Reschedule"));
+  reschedule.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(reschedule); const starts = String(data.get("startsAt")); const ends = String(data.get("endsAt"));
+    const note = String(data.get("note") || "").trim(); const payload = { startsAt: new Date(starts).toISOString(), endsAt: new Date(ends).toISOString(),
+      ianaTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", localStartsAt: starts, localEndsAt: ends,
+      acceptanceMethod: String(data.get("acceptanceMethod")), reason: String(data.get("reason")) }; if (note) payload.note = note;
+    runOperation(`/api/operations/orders/${context.orderId}/appointments/${appointment.appointmentId}/reschedule`, payload, reschedule.querySelector("button")); });
+  section.append(cancel, reschedule); return section;
+}
+
+function assignmentSection(context) {
+  if (!context.appointment || !["CONFIRMED", "WEATHER_DELAYED"].includes(context.appointment.state)) return null;
+  const section = detailSection("Crew assignment", "Only active members of this organization can be assigned.");
+  const candidateChoices = operationsState.candidates.map((person) => [person.personId, `${person.displayName}${person.title ? ` · ${person.title}` : ""}`]);
+  const form = element("form", "operation-form");
+  form.append(selectField("Crew member", "personId", candidateChoices), selectField("Role", "operationalRole", [
+    ["PRIMARY_OPERATOR", "Primary operator"], ["ADDITIONAL_OPERATOR", "Additional operator"], ["COORDINATOR", "Coordinator"]]), actionButton("Assign crew"));
+  form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form);
+    runOperation(`/api/operations/orders/${context.orderId}/appointments/${context.appointment.appointmentId}/assignments`, { personId: String(data.get("personId")), operationalRole: String(data.get("operationalRole")) }, form.querySelector("button")); });
+  section.append(form);
+  context.appointment.assignments.forEach((assignment) => {
+    const row = element("form", "assignment-row"); row.append(element("div", "", `${assignment.displayName} · ${attentionLabel(assignment.operationalRole).replace("Needs attention", assignment.operationalRole.toLowerCase().replaceAll("_", " "))}`));
+    row.append(selectField("Replacement", "replacementPersonId", candidateChoices), field("Reason", "text", "reason"), actionButton("Replace"));
+    row.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(row);
+      runOperation(`/api/operations/orders/${context.orderId}/appointments/${context.appointment.appointmentId}/assignments/${assignment.assignmentId}/replace`,
+        { replacementPersonId: String(data.get("replacementPersonId")), reason: String(data.get("reason")) }, row.querySelector("button")); });
+    section.append(row);
+  }); return section;
+}
+
+async function openOperationsDetail(orderId, supplied) {
+  operationsState.selectedOrderId = orderId; renderOperationsQueue();
+  try {
+    const context = supplied || await fetchJson(`/api/operations/orders/${encodeURIComponent(orderId)}`);
+    const detail = byId("operations-detail"); clearNode(detail);
+    const header = element("div", "detail-header"); header.append(element("p", "eyebrow", context.customer.displayName), element("h3", "", operationsAddress(context)),
+      element("p", "", context.services.map((service) => service.displayName).join(" · "))); detail.append(header);
+    if (context.attention.length) { const alerts = detailSection("Needs attention"); const chips = element("div", "detail-alerts");
+      context.attention.forEach((code) => chips.append(element("span", "attention-chip", attentionLabel(code)))); alerts.append(chips); detail.append(alerts); }
+    if (!context.propertyHubId || !context.scheduling || !context.job) {
+      const setup = detailSection("Start operational context", "Create the canonical Property Hub, Scheduling Request, Job, and one Workstream per ordered service as a single replay-safe action.");
+      const button = actionButton("Start operations"); button.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/initialize`, {}, button)); setup.append(button); detail.append(setup); return;
+    }
+    const candidates = await fetchJson(`/api/operations/assignment-candidates?organizationId=${encodeURIComponent(context.organizationId)}`);
+    operationsState.candidates = candidates.candidates || [];
+    detail.append(schedulingForm(context)); const appointment = appointmentSection(context); if (appointment) detail.append(appointment);
+    const assignment = assignmentSection(context); if (assignment) detail.append(assignment);
+    const work = detailSection("Job and services", `${context.job.state} · ${context.job.workstreams.length} service workstream${context.job.workstreams.length === 1 ? "" : "s"}`);
+    const list = element("ul", "workstream-list"); context.job.workstreams.forEach((item) => list.append(element("li", "", `${item.displayName} · ${item.state}`))); work.append(list); detail.append(work);
+  } catch (error) { operationsError(error instanceof Error ? error.message : "Operational context could not be loaded."); }
+}
+
+async function loadOperationsHome(showStatus = true) {
+  const status = byId("operations-status"); if (showStatus) status.hidden = false;
+  try {
+    const from = new Date(); from.setHours(0, 0, 0, 0); const to = new Date(from); to.setDate(to.getDate() + 60);
+    operationsState.home = await fetchJson(`/api/operations?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
+    renderOperationsQueue(); status.hidden = true;
+  } catch (error) { status.hidden = true; operationsError(error instanceof Error ? error.message : "The operations queue could not be loaded."); }
+}
+
+async function initializeOperationsPage() {
+  document.title = "Operations · MediaLab Operations Console";
+  document.querySelector(".header-copy h1").textContent = "Operations";
+  document.querySelector(".header-copy .lede").textContent = "Schedule upcoming work, see exceptions, and keep every appointment owned.";
+  document.querySelector(".skip-link").href = "#operations-main"; document.querySelector(".skip-link").textContent = "Skip to operations";
+  document.querySelector(".progress-shell").hidden = true; byId("console-main").hidden = true; byId("operations-main").hidden = false;
+  try {
+    await fetchJson("/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
+    await loadOperationsHome();
+    const orderId = new URLSearchParams(window.location.search).get("orderId"); if (orderId && UUID_PATTERN.test(orderId)) openOperationsDetail(orderId);
+  } catch (error) { operationsError(error instanceof Error ? error.message : "The local operator session is unavailable."); }
+}
+
+if (typeof window !== "undefined" && typeof document !== "undefined" && window.location.pathname === "/operations") {
+  document.querySelectorAll("[data-queue]").forEach((button) => button.addEventListener("click", () => {
+    operationsState.queue = button.dataset.queue; document.querySelectorAll("[data-queue]").forEach((item) => item.setAttribute("aria-pressed", String(item === button))); renderOperationsQueue();
+  }));
+  byId("operations-list").addEventListener("click", (event) => { const card = event.target.closest("[data-order-id]"); if (card) openOperationsDetail(card.dataset.orderId); });
+  byId("refresh-operations").addEventListener("click", () => loadOperationsHome());
+  initializeOperationsPage();
+} else if (typeof window !== "undefined" && typeof document !== "undefined") {
+  bindEvents(); initialize();
+}

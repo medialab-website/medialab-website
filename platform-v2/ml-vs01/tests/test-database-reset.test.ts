@@ -174,9 +174,13 @@ const EXACT_ROUTINE_NAMES = [
   'create_mission_plan_superseding_draft',
   'get_mission_plan_record',
   'get_mission_plan_sensitive_envelopes',
+  'get_operations_home',
+  'get_operations_order_context',
   'guard_mission_plan_draft_update',
   'issue_mission_plan_version',
   'list_mission_plans',
+  'list_operations_assignment_candidates',
+  'operations_order_context',
   'record_mission_plan_idempotency',
   'record_mission_plan_open_event',
   'record_mission_plan_sensitive_envelope',
@@ -564,7 +568,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(23);
+    expect(ledgerRes.rows).toHaveLength(24);
     expect(ledgerRes.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');

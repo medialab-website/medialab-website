@@ -36,7 +36,7 @@ describe("P02-M17-A Operations Console browser surface", () => {
 
   it("uses only same-origin static assets, safe DOM construction, and no raw JSON presentation", () => {
     const assetUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
-    expect(assetUrls).toEqual(["/styles.css", "/app.js", "#console-main"]);
+    expect(assetUrls).toEqual(["/styles.css", "/app.js", "#console-main", "/", "/operations", "/operations"]);
     expect(html).not.toMatch(/\sstyle=|<script(?![^>]*\bsrc=)|<iframe|<pre\b/i);
     expect(javascript).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\s*\(|new\s+Function\s*\(/);
     expect(javascript).toContain("document.createElement");
@@ -129,10 +129,11 @@ describe("P02-M17-A Operations Console browser surface", () => {
 
   it("makes the nonproduction authority boundary and excluded follow-on work unmistakable", () => {
     expect(html).toMatch(/Nonproduction environment/);
-    expect(html).toMatch(/reconstructed nonproduction catalog evidence/i);
-    expect(html).toMatch(/does not schedule appointments, create assignments or Mission Plans, process media, contact providers, or collect payment/i);
-    expect(html).toMatch(/This console stops at order confirmation/i);
-    expect(html).toMatch(/no appointment, assignment, or Mission Plan was created here/i);
+    expect(html).toMatch(/reconstructed nonproduction evidence/i);
+    expect(html).toMatch(/manage canonical scheduling and crew assignment/i);
+    expect(html).toMatch(/does not create Mission Plans, process media, contact providers, collect payment, or touch production/i);
+    expect(html).toMatch(/No appointment or assignment was created with the order/i);
+    expect(html).toMatch(/Continue in Operations/i);
     expect(javascript).toMatch(/No payment was processed by this console/i);
     expect(html).not.toMatch(/production[- ]ready|live customer|live provider/i);
   });

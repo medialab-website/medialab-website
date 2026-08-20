@@ -48,8 +48,11 @@ for (const name of eight) {
 }
 if (P02_M16_B_ALLOWLIST.length !== 50 || P02_M16_B_ALLOWLIST.some((item) => !item.startsWith("platform-v2/ml-vs01/"))) fail("amended 50-path boundary invalid");
 if (P02_M16_C_ALLOWLIST.length !== 16 || P02_M16_C_ALLOWLIST.some((item) => !item.startsWith("platform-v2/ml-vs01/"))) fail("M16-C boundary invalid");
-if (!readFileSync(join(base, "scripts/verify-changed-files.ts"), "utf8").includes("P02_M16_C_ALLOWLIST") ||
-    !readFileSync(join(base, "scripts/verify-foundation-closeout.ts"), "utf8").includes("P02_M16_C_ALLOWLIST")) fail("current boundary is not centralized");
+const changedFilesVerifier = readFileSync(join(base, "scripts/verify-changed-files.ts"), "utf8");
+for (const required of ["readCandidateStatus", "readChangedFilesInventory", "compareExactPathSets"]) {
+  if (!changedFilesVerifier.includes(required)) fail("current boundary is not centralized");
+}
+if (!String(packageJson.scripts["verify:all"]).includes("npm run verify:changed-files")) fail("current boundary is not in strict verify:all");
 
 const replayFiles = readdirSync(join(base, "src/business-replay")).map((name) => join(base, "src/business-replay", name));
 const replaySource = replayFiles.map((file) => readFileSync(file, "utf8")).join("\n");
@@ -60,9 +63,9 @@ const adapterSource = readFileSync(join(base, "src/business-replay/platform-adap
 const adapterDml = adapterSource.match(/\b(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+|FROM\s+)?medialab_core\.[a-z_]+/gi) ?? [];
 if (adapterDml.length !== 1 || !/INSERT INTO medialab_core\.development_sessions/i.test(adapterDml[0]!)) fail("Platform adapter exceeds accepted synthetic session bootstrap DML");
 const diff = BunLikeGitDiff();
-if (/\bGRANT\b[^;]*\bPUBLIC\b/i.test(diff) || /\bREVOKE\b[^;]*\bPUBLIC\b/i.test(diff)) fail("new PUBLIC authority detected");
+if (/\bGRANT\b[^;]*\bPUBLIC\b/i.test(diff)) fail("new PUBLIC authority detected");
 const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrations.length !== 23 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql") fail("migration inventory is not exact 0001-0023");
+if (migrations.length !== 24 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrations[23] !== "0024_operations_home_scheduling_assignment_console.sql") fail("migration inventory is not exact 0001-0024");
 for (const name of migrations.slice(0, 22)) {
   const predecessor = requireChildProcess().execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
   if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);

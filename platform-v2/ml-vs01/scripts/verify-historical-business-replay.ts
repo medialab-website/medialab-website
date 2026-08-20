@@ -49,7 +49,7 @@ for (const source of Object.values(FROZEN_SOURCES)) {
   if (hash !== source.sha256) fail(`post-run raw identity changed: ${source.relativePath}`);
 }
 const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrations.length !== 23 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql") fail("migration inventory is not exact 0001-0023");
+if (migrations.length !== 24 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrations[23] !== "0024_operations_home_scheduling_assignment_console.sql") fail("migration inventory is not exact 0001-0024");
 for (const name of migrations.slice(0, 22)) {
   const predecessor = execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
   if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);

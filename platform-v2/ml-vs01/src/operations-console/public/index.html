@@ -23,11 +23,16 @@
       </div>
     </header>
 
+    <nav class="app-nav" aria-label="Operations Console">
+      <a href="/">New listing</a>
+      <a href="/operations">Operations</a>
+    </nav>
+
     <div class="boundary-notice" role="note" aria-labelledby="boundary-heading">
       <div aria-hidden="true" class="notice-mark">i</div>
       <div>
         <h2 id="boundary-heading">Bounded development console</h2>
-        <p>This local surface uses reconstructed nonproduction catalog evidence. It does not schedule appointments, create assignments or Mission Plans, process media, contact providers, or collect payment.</p>
+        <p>This local surface uses reconstructed nonproduction evidence. It can create listings and manage canonical scheduling and crew assignment; it does not create Mission Plans, process media, contact providers, collect payment, or touch production.</p>
       </div>
     </div>
 
@@ -181,15 +186,43 @@
         <div id="confirmation-content" class="confirmation-content" aria-live="polite"></div>
         <div class="next-step-note">
           <h3>Scheduling comes next</h3>
-          <p>This console stops at order confirmation. Continue through the separately approved scheduling workflow; no appointment, assignment, or Mission Plan was created here.</p>
+          <p>No appointment or assignment was created with the order. Continue in Operations when you are ready.</p>
+          <a id="open-order-operations" class="button button-primary" href="/operations">Open operations</a>
         </div>
       </section>
 
       <p id="screen-reader-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
     </main>
 
+    <main id="operations-main" class="operations-shell" hidden>
+      <div id="operations-error" class="error-summary" role="alert" tabindex="-1" hidden>
+        <h2>We couldn’t continue</h2><p id="operations-error-message"></p>
+      </div>
+      <section class="operations-hero">
+        <div><p class="eyebrow">Daily command center</p><h2>Operations</h2>
+          <p>See what is scheduled, what is coming up, and what needs an owner.</p></div>
+        <button id="refresh-operations" class="button button-secondary" type="button">Refresh</button>
+      </section>
+      <div id="operations-status" class="startup-status" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span><span>Opening the operations queue…</span>
+      </div>
+      <nav class="queue-tabs" aria-label="Operations views">
+        <button type="button" data-queue="today" aria-pressed="true">Today <span id="today-count">0</span></button>
+        <button type="button" data-queue="upcoming" aria-pressed="false">Upcoming <span id="upcoming-count">0</span></button>
+        <button type="button" data-queue="attention" aria-pressed="false">Needs attention <span id="attention-count">0</span></button>
+      </nav>
+      <div class="operations-layout">
+        <section class="queue-panel" aria-labelledby="queue-heading">
+          <h3 id="queue-heading">Today</h3><div id="operations-list" class="operations-list"></div>
+        </section>
+        <aside id="operations-detail" class="operations-detail" aria-live="polite">
+          <div class="empty-detail"><h3>Select an order</h3><p>Open any item to schedule work, confirm an appointment, or assign crew.</p></div>
+        </aside>
+      </div>
+    </main>
+
     <footer>
-      <p>Internal nonproduction console · New Listing &amp; Order Confirmation only</p>
+      <p>Internal nonproduction console · Listings, scheduling &amp; crew assignment</p>
     </footer>
   </body>
 </html>

@@ -21,6 +21,20 @@ import {
 } from "./database.js";
 import { operationsConsoleError } from "./errors.js";
 import type { ResolvedDevelopmentOperatorSession } from "./session.js";
+import {
+  OPERATIONS_SCHEMA,
+  type AssignmentCandidates,
+  type AcceptProposalInput,
+  type AssignmentInput,
+  type CancelAppointmentInput,
+  type ConfirmAppointmentInput,
+  type OperationsActionReceipt,
+  type OperationsContext,
+  type OperationsHome,
+  type OperationsWindowInput,
+  type ReplacementInput,
+  type RescheduleAppointmentInput,
+} from "./operations-contracts.js";
 
 const CATALOG_TTL_MS = 10 * 60 * 1_000;
 const PREVIEW_TTL_MS = 15 * 60 * 1_000;
@@ -279,6 +293,93 @@ export class OperationsConsoleService {
     }
   }
 
+  #safeContext(context: OperationsContext): OperationsContext {
+    const {
+      schedulingRequestLineageIds: _requests,
+      appointmentLineageIds: _appointments,
+      assignmentLineageIds: _assignments,
+      ...publicContext
+    } = context as OperationsContext & {
+      schedulingRequestLineageIds?: string[]; appointmentLineageIds?: string[]; assignmentLineageIds?: string[];
+    };
+    if (!publicContext.scheduling) return publicContext;
+    const { customerIdentityId: _hidden, ...scheduling } = publicContext.scheduling as typeof publicContext.scheduling & { customerIdentityId?: string };
+    return { ...publicContext, scheduling };
+  }
+
+  #translateOperationsError(error: unknown): never {
+    if (error instanceof OperationsConsoleDatabaseError) {
+      if (error.code === "AUTHORITY") throw operationsConsoleError("FORBIDDEN", { cause: error });
+      if (error.code === "VALIDATION") throw operationsConsoleError("INVALID_REQUEST", { cause: error });
+      if (error.code === "CONFLICT") throw operationsConsoleError("IDEMPOTENCY_CONFLICT", { cause: error });
+      throw operationsConsoleError("SERVICE_UNAVAILABLE", { cause: error });
+    }
+    throw error;
+  }
+
+  async operationsHome(session: ResolvedDevelopmentOperatorSession, from: string, to: string): Promise<OperationsHome> {
+    try {
+      const projection = await this.#database.getOperationsHome(session.databaseSessionToken, from, to);
+      return Object.freeze({ ...projection, items: projection.items.map((item) => this.#safeContext(item)),
+        sections: {
+          today: projection.sections.today.map((item) => this.#safeContext(item)),
+          upcoming: projection.sections.upcoming.map((item) => this.#safeContext(item)),
+          needsAttention: projection.sections.needsAttention.map((item) => this.#safeContext(item)),
+        },
+        schema: OPERATIONS_SCHEMA, contract: "OperationsHomeV1" as const });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async operationsContext(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<OperationsContext> {
+    try { return this.#safeContext(await this.#database.getOperationsContext(session.databaseSessionToken, orderId)); }
+    catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async assignmentCandidates(session: ResolvedDevelopmentOperatorSession, organizationId: string): Promise<AssignmentCandidates> {
+    try {
+      const projection = await this.#database.listAssignmentCandidates(session.databaseSessionToken, organizationId);
+      return Object.freeze({ ...projection, schema: OPERATIONS_SCHEMA, contract: "OperationsAssignmentCandidatesV1" as const });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async #action(
+    action: string,
+    execute: () => Promise<OperationsContext>,
+  ): Promise<OperationsActionReceipt> {
+    try {
+      return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "OperationsActionReceiptV1" as const,
+        action, replaySafe: true as const, context: this.#safeContext(await execute()) });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  initializeOperations(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<OperationsActionReceipt> {
+    return this.#action("INITIALIZE_OPERATIONS", () => this.#database.initializeOperations(session.databaseSessionToken, orderId));
+  }
+  addRequestedWindow(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: OperationsWindowInput): Promise<OperationsActionReceipt> {
+    return this.#action("ADD_REQUESTED_WINDOW", () => this.#database.addRequestedWindow(session.databaseSessionToken, orderId, requestId, input));
+  }
+  proposeWindow(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: OperationsWindowInput): Promise<OperationsActionReceipt> {
+    return this.#action("PROPOSE_WINDOW", () => this.#database.proposeWindow(session.databaseSessionToken, orderId, requestId, input));
+  }
+  acceptProposal(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: AcceptProposalInput): Promise<OperationsActionReceipt> {
+    return this.#action("ACCEPT_PROPOSAL", () => this.#database.acceptProposal(session.databaseSessionToken, orderId, requestId, input));
+  }
+  confirmAppointment(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: ConfirmAppointmentInput): Promise<OperationsActionReceipt> {
+    return this.#action("CONFIRM_APPOINTMENT", () => this.#database.confirmAppointment(session.databaseSessionToken, orderId, requestId, input));
+  }
+  cancelAppointment(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: CancelAppointmentInput): Promise<OperationsActionReceipt> {
+    return this.#action("CANCEL_APPOINTMENT", () => this.#database.cancelAppointment(session.databaseSessionToken, orderId, appointmentId, input));
+  }
+  rescheduleAppointment(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: RescheduleAppointmentInput): Promise<OperationsActionReceipt> {
+    return this.#action("RESCHEDULE_APPOINTMENT", () => this.#database.rescheduleAppointment(session.databaseSessionToken, orderId, appointmentId, input));
+  }
+  assignParticipant(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: AssignmentInput): Promise<OperationsActionReceipt> {
+    return this.#action("ASSIGN_PARTICIPANT", () => this.#database.assignParticipant(session.databaseSessionToken, orderId, appointmentId, input));
+  }
+  replaceParticipant(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, assignmentId: string, input: ReplacementInput): Promise<OperationsActionReceipt> {
+    return this.#action("REPLACE_PARTICIPANT", () => this.#database.replaceParticipant(session.databaseSessionToken, orderId, appointmentId, assignmentId, input));
+  }
+
   #confirmation(preview: BoundPreviewState, transaction: ListingTransactionResult, replayed: boolean): CanonicalOrderConfirmationV1 {
     const record = transaction.postCommitRecord;
     const property = preview.request.property;
@@ -329,8 +430,8 @@ export class OperationsConsoleService {
       propertyOutcome: transaction.property.property_outcome as "PROPERTY_CREATED" | "PROPERTY_REUSED",
       propertySnapshotOutcome: transaction.property.snapshot_outcome as "SNAPSHOT_CREATED" | "SNAPSHOT_REUSED",
       replayed,
-      nextStep: "SCHEDULING_NOT_INCLUDED" as const,
-      nextStepMessage: "Scheduling and assignment are intentionally outside this approved slice.",
+      nextStep: "OPERATIONS_AVAILABLE" as const,
+      nextStepMessage: "Open operational context to schedule the appointment and assign crew.",
     }) as CanonicalOrderConfirmationV1;
   }
 

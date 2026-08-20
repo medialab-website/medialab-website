@@ -192,6 +192,7 @@ exactNames('Canonical migration inventory', migrationFiles, [
   ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
   ,'0022_organization_records_dashboard_audited_export_foundation.sql'
   ,'0023_runtime_intake_reconciliation_commands.sql'
+  ,'0024_operations_home_scheduling_assignment_console.sql'
 ]);
 for (const expected of expectedMigrations) {
   const bytes = fs.readFileSync(path.join(migrationsDir, expected.filename));

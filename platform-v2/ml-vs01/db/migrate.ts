@@ -47,6 +47,7 @@ const DISPOSABLE_DELIVERY_SURFACE_PACKET_MIGRATION = '0020_disposable_delivery_s
 const PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_PACKET_MIGRATION = '0021_provider_neutral_file_backed_disposable_delivery_foundation.sql';
 const ORGANIZATION_RECORDS_AUDITED_EXPORT_PACKET_MIGRATION = '0022_organization_records_dashboard_audited_export_foundation.sql';
 const RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION = '0023_runtime_intake_reconciliation_commands.sql';
+const OPERATIONS_HOME_PACKET_MIGRATION = '0024_operations_home_scheduling_assignment_console.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -284,6 +285,12 @@ const RUNTIME_INTAKE_RECONCILIATION_PUBLIC_FUNCTIONS = [
   'medialab_core.reconcile_property_snapshot_intake(text, text, uuid, text, text, text, text, text, text, text, text, integer)'
 ];
 
+const OPERATIONS_HOME_PUBLIC_FUNCTIONS = [
+  'medialab_core.get_operations_home(text, timestamptz, timestamptz)',
+  'medialab_core.get_operations_order_context(text, uuid)',
+  'medialab_core.list_operations_assignment_candidates(text, uuid)'
+];
+
 export function validateMigrationFilenames(filenames: string[]): void {
   const filenameRegex = /^[0-9]{4}_[a-z0-9_]+\.sql$/;
   const prefixes = new Set<string>();
@@ -355,7 +362,8 @@ async function applyRuntimePrivilegePolicy(
   includeDisposableDeliverySurfaceFunctions = false,
   includeProviderNeutralFileBackedDeliveryFunctions = false,
   includeOrganizationRecordsAuditedExportFunctions = false,
-  includeRuntimeIntakeReconciliationFunctions = false
+  includeRuntimeIntakeReconciliationFunctions = false,
+  includeOperationsHomeFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -391,7 +399,8 @@ async function applyRuntimePrivilegePolicy(
       ...(includeDisposableDeliverySurfaceFunctions ? DISPOSABLE_DELIVERY_SURFACE_PUBLIC_FUNCTIONS : []),
       ...(includeProviderNeutralFileBackedDeliveryFunctions ? PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_PUBLIC_FUNCTIONS : []),
       ...(includeOrganizationRecordsAuditedExportFunctions ? ORGANIZATION_RECORDS_AUDITED_EXPORT_PUBLIC_FUNCTIONS : []),
-      ...(includeRuntimeIntakeReconciliationFunctions ? RUNTIME_INTAKE_RECONCILIATION_PUBLIC_FUNCTIONS : [])
+      ...(includeRuntimeIntakeReconciliationFunctions ? RUNTIME_INTAKE_RECONCILIATION_PUBLIC_FUNCTIONS : []),
+      ...(includeOperationsHomeFunctions ? OPERATIONS_HOME_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -584,6 +593,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === OPERATIONS_HOME_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -626,7 +639,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           sqlFiles.includes(DISPOSABLE_DELIVERY_SURFACE_PACKET_MIGRATION),
           sqlFiles.includes(PROVIDER_NEUTRAL_FILE_BACKED_DELIVERY_PACKET_MIGRATION),
           sqlFiles.includes(ORGANIZATION_RECORDS_AUDITED_EXPORT_PACKET_MIGRATION),
-          sqlFiles.includes(RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION)
+          sqlFiles.includes(RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION),
+          sqlFiles.includes(OPERATIONS_HOME_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {

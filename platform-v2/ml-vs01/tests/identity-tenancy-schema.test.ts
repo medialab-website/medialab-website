@@ -219,6 +219,8 @@ const EXACT_ROUTINE_NAMES = [
   'get_job_record',
   'get_mission_plan_record',
   'get_mission_plan_sensitive_envelopes',
+  'get_operations_home',
+  'get_operations_order_context',
   'get_order_record',
   'get_property_hub_record',
   'get_scheduling_request_record',
@@ -244,7 +246,9 @@ const EXACT_ROUTINE_NAMES = [
   'issue_mission_plan_version',
   'link_job_appointment',
   'list_mission_plans',
+  'list_operations_assignment_candidates',
   'normalize_contact_value',
+  'operations_order_context',
   'propose_scheduling_window',
   'publish_catalog_draft_product',
   'record_appointment_no_show',
@@ -538,6 +542,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0021_provider_neutral_file_backed_disposable_delivery_foundation.sql'
       ,'0022_organization_records_dashboard_audited_export_foundation.sql'
       ,'0023_runtime_intake_reconciliation_commands.sql'
+      ,'0024_operations_home_scheduling_assignment_console.sql'
     ]);
   });
 

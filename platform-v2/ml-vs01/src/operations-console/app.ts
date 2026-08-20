@@ -20,6 +20,28 @@ import {
   type ResolvedDevelopmentOperatorSession,
   type ServerBoundDevelopmentOperatorContext,
 } from "./session.js";
+import {
+  parseAssignment,
+  parseAcceptProposal,
+  parseCancel,
+  parseConfirm,
+  parseEmpty,
+  parseProposedWindow,
+  parseReplacement,
+  parseRequestedWindow,
+  parseReschedule,
+  type AssignmentCandidates,
+  type AcceptProposalInput,
+  type AssignmentInput,
+  type CancelAppointmentInput,
+  type ConfirmAppointmentInput,
+  type OperationsActionReceipt,
+  type OperationsContext,
+  type OperationsHome,
+  type OperationsWindowInput,
+  type ReplacementInput,
+  type RescheduleAppointmentInput,
+} from "./operations-contracts.js";
 
 const publicRoot = join(dirname(fileURLToPath(import.meta.url)), "public");
 const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -41,6 +63,18 @@ export interface OperationsConsoleApplicationService {
   preview(session: ResolvedDevelopmentOperatorSession, request: ListingPreviewRequestV1): Promise<ListingPreviewV1>;
   create(session: ResolvedDevelopmentOperatorSession, request: CreateListingRequestV1): Promise<ListingCreationReceiptV1>;
   order(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<CanonicalOrderConfirmationV1>;
+  operationsHome?(session: ResolvedDevelopmentOperatorSession, from: string, to: string): Promise<OperationsHome>;
+  operationsContext?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<OperationsContext>;
+  assignmentCandidates?(session: ResolvedDevelopmentOperatorSession, organizationId: string): Promise<AssignmentCandidates>;
+  initializeOperations?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<OperationsActionReceipt>;
+  addRequestedWindow?(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: OperationsWindowInput): Promise<OperationsActionReceipt>;
+  proposeWindow?(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: OperationsWindowInput): Promise<OperationsActionReceipt>;
+  acceptProposal?(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: AcceptProposalInput): Promise<OperationsActionReceipt>;
+  confirmAppointment?(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string, input: ConfirmAppointmentInput): Promise<OperationsActionReceipt>;
+  cancelAppointment?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: CancelAppointmentInput): Promise<OperationsActionReceipt>;
+  rescheduleAppointment?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: RescheduleAppointmentInput): Promise<OperationsActionReceipt>;
+  assignParticipant?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: AssignmentInput): Promise<OperationsActionReceipt>;
+  replaceParticipant?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, assignmentId: string, input: ReplacementInput): Promise<OperationsActionReceipt>;
   close?(): Promise<void>;
 }
 
@@ -71,6 +105,18 @@ function assertSameOrigin(request: FastifyRequest): void {
     if (error instanceof Error && error.name === "OperationsConsoleHttpError") throw error;
     throw operationsConsoleError("FORBIDDEN");
   }
+}
+
+function canonicalId(value: string): string {
+  if (!ORDER_ID.test(value)) throw operationsConsoleError("NOT_FOUND");
+  return value.toLowerCase();
+}
+
+function isoRange(value: string | undefined): string {
+  if (typeof value !== "string" || value.length > 40 || !/[zZ]|[+-]\d{2}:\d{2}$/u.test(value)) throw operationsConsoleError("INVALID_REQUEST");
+  const date = new Date(value);
+  if (!Number.isFinite(date.valueOf())) throw operationsConsoleError("INVALID_REQUEST");
+  return date.toISOString();
 }
 
 export function createOperationsConsoleApp(options: OperationsConsoleApplicationOptions) {
@@ -133,7 +179,37 @@ export function createOperationsConsoleApp(options: OperationsConsoleApplication
     return options.service.order(authenticated(options.sessions, request), request.params.orderId.toLowerCase());
   });
 
+  app.get<{ Querystring: { from?: string; to?: string } }>("/api/operations", async (request) =>
+    options.service.operationsHome!(authenticated(options.sessions, request), isoRange(request.query.from), isoRange(request.query.to)));
+
+  app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId", async (request) =>
+    options.service.operationsContext!(authenticated(options.sessions, request), canonicalId(request.params.orderId)));
+
+  app.get<{ Querystring: { organizationId?: string } }>("/api/operations/assignment-candidates", async (request) =>
+    options.service.assignmentCandidates!(authenticated(options.sessions, request), canonicalId(request.query.organizationId ?? "")));
+
+  app.post<{ Params: { orderId: string }; Body: unknown }>("/api/operations/orders/:orderId/initialize", async (request) => {
+    parseEmpty(request.body); return options.service.initializeOperations!(authenticated(options.sessions, request), canonicalId(request.params.orderId));
+  });
+  app.post<{ Params: { orderId: string; requestId: string }; Body: unknown }>("/api/operations/orders/:orderId/scheduling/:requestId/requested-windows", async (request) =>
+    options.service.addRequestedWindow!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.requestId), parseRequestedWindow(request.body)));
+  app.post<{ Params: { orderId: string; requestId: string }; Body: unknown }>("/api/operations/orders/:orderId/scheduling/:requestId/proposed-windows", async (request) =>
+    options.service.proposeWindow!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.requestId), parseProposedWindow(request.body)));
+  app.post<{ Params: { orderId: string; requestId: string }; Body: unknown }>("/api/operations/orders/:orderId/scheduling/:requestId/accept-proposal", async (request) =>
+    options.service.acceptProposal!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.requestId), parseAcceptProposal(request.body)));
+  app.post<{ Params: { orderId: string; requestId: string }; Body: unknown }>("/api/operations/orders/:orderId/scheduling/:requestId/confirm", async (request) =>
+    options.service.confirmAppointment!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.requestId), parseConfirm(request.body)));
+  app.post<{ Params: { orderId: string; appointmentId: string }; Body: unknown }>("/api/operations/orders/:orderId/appointments/:appointmentId/cancel", async (request) =>
+    options.service.cancelAppointment!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.appointmentId), parseCancel(request.body)));
+  app.post<{ Params: { orderId: string; appointmentId: string }; Body: unknown }>("/api/operations/orders/:orderId/appointments/:appointmentId/reschedule", async (request) =>
+    options.service.rescheduleAppointment!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.appointmentId), parseReschedule(request.body)));
+  app.post<{ Params: { orderId: string; appointmentId: string }; Body: unknown }>("/api/operations/orders/:orderId/appointments/:appointmentId/assignments", async (request) =>
+    options.service.assignParticipant!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.appointmentId), parseAssignment(request.body)));
+  app.post<{ Params: { orderId: string; appointmentId: string; assignmentId: string }; Body: unknown }>("/api/operations/orders/:orderId/appointments/:appointmentId/assignments/:assignmentId/replace", async (request) =>
+    options.service.replaceParticipant!(authenticated(options.sessions, request), canonicalId(request.params.orderId), canonicalId(request.params.appointmentId), canonicalId(request.params.assignmentId), parseReplacement(request.body)));
+
   app.get("/", async (_request, reply) => reply.type("text/html; charset=utf-8").send(await readFile(join(publicRoot, "index.html"))));
+  app.get("/operations", async (_request, reply) => reply.type("text/html; charset=utf-8").send(await readFile(join(publicRoot, "index.html"))));
   app.get("/app.js", async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(await readFile(join(publicRoot, "app.js"))));
   app.get("/styles.css", async (_request, reply) => reply.type("text/css; charset=utf-8").send(await readFile(join(publicRoot, "styles.css"))));
 
