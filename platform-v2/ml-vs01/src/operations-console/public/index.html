@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>New listing · MediaLab Operations Console</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#console-main">Skip to listing form</a>
+
+    <header class="site-header">
+      <div class="header-copy">
+        <p class="eyebrow">MediaLab · Internal Operations</p>
+        <h1>New listing</h1>
+        <p class="lede">Create a customer, property, and order from one careful review.</p>
+      </div>
+      <div class="environment-badge" aria-label="Nonproduction environment">
+        <span aria-hidden="true"></span>
+        Nonproduction
+      </div>
+    </header>
+
+    <div class="boundary-notice" role="note" aria-labelledby="boundary-heading">
+      <div aria-hidden="true" class="notice-mark">i</div>
+      <div>
+        <h2 id="boundary-heading">Bounded development console</h2>
+        <p>This local surface uses reconstructed nonproduction catalog evidence. It does not schedule appointments, create assignments or Mission Plans, process media, contact providers, or collect payment.</p>
+      </div>
+    </div>
+
+    <nav class="progress-shell" aria-label="New listing progress">
+      <ol id="progress-list" class="progress-list">
+        <li data-progress-step="customer" aria-current="step"><span>1</span>Customer</li>
+        <li data-progress-step="property"><span>2</span>Property</li>
+        <li data-progress-step="services"><span>3</span>Services</li>
+        <li data-progress-step="review"><span>4</span>Review</li>
+        <li data-progress-step="create"><span>5</span>Create listing</li>
+        <li data-progress-step="confirmation"><span>6</span>Confirmation</li>
+      </ol>
+    </nav>
+
+    <main id="console-main" class="console-shell">
+      <div id="error-summary" class="error-summary" role="alert" tabindex="-1" hidden>
+        <h2>We couldn’t continue</h2>
+        <p id="error-message">Check the highlighted information and try again.</p>
+      </div>
+
+      <div id="startup-status" class="startup-status" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="startup-message">Opening a private local operator session…</span>
+        <button id="retry-startup" class="button button-secondary button-compact" type="button" hidden>Try again</button>
+      </div>
+
+      <section id="customer-step" class="step-card" data-step-panel="customer" aria-labelledby="customer-heading">
+        <div class="step-heading">
+          <p class="step-kicker">Step 1 of 6</p>
+          <h2 id="customer-heading" tabindex="-1">Who is this listing for?</h2>
+          <p>Enter only the customer details needed to reconcile the internal record.</p>
+        </div>
+        <form id="customer-form" aria-describedby="required-note" novalidate>
+          <p id="required-note" class="required-note"><span aria-hidden="true">*</span> Required field</p>
+          <div class="field-grid">
+            <div class="field field-wide">
+              <label for="customer-name">Customer name <span aria-hidden="true">*</span></label>
+              <input id="customer-name" name="customerName" type="text" autocomplete="name" maxlength="160" required>
+              <p class="field-hint">Use the name the team should see on the order.</p>
+            </div>
+            <div class="field field-wide">
+              <label for="customer-email">Customer email <span aria-hidden="true">*</span></label>
+              <input id="customer-email" name="customerEmail" type="email" inputmode="email" autocomplete="email" maxlength="254" required>
+              <p class="field-hint">Used only to reconcile the customer within this bounded flow.</p>
+            </div>
+          </div>
+          <div class="form-actions form-actions-end">
+            <button id="customer-continue" class="button button-primary" type="submit" disabled>Continue to property</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="property-step" class="step-card" data-step-panel="property" aria-labelledby="property-heading" hidden>
+        <div class="step-heading">
+          <p class="step-kicker">Step 2 of 6</p>
+          <h2 id="property-heading" tabindex="-1">Where is the property?</h2>
+          <p>The address is normalized and reconciled before the listing is created.</p>
+        </div>
+        <form id="property-form" novalidate>
+          <div class="field-grid">
+            <div class="field field-wide">
+              <label for="address-line-1">Street address <span aria-hidden="true">*</span></label>
+              <input id="address-line-1" name="addressLine1" type="text" autocomplete="address-line1" maxlength="200" required>
+            </div>
+            <div class="field field-wide">
+              <label for="address-line-2">Unit or suite <span class="optional">Optional</span></label>
+              <input id="address-line-2" name="addressLine2" type="text" autocomplete="address-line2" maxlength="200">
+            </div>
+            <div class="field field-locality">
+              <label for="locality">City or locality <span aria-hidden="true">*</span></label>
+              <input id="locality" name="locality" type="text" autocomplete="address-level2" maxlength="120" required>
+            </div>
+            <div class="field field-region">
+              <label for="administrative-area">State or region <span aria-hidden="true">*</span></label>
+              <input id="administrative-area" name="administrativeArea" type="text" autocomplete="address-level1" maxlength="120" autocapitalize="characters" required>
+            </div>
+            <div class="field field-postal">
+              <label for="postal-code">Postal code <span aria-hidden="true">*</span></label>
+              <input id="postal-code" name="postalCode" type="text" autocomplete="postal-code" maxlength="32" required>
+            </div>
+            <div class="field field-country">
+              <label for="country-code">Country code <span aria-hidden="true">*</span></label>
+              <input id="country-code" name="countryCode" type="text" autocomplete="country" maxlength="2" autocapitalize="characters" value="US" required>
+            </div>
+            <div class="field field-square-feet">
+              <label for="square-feet">Square feet <span class="optional">When required by a package</span></label>
+              <input id="square-feet" name="squareFeet" type="number" inputmode="numeric" min="1" max="1000000" step="1">
+              <p class="field-hint">You can add this now or when a square-foot package is selected.</p>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="button button-secondary" type="button" data-back="customer">Back</button>
+            <button class="button button-primary" type="submit">Continue to services</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="services-step" class="step-card" data-step-panel="services" aria-labelledby="services-heading" hidden>
+        <div class="step-heading">
+          <p class="step-kicker">Step 3 of 6</p>
+          <h2 id="services-heading" tabindex="-1">Choose services</h2>
+          <p>Select one or more available catalog choices. Package quantity is fixed at one; individual services allow 1–99.</p>
+        </div>
+        <form id="services-form" novalidate>
+          <fieldset>
+            <legend class="visually-hidden">Available services</legend>
+            <div id="catalog-status" class="catalog-status" role="status">Catalog choices will appear when the local session is ready.</div>
+            <div id="catalog-choices" class="catalog-choices"></div>
+          </fieldset>
+          <p id="catalog-disclosure" class="catalog-disclosure">Catalog names and calculated amounts shown here are server-provided, reconstructed nonproduction evidence—not production pricing authority.</p>
+          <div class="form-actions">
+            <button class="button button-secondary" type="button" data-back="property">Back</button>
+            <button id="services-continue" class="button button-primary" type="submit">Review listing</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="review-step" class="step-card" data-step-panel="review" aria-labelledby="review-heading" hidden>
+        <div class="step-heading">
+          <p class="step-kicker">Step 4 of 6</p>
+          <h2 id="review-heading" tabindex="-1">Review before creating</h2>
+          <p>These details are bound to a short-lived server preview. Go back to make a correction.</p>
+        </div>
+        <div id="review-content" class="review-grid" aria-live="polite"></div>
+        <div class="review-assurance">
+          <h3>What happens next</h3>
+          <p>Creating the listing writes the customer, property snapshot, commercial snapshots, and order as one transaction. No appointment, assignment, Mission Plan, provider action, media workflow, or payment is created.</p>
+        </div>
+        <div class="form-actions">
+          <button class="button button-secondary" type="button" data-back="services">Back</button>
+          <button id="create-listing" class="button button-primary button-emphasis" type="button">Create listing</button>
+        </div>
+      </section>
+
+      <section id="create-step" class="step-card centered-card" data-step-panel="create" aria-labelledby="create-heading" hidden aria-busy="false">
+        <span class="spinner spinner-large" aria-hidden="true"></span>
+        <p class="step-kicker">Step 5 of 6</p>
+        <h2 id="create-heading" tabindex="-1">Creating the listing safely</h2>
+        <p id="create-status" role="status" aria-live="polite">Keeping every write together until canonical readback succeeds…</p>
+      </section>
+
+      <section id="confirmation-step" class="step-card confirmation-card" data-step-panel="confirmation" aria-labelledby="confirmation-heading" hidden>
+        <div class="confirmation-heading">
+          <span class="success-mark" aria-hidden="true">✓</span>
+          <div>
+            <p class="step-kicker">Step 6 of 6</p>
+            <h2 id="confirmation-heading" tabindex="-1">Listing and order confirmed</h2>
+            <p>Canonical readback completed after the transaction committed.</p>
+          </div>
+        </div>
+        <div id="confirmation-content" class="confirmation-content" aria-live="polite"></div>
+        <div class="next-step-note">
+          <h3>Scheduling comes next</h3>
+          <p>This console stops at order confirmation. Continue through the separately approved scheduling workflow; no appointment, assignment, or Mission Plan was created here.</p>
+        </div>
+      </section>
+
+      <p id="screen-reader-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+    </main>
+
+    <footer>
+      <p>Internal nonproduction console · New Listing &amp; Order Confirmation only</p>
+    </footer>
+  </body>
+</html>

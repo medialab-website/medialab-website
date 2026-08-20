@@ -1,68 +1,50 @@
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { P02_M16_E_ALLOWLIST } from './p02-m16-e-changed-files.js';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  P02_M17_A_ALLOWLIST,
+  compareExactPathSets,
+  readCandidateStatus,
+  readChangedFilesInventory,
+  validateCandidateStatus,
+} from "./p02-m17-a-changed-files.js";
+import { P02_M16_C_ALLOWLIST } from "./p02-m16-c-changed-files.js";
 
-// P02_M16_C_ALLOWLIST and other predecessor allowlists remain frozen historical definitions; current enforcement is P02_M16_E_ALLOWLIST.
+const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(baseDir, "../..");
+const states = readCandidateStatus(repoRoot);
+const actualPaths = states.map((state) => state.path).sort();
+const documentedPaths = readChangedFilesInventory(path.join(baseDir, "CHANGED_FILES.md")).sort();
+const failures = [
+  ...validateCandidateStatus(states),
+  ...compareExactPathSets(actualPaths, documentedPaths),
+];
 
-console.log('Running verify-changed-files.ts...');
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const worktreeRoot = path.resolve(__dirname, '../../../');
-const changedFilesMdPath = path.resolve(__dirname, '../CHANGED_FILES.md');
-
-if (!fs.existsSync(changedFilesMdPath)) {
-  console.error(`ERROR: CHANGED_FILES.md not found at ${changedFilesMdPath}`);
-  process.exit(1);
+if (
+  P02_M16_C_ALLOWLIST.length !== 16 ||
+  P02_M16_C_ALLOWLIST.some((candidatePath) => !candidatePath.startsWith("platform-v2/ml-vs01/"))
+) {
+  failures.push("predecessor P02-M16-C centralized boundary invalid");
 }
 
-const mdContent = fs.readFileSync(changedFilesMdPath, 'utf-8');
-
-const gitStatusRaw = execSync('git status --porcelain -uall platform-v2/ml-vs01', {
-  cwd: worktreeRoot,
-  encoding: 'utf-8'
-});
-
-const actualGitFiles = gitStatusRaw
-  .split('\n')
-  .map((line: string) => line.replace(/\r$/, ''))
-  .filter((line: string) => line.length > 0)
-  .map((line: string) => line.substring(3).trim())
-  .filter((f: string) => f.length > 0 && !f.includes('node_modules/'));
-
-const stagedPaths = gitStatusRaw
-  .split('\n')
-  .map((line: string) => line.replace(/\r$/, ''))
-  .filter((line: string) => line.length > 0 && line[0] !== ' ' && line[0] !== '?')
-  .map((line: string) => line.substring(3).trim());
-
-if (stagedPaths.length > 0) {
-  console.error(`ERROR: Staged candidate paths detected: ${stagedPaths.join(', ')}`);
-  process.exit(1);
-}
-
-console.log('Actual Git candidate files:');
-actualGitFiles.forEach((f: string) => console.log(`  - ${f}`));
-
-let missingInMd = false;
-for (const gitFile of actualGitFiles) {
-  if (!mdContent.includes(gitFile)) {
-    console.error(`ERROR: Git status file '${gitFile}' is missing from CHANGED_FILES.md`);
-    missingInMd = true;
+if (actualPaths.length === 0) failures.push("candidate has no changed paths");
+for (const documented of documentedPaths) {
+  if (!P02_M17_A_ALLOWLIST.includes(documented)) {
+    failures.push(`CHANGED_FILES.md path '${documented}' is outside the exact P02-M17-A allowlist`);
   }
 }
 
-if (missingInMd) {
-  process.exit(1);
-}
+const result = {
+  verifier: "P02-M17-A_CHANGED_FILES_V1",
+  pass: failures.length === 0,
+  porcelain: "v2-z-repository-wide",
+  candidateMode: "uncommitted-unstaged-only",
+  allowlistMaximum: P02_M17_A_ALLOWLIST.length,
+  actualCount: actualPaths.length,
+  documentedCount: documentedPaths.length,
+  changedPaths: actualPaths,
+  allOtherPathsUnchanged: states.length === actualPaths.length && failures.every((failure) => !failure.includes("outside")),
+  failures,
+};
 
-for (const actualPath of actualGitFiles) {
-  if (!P02_M16_E_ALLOWLIST.includes(actualPath)) {
-    console.error(`ERROR: Actual Git candidate file '${actualPath}' is outside the reconciled P02-M16-E 69-path maximum allowlist.`);
-    process.exit(1);
-  }
-}
-
-console.log('Changed files inventory verification PASSED.');
+console.log(JSON.stringify(result, null, 2));
+if (!result.pass) process.exit(1);
