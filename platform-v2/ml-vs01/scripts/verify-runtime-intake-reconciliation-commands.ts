@@ -26,7 +26,7 @@ try {
   const ledger = await client.query<{ filename: string; sha256: string }>(
     "SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename",
   );
-  if (ledger.rows.length !== 25 || ledger.rows[22]?.filename !== migrationName ||
+  if (ledger.rows.length !== 26 || ledger.rows[22]?.filename !== migrationName ||
       ledger.rows[22]?.sha256 !== migrationSha256) fail("migration 0023 ledger identity mismatch");
 
   const email = await client.query<{ is_nullable: string }>(

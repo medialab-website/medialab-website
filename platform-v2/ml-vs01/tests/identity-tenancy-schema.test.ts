@@ -8,6 +8,18 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'clear_editorial_segment_decision',
+  'create_editorial_segment',
+  'decide_editorial_segment',
+  'get_editorial_segment',
+  'list_editorial_segments',
+  'record_media_technical_observation',
+  'reject_editorial_evidence_mutation',
+  'require_editorial_permission',
+  'revise_editorial_segment',
+  'validate_editorial_reason',
+  'validate_editorial_safe_json',
+  'validate_editorial_segment_scope',
   'classify_organization_record_order',
   'create_organization_record_export_snapshot',
   'get_internal_organization_records_projection',
@@ -479,6 +491,10 @@ const EXACT_TRIGGERS = [
   ,['capture_item_custody_immutability_guard', 'capture_item_custody_events', 'reject_capture_evidence_mutation']
   ,['capture_duplicate_evidence_immutability_guard', 'capture_duplicate_evidence', 'reject_capture_evidence_mutation']
   ,['capture_item_promotions_immutability_guard', 'capture_item_promotions', 'reject_capture_evidence_mutation']
+  ,['media_technical_observations_immutability_guard', 'media_technical_observations', 'reject_editorial_evidence_mutation']
+  ,['editorial_segments_immutability_guard', 'editorial_segments', 'reject_editorial_evidence_mutation']
+  ,['editorial_segment_versions_immutability_guard', 'editorial_segment_versions', 'reject_editorial_evidence_mutation']
+  ,['editorial_segment_decision_events_immutability_guard', 'editorial_segment_decision_events', 'reject_editorial_evidence_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({ trigger_name, table_name, function_name }))
   .sort((a, b) => a.table_name.localeCompare(b.table_name) || a.trigger_name.localeCompare(b.trigger_name));
 
@@ -546,6 +562,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0023_runtime_intake_reconciliation_commands.sql'
       ,'0024_operations_home_scheduling_assignment_console.sql'
       ,'0025_operations_mission_plan_draft_controls.sql'
+      ,'0026_editorial_segment_foundation.sql'
     ]);
   });
 
@@ -1040,9 +1057,9 @@ describe('M02 Identity and Tenancy Schema', () => {
       people: 3,
       identities: 2,
       memberships: 3,
-      permissions: 38,
+      permissions: 40,
       permission_sets: 1,
-      permission_set_permissions: 38,
+      permission_set_permissions: 40,
       membership_permission_sets: 1,
       development_sessions: 1
     };

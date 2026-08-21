@@ -19,7 +19,7 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
     describe(`Migration Ledger Assertions (${env})`, () => {
       it('1 & 2. Verify migration ledger contents and exact checksums', async () => {
         const res = await pool.query(`SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC`);
-        expect(res.rows).toHaveLength(25);
+        expect(res.rows).toHaveLength(26);
         expect(res.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
         
         expect(res.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
@@ -375,9 +375,9 @@ describe('P02-M01 Property Identity and Immutable Snapshot Schema', () => {
         people: 3,
         identities: 2,
         memberships: 3,
-        permissions: 38,
+        permissions: 40,
         permission_sets: 1,
-        permission_set_permissions: 38,
+        permission_set_permissions: 40,
         membership_permission_sets: 1,
         development_sessions: 1
       };

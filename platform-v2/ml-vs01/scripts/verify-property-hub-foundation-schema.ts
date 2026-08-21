@@ -182,8 +182,8 @@ try {
       sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(baseDir, 'db/migrations', filename))).digest('hex')
     }))
   ];
-  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql')) !== JSON.stringify(expectedLedger)) {
-    fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'))}`);
+  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql')) !== JSON.stringify(expectedLedger)) {
+    fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'))}`);
   }
 
   const tables = await client.query(

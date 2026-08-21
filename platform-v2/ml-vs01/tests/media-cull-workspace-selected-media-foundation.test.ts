@@ -91,7 +91,7 @@ describe('P02-M11-A Media Cull Workspace and selected-media evidence foundation'
 
   it('replays fifteen exact migrations with permission-only fixtures and exact restricted authority', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(25);
+    expect(ledger.rows).toHaveLength(26);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[13].filename).toBe('0014_media_cull_workspace_selected_media_evidence_foundation.sql');
     expect(ledger.rows[14].filename).toBe('0015_editor_handoff_returned_media_intake_foundation.sql');

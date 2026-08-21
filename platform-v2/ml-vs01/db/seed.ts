@@ -29,6 +29,7 @@ import { PUBLICATION_DELIVERY_FOUNDATION_FIXTURE_TABLES } from './fixtures/publi
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_FIXTURE_TABLES } from './fixtures/temporary-download-center-external-sharing-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FOUNDATION_FIXTURE_TABLES } from './fixtures/temporary-download-center-access-credential-gateway-fixtures.js';
 import { ORGANIZATION_RECORDS_AUDITED_EXPORT_FIXTURE_TABLES } from './fixtures/organization-records-dashboard-audited-export-fixtures.js';
+import { EDITORIAL_SEGMENT_FOUNDATION_FIXTURE_TABLES } from './fixtures/editorial-segment-foundation-fixtures.js';
 
 export interface SeedOptions {
   host?: string;
@@ -540,6 +541,18 @@ export async function runSeed(options: SeedOptions = {}): Promise<SeedResult> {
 
     // 26. M15-E seeds no customer records, shares, revocations, exports, or access events
     for (const fixtureTable of ORGANIZATION_RECORDS_AUDITED_EXPORT_FIXTURE_TABLES) {
+      for (const fixtureRow of fixtureTable.rows) {
+        await ensureFixtureRow(
+          fixtureTable.table,
+          fixtureTable.keys,
+          fixtureRow as unknown as Record<string, unknown>,
+          false
+        );
+      }
+    }
+
+    // 27. Minimum editorial segment manage/read permissions; no technical or editorial evidence is pre-created
+    for (const fixtureTable of EDITORIAL_SEGMENT_FOUNDATION_FIXTURE_TABLES) {
       for (const fixtureRow of fixtureTable.rows) {
         await ensureFixtureRow(
           fixtureTable.table,

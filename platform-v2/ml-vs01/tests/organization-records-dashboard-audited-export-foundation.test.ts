@@ -107,7 +107,7 @@ describe('P02-M16-A organization records dashboard and audited export foundation
 
   it('applies 0022 with exact append-only objects, locked functions, and only two runtime commands', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(25);
+    expect(ledger.rows).toHaveLength(26);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[21].filename).toBe('0022_organization_records_dashboard_audited_export_foundation.sql');
 

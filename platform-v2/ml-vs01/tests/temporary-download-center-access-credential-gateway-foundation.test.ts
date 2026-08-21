@@ -175,7 +175,7 @@ describe('P02-M15-C Temporary Download Center access credential and gateway foun
 
   it('applies 0019 with exact controlled objects, strong one-time secret issuance, and no durable or read-path secret exposure', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(25);
+    expect(ledger.rows).toHaveLength(26);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
     expect(ledger.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');

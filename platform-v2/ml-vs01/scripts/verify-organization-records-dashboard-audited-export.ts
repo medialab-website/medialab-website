@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   await client.connect();
   try {
     const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    assert(ledger.rows.length === 25, `expected 23 migration ledger rows, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 26, `expected 23 migration ledger rows, found ${ledger.rows.length}`);
     assert(ledger.rows[21].filename === migration && ledger.rows[21].sha256 === expectedMigrationSha256, 'migration 0022 ledger identity mismatch');
     assert(ledger.rows[22].filename === '0023_runtime_intake_reconciliation_commands.sql', 'migration 0023 ledger identity mismatch');
     for (const row of ledger.rows.slice(0, 21)) assert(predecessorSha256[row.filename] === row.sha256, `predecessor ledger mismatch for ${row.filename}`);

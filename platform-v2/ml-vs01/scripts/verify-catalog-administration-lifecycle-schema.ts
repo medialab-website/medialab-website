@@ -253,7 +253,7 @@ async function verifyDatabase(): Promise<void> {
   try {
     const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
     const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-    if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql')) !== JSON.stringify(expectedLedger)) fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'))}`);
+    if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql')) !== JSON.stringify(expectedLedger)) fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'))}`);
 
     const owner = await client.query(`SELECT tableowner FROM pg_tables WHERE schemaname = 'medialab_core' AND tablename = 'catalog_administration_events'`);
     if (owner.rows[0]?.tableowner !== TEST_OWNER_ROLE) fail(`Catalog administration event owner mismatch: ${owner.rows[0]?.tableowner}`);

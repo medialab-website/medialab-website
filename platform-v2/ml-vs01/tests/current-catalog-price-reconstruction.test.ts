@@ -33,6 +33,7 @@ import { MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixt
 import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/returned-editor-review-final-source-fixtures.js';
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
+import { EDITORIAL_SEGMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/editorial-segment-foundation-fixtures.js';
 
 const TEST_DB = 'medialab_p02m16a_test';
 const TEST_OWNER_ROLE = 'medialab_p02m16a_test_owner';
@@ -157,7 +158,7 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
     const ledger = await owner.query(
       'SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename'
     );
-    expect(ledger.rows).toHaveLength(25);
+    expect(ledger.rows).toHaveLength(26);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows.slice(0, 3)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
@@ -196,7 +197,8 @@ describe('P02-M03-A current catalog and immutable commercial evidence', () => {
         (MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
         (MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
         (PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
-        (TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0)
+        (TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0) +
+        (EDITORIAL_SEGMENT_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof EDITORIAL_SEGMENT_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0)
       );
     }
     const sources = await owner.query(

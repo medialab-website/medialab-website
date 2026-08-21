@@ -23,6 +23,7 @@ import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/temporary-download-center-external-sharing-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_ACCESS_CREDENTIAL_GATEWAY_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/temporary-download-center-access-credential-gateway-fixtures.js';
 import { ORGANIZATION_RECORDS_AUDITED_EXPORT_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/organization-records-dashboard-audited-export-fixtures.js';
+import { EDITORIAL_SEGMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from './fixtures/editorial-segment-foundation-fixtures.js';
 
 const EXPECTED_RESET_ROW_COUNTS: Record<string, number> = {
   ...EXPECTED_ROW_COUNTS,
@@ -74,6 +75,9 @@ for (const [table, count] of Object.entries(TEMPORARY_DOWNLOAD_CENTER_ACCESS_CRE
   EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
 }
 for (const [table, count] of Object.entries(ORGANIZATION_RECORDS_AUDITED_EXPORT_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+  EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
+}
+for (const [table, count] of Object.entries(EDITORIAL_SEGMENT_FOUNDATION_ROW_COUNT_INCREMENTS)) {
   EXPECTED_RESET_ROW_COUNTS[table] = (EXPECTED_RESET_ROW_COUNTS[table] ?? 0) + count;
 }
 

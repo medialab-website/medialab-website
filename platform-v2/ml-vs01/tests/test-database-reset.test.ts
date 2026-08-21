@@ -17,6 +17,7 @@ import { MEDIA_EDITOR_HANDOFF_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixt
 import { MEDIA_RETURN_REVIEW_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/returned-editor-review-final-source-fixtures.js';
 import { PUBLICATION_DELIVERY_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/publication-delivery-entitlement-fixtures.js';
 import { TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/temporary-download-center-external-sharing-fixtures.js';
+import { EDITORIAL_SEGMENT_FOUNDATION_ROW_COUNT_INCREMENTS } from '../db/fixtures/editorial-segment-foundation-fixtures.js';
 
 const TEST_DB = 'medialab_p02m16a_test';
 const TEST_ROLE = 'medialab_p02m16a_test_owner';
@@ -24,6 +25,18 @@ const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
 const TEST_PORT = 55447;
 
 const EXACT_ROUTINE_NAMES = [
+  'clear_editorial_segment_decision',
+  'create_editorial_segment',
+  'decide_editorial_segment',
+  'get_editorial_segment',
+  'list_editorial_segments',
+  'record_media_technical_observation',
+  'reject_editorial_evidence_mutation',
+  'require_editorial_permission',
+  'revise_editorial_segment',
+  'validate_editorial_reason',
+  'validate_editorial_safe_json',
+  'validate_editorial_segment_scope',
   'classify_organization_record_order',
   'create_organization_record_export_snapshot',
   'get_internal_organization_records_projection',
@@ -473,6 +486,10 @@ const EXACT_TRIGGERS = [
   ,['capture_item_custody_immutability_guard', 'capture_item_custody_events', 'reject_capture_evidence_mutation']
   ,['capture_duplicate_evidence_immutability_guard', 'capture_duplicate_evidence', 'reject_capture_evidence_mutation']
   ,['capture_item_promotions_immutability_guard', 'capture_item_promotions', 'reject_capture_evidence_mutation']
+  ,['media_technical_observations_immutability_guard', 'media_technical_observations', 'reject_editorial_evidence_mutation']
+  ,['editorial_segments_immutability_guard', 'editorial_segments', 'reject_editorial_evidence_mutation']
+  ,['editorial_segment_versions_immutability_guard', 'editorial_segment_versions', 'reject_editorial_evidence_mutation']
+  ,['editorial_segment_decision_events_immutability_guard', 'editorial_segment_decision_events', 'reject_editorial_evidence_mutation']
 ].map(([trigger_name, table_name, function_name]) => ({
   trigger_name,
   table_name,
@@ -570,7 +587,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(25);
+    expect(ledgerRes.rows).toHaveLength(26);
     expect(ledgerRes.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -644,6 +661,9 @@ describe('P01C Test Database Reset Tooling Tests', () => {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, count] of Object.entries(TEMPORARY_DOWNLOAD_CENTER_FOUNDATION_ROW_COUNT_INCREMENTS)) {
+      expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
+    }
+    for (const [table, count] of Object.entries(EDITORIAL_SEGMENT_FOUNDATION_ROW_COUNT_INCREMENTS)) {
       expectedCounts[table] = (expectedCounts[table] ?? 0) + count;
     }
     for (const [table, expectedCount] of Object.entries(expectedCounts)) {

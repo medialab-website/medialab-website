@@ -78,7 +78,7 @@ describe("P02-M18-A Operations Home, scheduling, and assignment", () => {
     const client = new pg.Client(owner); await client.connect();
     try {
       const ledger = await client.query<{ filename: string }>("SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename");
-      expect(ledger.rows).toHaveLength(25);
+      expect(ledger.rows).toHaveLength(26);
       expect(ledger.rows[23]!.filename).toBe("0024_operations_home_scheduling_assignment_console.sql");
       expect(ledger.rows[24]!.filename).toBe("0025_operations_mission_plan_draft_controls.sql");
       const grants = await client.query<{ name: string }>(`SELECT p.proname AS name FROM pg_proc p

@@ -53,7 +53,7 @@ for (const [filename, expected] of predecessorMigrations) {
   const actual = crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, filename))).digest('hex');
   if (actual !== expected) fail(`${filename} predecessor SHA-256 mismatch`);
 }
-const migrationFiles = fs.readdirSync(migrationDir).filter((name) => name.endsWith('.sql') && name !== '0025_operations_mission_plan_draft_controls.sql').sort();
+const migrationFiles = fs.readdirSync(migrationDir).filter((name) => name.endsWith('.sql') && name !== '0025_operations_mission_plan_draft_controls.sql' && name !== '0026_editorial_segment_foundation.sql').sort();
 exact('Migration inventory', migrationFiles, [...predecessorMigrations.map(([name]) => name), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration, fifthSuccessorMigration, sixthSuccessorMigration, seventhSuccessorMigration, eighthSuccessorMigration, ninthSuccessorMigration, tenthSuccessorMigration, eleventhSuccessorMigration, runtimeIntakeSuccessorMigration, operationsSuccessorMigration]);
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
 const packetHash = crypto.createHash('sha256').update(packetBytes).digest('hex');
@@ -104,7 +104,7 @@ try {
     { filename: eleventhSuccessorMigration, sha256: eleventhSuccessorHash },
     { filename: runtimeIntakeSuccessorMigration, sha256: runtimeIntakeSuccessorHash },
     { filename: operationsSuccessorMigration, sha256: operationsSuccessorHash }];
-  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql')) !== JSON.stringify(expectedLedger)) fail('Twenty-four-row predecessor migration ledger mismatch');
+  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql')) !== JSON.stringify(expectedLedger)) fail('Twenty-four-row predecessor migration ledger mismatch');
   const dbTables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core'
       AND tablename = ANY($1::text[]) ORDER BY tablename`, [tables]

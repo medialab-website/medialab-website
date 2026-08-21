@@ -1,11 +1,15 @@
-# P02-M19-A Changed Files
+# P02-M20-A Changed Files
 
-The uncommitted and unstaged owner-directed Mission Control candidate contains this exact 71-path set. Accepted migrations `0001`–`0024` and `package-lock.json` remain byte-identical; additive projection migration `0025` is the only new migration; dependencies are unchanged. Changes remain within the existing Operations Console, permission-checked read projections, contracts, verification, and documentation paths—no canonical storage or provider surface was added.
+The uncommitted and unstaged candidate contains this exact 68-path set. Accepted migrations `0001`–`0025` and `package-lock.json` remain byte-identical; additive migration `0026` is the only new migration; dependencies are unchanged. Most changed predecessor tests/verifiers contain only exact additive migration-ledger, permission-fixture, routine/trigger inventory, or bounded timeout reconciliation.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
+- platform-v2/ml-vs01/db/fixtures/editorial-segment-foundation-fixtures.ts
 - platform-v2/ml-vs01/db/migrate.ts
-- platform-v2/ml-vs01/db/migrations/0025_operations_mission_plan_draft_controls.sql
+- platform-v2/ml-vs01/db/migrations/0026_editorial_segment_foundation.sql
+- platform-v2/ml-vs01/db/migrations/README.md
+- platform-v2/ml-vs01/db/reset-test-database.ts
+- platform-v2/ml-vs01/db/seed.ts
 - platform-v2/ml-vs01/package.json
 - platform-v2/ml-vs01/scripts/run-internal-operations-console-new-listing.ts
 - platform-v2/ml-vs01/scripts/verify-business-replay-harness.ts
@@ -18,6 +22,8 @@ The uncommitted and unstaged owner-directed Mission Control candidate contains t
 - platform-v2/ml-vs01/scripts/verify-disposable-delivery-surface-local-fixture.ts
 - platform-v2/ml-vs01/scripts/verify-durable-media-operations-reconciliation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-editor-handoff-returned-media-intake-schema.ts
+- platform-v2/ml-vs01/scripts/verify-editorial-segment-foundation-schema.ts
+- platform-v2/ml-vs01/scripts/verify-editorial-segment-determinism.ts
 - platform-v2/ml-vs01/scripts/verify-historical-business-replay.ts
 - platform-v2/ml-vs01/scripts/verify-job-service-workstream-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-media-asset-identity-lineage-schema.ts
@@ -39,28 +45,19 @@ The uncommitted and unstaged owner-directed Mission Control candidate contains t
 - platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-access-credential-gateway-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-external-sharing-schema.ts
-- platform-v2/ml-vs01/src/operations-console/app.ts
-- platform-v2/ml-vs01/src/operations-console/database.ts
-- platform-v2/ml-vs01/src/operations-console/operations-contracts.ts
-- platform-v2/ml-vs01/src/operations-console/public/app.js
-- platform-v2/ml-vs01/src/operations-console/public/index.html
-- platform-v2/ml-vs01/src/operations-console/public/styles.css
-- platform-v2/ml-vs01/src/operations-console/service.ts
 - platform-v2/ml-vs01/tests/capture-session-ingest-custody-foundation.test.ts
 - platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts
 - platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts
 - platform-v2/ml-vs01/tests/durable-media-operations-reconciliation-foundation.test.ts
 - platform-v2/ml-vs01/tests/editor-handoff-returned-media-intake-foundation.test.ts
+- platform-v2/ml-vs01/tests/editorial-segment-foundation.test.ts
 - platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts
 - platform-v2/ml-vs01/tests/job-service-workstream-foundation.test.ts
 - platform-v2/ml-vs01/tests/media-asset-identity-lineage-foundation.test.ts
 - platform-v2/ml-vs01/tests/media-cull-workspace-selected-media-foundation.test.ts
 - platform-v2/ml-vs01/tests/migration-engine.test.ts
 - platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts
-- platform-v2/ml-vs01/tests/operations-console-security.test.ts
-- platform-v2/ml-vs01/tests/operations-console-ui.test.ts
 - platform-v2/ml-vs01/tests/operations-home-scheduling-assignment.test.ts
-- platform-v2/ml-vs01/tests/operations-mission-plan-workspace.test.ts
 - platform-v2/ml-vs01/tests/order-foundation.test.ts
 - platform-v2/ml-vs01/tests/organization-records-dashboard-audited-export-foundation.test.ts
 - platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts

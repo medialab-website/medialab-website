@@ -132,7 +132,7 @@ for (const [filename, expectedHash] of expectedMigrations) {
   const actualHash = crypto.createHash('sha256').update(bytes).digest('hex');
   if (actualHash !== expectedHash) fail(`${filename} SHA-256 mismatch. Expected ${expectedHash}, got ${actualHash}`);
 }
-const migrationFiles = fs.readdirSync(path.join(baseDir, 'db/migrations')).filter((name) => name.endsWith('.sql') && name !== '0025_operations_mission_plan_draft_controls.sql').sort();
+const migrationFiles = fs.readdirSync(path.join(baseDir, 'db/migrations')).filter((name) => name.endsWith('.sql') && name !== '0025_operations_mission_plan_draft_controls.sql' && name !== '0026_editorial_segment_foundation.sql').sort();
 exact('Canonical migration inventory', migrationFiles, expectedMigrations.map(([filename]) => filename));
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(baseDir, 'package.json'), 'utf8')) as {
@@ -245,7 +245,7 @@ async function verifyDatabase(): Promise<void> {
   try {
     const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
     const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-    if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql')) !== JSON.stringify(expectedLedger)) fail('Database migration ledger does not match the exact twenty-two-file inventory');
+    if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql')) !== JSON.stringify(expectedLedger)) fail('Database migration ledger does not match the exact twenty-two-file inventory');
 
     const tables = await client.query(
       `SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core' AND tablename IN ${tableListSql} ORDER BY tablename`
@@ -347,7 +347,7 @@ async function verifyDatabase(): Promise<void> {
       const result = await client.query(`SELECT count(*)::int AS count FROM medialab_core.${table}`);
       const canonicalCount = CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS[table as keyof typeof CURRENT_REAL_ESTATE_EXPECTED_ROW_COUNTS] ?? 0;
       const orderCount = ORDER_FOUNDATION_ROW_COUNT_INCREMENTS[table as keyof typeof ORDER_FOUNDATION_ROW_COUNT_INCREMENTS] ?? 0;
-      const additivePermissionCount = table === 'permissions' || table === 'permission_set_permissions' ? 31 : 0;
+      const additivePermissionCount = table === 'permissions' || table === 'permission_set_permissions' ? 33 : 0;
       if (result.rows[0].count !== expectedCount + canonicalCount + orderCount + additivePermissionCount) fail(`${table} fixture count mismatch: ${result.rows[0].count}`);
     }
 

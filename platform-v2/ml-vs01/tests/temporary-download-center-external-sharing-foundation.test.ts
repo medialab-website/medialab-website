@@ -146,7 +146,7 @@ describe('P02-M15-A Temporary Download Center and external-sharing foundation', 
 
   it('preserves 0018 exact objects and permissions under the 0019 trusted gateway-writer boundary', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(25);
+    expect(ledger.rows).toHaveLength(26);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[17].filename).toBe('0018_temporary_download_center_external_sharing_foundation.sql');
     expect(ledger.rows[18].filename).toBe('0019_temporary_download_center_access_credential_gateway_foundation.sql');
