@@ -40,6 +40,7 @@ import {
   type AssignmentInput,
   type CancelAppointmentInput,
   type ConfirmAppointmentInput,
+  type DesktopWorkPacketDownload,
   type MissionPlanActionReceipt,
   type MissionPlanNoteInput,
   type MissionPlanOfflinePacket,
@@ -49,6 +50,7 @@ import {
   type OperationsContext,
   type OperationsHome,
   type OperationsWindowInput,
+  type ProductionWorkspace,
   type ReplacementInput,
   type RescheduleAppointmentInput,
 } from "./operations-contracts.js";
@@ -87,6 +89,8 @@ export interface OperationsConsoleApplicationService {
   assignParticipant?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, input: AssignmentInput): Promise<OperationsActionReceipt>;
   replaceParticipant?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, assignmentId: string, input: ReplacementInput): Promise<OperationsActionReceipt>;
   missionPlanWorkspace?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanWorkspace>;
+  productionWorkspace?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<ProductionWorkspace>;
+  desktopWorkPacket?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<DesktopWorkPacketDownload>;
   createMissionPlanDraft?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanActionReceipt>;
   reviseMissionPlanDraft?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, sections: MissionPlanSectionInput[]): Promise<MissionPlanActionReceipt>;
   addMissionPlanNote?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, input: MissionPlanNoteInput): Promise<MissionPlanActionReceipt>;
@@ -231,6 +235,13 @@ export function createOperationsConsoleApp(options: OperationsConsoleApplication
 
   app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId/mission-plan", async (request) =>
     options.service.missionPlanWorkspace!(authenticated(options.sessions, request), canonicalId(request.params.orderId)));
+  app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId/production", async (request) =>
+    options.service.productionWorkspace!(authenticated(options.sessions, request), canonicalId(request.params.orderId)));
+  app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId/desktop-work-packet", async (request, reply) => {
+    const download = await options.service.desktopWorkPacket!(authenticated(options.sessions, request), canonicalId(request.params.orderId));
+    return reply.type("application/json; charset=utf-8")
+      .header("content-disposition", `attachment; filename="${download.filename}"`).send(download.packet);
+  });
   app.post<{ Params: { orderId: string }; Body: unknown }>("/api/operations/orders/:orderId/mission-plan", async (request) => {
     parseEmpty(request.body); return options.service.createMissionPlanDraft!(authenticated(options.sessions, request), canonicalId(request.params.orderId));
   });

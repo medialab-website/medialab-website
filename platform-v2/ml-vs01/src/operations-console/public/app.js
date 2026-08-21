@@ -1181,6 +1181,107 @@ async function loadMissionPlanPane(context, pane) {
   } catch (error) { clearNode(pane); pane.append(detailSection("Mission Plan unavailable", error instanceof Error ? error.message : "The Mission Plan could not be loaded.")); }
 }
 
+function productionCount(label, value, detail) {
+  const item = element("div", "production-count");
+  item.append(element("span", "summary-label", label), element("strong", "", String(value)), element("small", "", detail));
+  return item;
+}
+
+function productionLaneCard(lane) {
+  const card = element("article", `production-lane-card lane-${lane.lane.toLowerCase()}`);
+  const heading = element("div", "production-lane-heading");
+  const title = element("div", ""); title.append(element("p", "eyebrow", `${lane.lane} lane`),
+    element("h4", "", lane.lane === "PHOTO" ? "Listing photos" : "Listing video"));
+  heading.append(title, element("span", `production-stage stage-${lane.stage.toLowerCase()}`, lane.stageLabel));
+  card.append(heading);
+  if (lane.workstreams.length) {
+    const workstreams = element("ul", "production-workstreams");
+    lane.workstreams.forEach((workstream) => workstreams.append(element("li", "", workstream.displayName)));
+    card.append(workstreams);
+  } else {
+    card.append(element("p", "production-muted", lane.expected
+      ? "Canonical lane evidence exists without a selected Mission Plan workstream."
+      : "This lane is not part of the current issued Mission Plan."));
+  }
+  const counts = element("div", "production-counts");
+  counts.append(
+    productionCount("Ingest", lane.capture.sessionCount, lane.capture.sessionCount ? lane.capture.states.join(" · ") : "Not started"),
+    productionCount("Cull", lane.cull.workspaceCount, lane.cull.currentState ? lane.cull.currentState.replaceAll("_", " ") : "Not started"),
+    productionCount("Handoff", lane.handoff.batchCount, lane.handoff.currentState ? lane.handoff.currentState.replaceAll("_", " ") : "Not started"),
+    productionCount("Review", lane.review.batchCount, lane.review.currentState ? lane.review.currentState.replaceAll("_", " ") : "Not started"),
+  );
+  card.append(counts);
+  const next = element("div", "production-next"); next.append(element("span", "summary-label", "Next action"), element("p", "", lane.nextAction)); card.append(next);
+  if (lane.exceptions.length) {
+    const exceptions = element("div", "production-exceptions"); exceptions.append(element("strong", "", "Needs attention"));
+    lane.exceptions.forEach((message) => exceptions.append(element("p", "", message))); card.append(exceptions);
+  }
+  return card;
+}
+
+async function downloadDesktopWorkPacket(context, button) {
+  markBusy(button, true, "Preparing…"); byId("operations-error").hidden = true; clearOperationsSuccess();
+  try {
+    const response = await fetch(`/api/operations/orders/${context.orderId}/desktop-work-packet`);
+    if (!response.ok) { const failure = await response.json(); throw new Error(failure?.error?.message || "The Desktop work packet could not be prepared."); }
+    const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement("a");
+    const disposition = response.headers.get("content-disposition") || ""; const filename = disposition.match(/filename="([^"]+)"/u)?.[1] || "medialab-desktop-work-packet.json";
+    link.href = url; link.download = filename; document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    operationsSuccess("Desktop work packet downloaded. No media was moved.");
+  } catch (error) { operationsError(error instanceof Error ? error.message : "The Desktop work packet could not be prepared."); }
+  finally { markBusy(button, false, "Preparing…"); }
+}
+
+function renderProductionWorkspace(context, workspace, pane, openMissionPlan) {
+  clearNode(pane);
+  const heading = element("section", "production-heading");
+  const copy = element("div", ""); copy.append(element("p", "eyebrow", "Web-first production"), element("h3", "", "Production workspace"),
+    element("p", "production-muted", "Track large-file work here while source media stays in the native Desktop workflow."));
+  const action = workspace.desktopWorkPacketReady
+    ? element("button", "button button-primary", "Download Desktop work packet")
+    : element("button", "button button-secondary", "Open Mission Plan");
+  action.type = "button";
+  if (workspace.desktopWorkPacketReady) action.addEventListener("click", () => downloadDesktopWorkPacket(context, action));
+  else action.addEventListener("click", openMissionPlan);
+  heading.append(copy, action); pane.append(heading);
+
+  const mission = element("section", "production-mission-binding");
+  if (workspace.missionPlan) {
+    mission.append(summaryField("Issued Mission Plan", `Version ${workspace.missionPlan.versionNumber}`),
+      summaryField("Integrity", workspace.missionPlan.integritySha256),
+      summaryField("Issued", new Date(workspace.missionPlan.issuedAt).toLocaleString()));
+  } else {
+    mission.append(summaryField("Issued Mission Plan", "Required before Desktop work"));
+  }
+  pane.append(mission);
+  if (workspace.exceptions.length) {
+    const exceptions = detailSection("Before Desktop work");
+    workspace.exceptions.forEach((message) => exceptions.append(element("p", "state-note", message))); pane.append(exceptions);
+  }
+  const lanes = element("div", "production-lanes"); workspace.lanes.forEach((lane) => lanes.append(productionLaneCard(lane))); pane.append(lanes);
+  pane.append(element("p", "production-disclosure", workspace.disclosure));
+}
+
+async function loadProductionPane(context, pane, openMissionPlan) {
+  clearNode(pane); pane.append(detailSection("Production workspace", "Loading canonical PHOTO and VIDEO status…"));
+  try {
+    const workspace = await fetchJson(`/api/operations/orders/${context.orderId}/production`);
+    renderProductionWorkspace(context, workspace, pane, openMissionPlan);
+  } catch (error) { clearNode(pane); pane.append(detailSection("Production workspace unavailable", error instanceof Error ? error.message : "Production status could not be loaded.")); }
+}
+
+function productionWorkspaceSwitcher(context, pane) {
+  const switcher = element("nav", "workspace-switcher"); switcher.setAttribute("aria-label", "Selected property workspace");
+  const production = element("button", "workspace-switch", "Production"); production.type = "button";
+  const mission = element("button", "workspace-switch", "Mission Plan"); mission.type = "button";
+  const activate = (name) => {
+    production.setAttribute("aria-pressed", String(name === "production")); mission.setAttribute("aria-pressed", String(name === "mission"));
+    if (name === "production") loadProductionPane(context, pane, () => activate("mission")); else loadMissionPlanPane(context, pane);
+  };
+  production.addEventListener("click", () => activate("production")); mission.addEventListener("click", () => activate("mission"));
+  switcher.append(production, mission); activate("production"); return switcher;
+}
+
 function customerActions(context) {
   const actions = element("div", "compact-actions");
   const email = element("a", "button button-secondary button-compact", "Email"); email.href = `mailto:${context.customer.email}`; actions.append(email);
@@ -1240,7 +1341,8 @@ async function openOperationsDetail(orderId) {
       const button = actionButton("Start Mission Control"); button.addEventListener("click", () => runOperation(`/api/operations/orders/${context.orderId}/initialize`, {}, button)); setup.append(button); detail.append(setup); return;
     }
     if (!context.appointment) detail.append(schedulingForm(context));
-    const missionPane = element("div", "mission-plan-pane"); detail.append(missionPane); loadMissionPlanPane(context, missionPane);
+    const workspacePane = element("div", "mission-plan-pane production-workspace-pane");
+    detail.append(productionWorkspaceSwitcher(context, workspacePane), workspacePane);
   } catch (error) { operationsError(error instanceof Error ? error.message : "Operational context could not be loaded."); }
 }
 
@@ -1255,8 +1357,11 @@ async function loadOperationsHome(showStatus = true) {
 
 async function initializeOperationsPage() {
   document.title = "Mission Control · MediaLab";
-  document.querySelector(".header-copy h1").textContent = "Mission Control";
-  document.querySelector(".header-copy .lede").textContent = "Today, upcoming work, completed orders, and the next action in one place.";
+  document.body.classList.add("operations-mode");
+  document.querySelector(".header-copy h1").textContent = "MISSION CONTROL";
+  document.querySelector(".header-copy .eyebrow").hidden = true;
+  document.querySelector(".header-copy .lede").hidden = true;
+  document.querySelector(".boundary-notice").hidden = true;
   document.querySelector(".skip-link").href = "#operations-main"; document.querySelector(".skip-link").textContent = "Skip to Mission Control";
   document.querySelector(".progress-shell").hidden = true; byId("console-main").hidden = true; byId("operations-main").hidden = false;
   try {

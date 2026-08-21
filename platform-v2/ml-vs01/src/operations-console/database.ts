@@ -39,6 +39,40 @@ type RawOperationsContext = OperationsContext & {
 type RawJobRecord = { appointments: Array<{ id: string; appointment_id: string }> };
 type MissionPlanSummary = { mission_plan_id: string; appointment_id: string };
 
+export interface CaptureSessionProjection {
+  capture_session_id: string;
+  session_label: string;
+  state: string;
+  job_id: string | null;
+  created_at: string;
+}
+
+export interface CullWorkspaceProjection {
+  workspace: { id: string; service_workstream_id: string | null; lane: "PHOTO" | "VIDEO"; created_at: string };
+  current: { current_state: string; inventory_sealed: boolean; active_candidate_count: number;
+    selected_manifest_id: string | null; updated_at: string };
+  is_current_selection: boolean;
+}
+
+export interface EditorHandoffProjection {
+  batch: { id: string; service_workstream_id: string | null; lane: "PHOTO" | "VIDEO"; created_at: string };
+  current: { current_state: string; item_count: number; returned_source_count: number;
+    outstanding_source_count: number; unresolved_return_count: number; updated_at: string };
+}
+
+export interface ReturnedReviewProjection {
+  batch: { id: string; service_workstream_id: string | null; lane: "PHOTO" | "VIDEO"; created_at: string };
+  current: { current_state: string; item_count: number; resolved_count: number;
+    unresolved_count: number; updated_at: string };
+}
+
+export interface ProductionEvidenceProjection {
+  captureSessions: CaptureSessionProjection[];
+  cullWorkspaces: CullWorkspaceProjection[];
+  handoffBatches: EditorHandoffProjection[];
+  reviewBatches: ReturnedReviewProjection[];
+}
+
 export interface CatalogProjectionRow {
   product_id: string;
   product_code: string;
@@ -822,6 +856,43 @@ export class OperationsConsoleDatabase {
   }> {
     try { return await this.#missionPlanRelationship(token, orderId); }
     catch (error) { throw this.#databaseError(error); }
+  }
+
+  async getProductionEvidence(
+    token: string,
+    organizationId: string,
+    jobId: string,
+    workstreamIds: string[],
+  ): Promise<ProductionEvidenceProjection> {
+    try {
+      const capturePromise = this.pool.query<{ evidence: CaptureSessionProjection[] }>(
+        "SELECT medialab_core.list_capture_sessions($1,$2::uuid,$3::uuid) AS evidence",
+        [token, organizationId, jobId],
+      );
+      const cullScopes: Array<string | null> = [null, ...workstreamIds];
+      const cullPromise = Promise.all(cullScopes.flatMap((workstreamId) => (["PHOTO", "VIDEO"] as const).map((lane) =>
+        this.pool.query<{ evidence: CullWorkspaceProjection[] }>(
+          "SELECT medialab_core.list_cull_workspaces($1,$2::uuid,$3::uuid,$4) AS evidence",
+          [token, jobId, workstreamId, lane],
+        ))));
+      const handoffPromise = this.pool.query<{ evidence: EditorHandoffProjection }>(
+        "SELECT item AS evidence FROM medialab_core.list_editor_handoff_batches($1,$2::uuid,NULL) AS item",
+        [token, jobId],
+      );
+      const reviewPromise = this.pool.query<{ evidence: ReturnedReviewProjection }>(
+        "SELECT item AS evidence FROM medialab_core.list_returned_review_batches($1,$2::uuid,NULL) AS item",
+        [token, jobId],
+      );
+      const [capture, cull, handoff, review] = await Promise.all([
+        capturePromise, cullPromise, handoffPromise, reviewPromise,
+      ]);
+      return {
+        captureSessions: capture.rows[0]?.evidence ?? [],
+        cullWorkspaces: cull.flatMap((result) => result.rows[0]?.evidence ?? []),
+        handoffBatches: handoff.rows.map((row) => row.evidence),
+        reviewBatches: review.rows.map((row) => row.evidence),
+      };
+    } catch (error) { throw this.#databaseError(error); }
   }
 
   async createMissionPlanDraft(

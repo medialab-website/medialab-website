@@ -21,18 +21,28 @@ for (const state of states) {
   }
   if (state.path.endsWith("package-lock.json")) failures.push("package-lock.json must remain byte-identical");
   const relative = state.path.slice(root.length);
-  const allowed = ["BUILD_STATE.md", "CHANGED_FILES.md", "package.json", "db/migrate.ts",
-    "db/reset-test-database.ts", "db/seed.ts", "db/migrations/README.md",
-    "db/migrations/0026_editorial_segment_foundation.sql",
-    "db/fixtures/editorial-segment-foundation-fixtures.ts"].includes(relative)
-    || (relative.startsWith("tests/") && relative.endsWith(".test.ts"))
-    || (relative.startsWith("scripts/") && relative.endsWith(".ts"));
-  if (!allowed) failures.push(`'${state.path}' is outside the P02-M20-A file-category boundary`);
+  const allowed = [
+    "BUILD_STATE.md",
+    "CHANGED_FILES.md",
+    "scripts/verify-changed-files.ts",
+    "scripts/run-internal-operations-console-new-listing.ts",
+    "src/operations-console/app.ts",
+    "src/operations-console/contracts.ts",
+    "src/operations-console/database.ts",
+    "src/operations-console/errors.ts",
+    "src/operations-console/operations-contracts.ts",
+    "src/operations-console/public/app.js",
+    "src/operations-console/public/index.html",
+    "src/operations-console/public/styles.css",
+    "src/operations-console/service.ts",
+    "tests/operations-production-bridge.test.ts",
+  ].includes(relative);
+  if (!allowed) failures.push(`'${state.path}' is outside the P02-M21-A exact file boundary`);
 }
 if (actualPaths.length === 0) failures.push("candidate has no changed paths");
 
 const result = {
-  verifier: "P02-M20-A_CHANGED_FILES_V1",
+  verifier: "P02-M21-A_CHANGED_FILES_V1",
   pass: failures.length === 0,
   candidateMode: "uncommitted-unstaged-only",
   actualCount: actualPaths.length,

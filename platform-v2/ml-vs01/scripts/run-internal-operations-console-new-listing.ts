@@ -42,6 +42,22 @@ import {
   MISSION_PLAN_PERMISSION_FIXTURES,
   MISSION_PLAN_PERMISSION_SET_PERMISSION_FIXTURES,
 } from "../db/fixtures/mission-plan-foundation-fixtures.js";
+import {
+  MEDIA_CAPTURE_PERMISSION_FIXTURES,
+  MEDIA_CAPTURE_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/capture-session-ingest-custody-fixtures.js";
+import {
+  MEDIA_CULL_PERMISSION_FIXTURES,
+  MEDIA_CULL_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/media-cull-workspace-selected-media-fixtures.js";
+import {
+  MEDIA_EDITOR_HANDOFF_PERMISSION_FIXTURES,
+  MEDIA_EDITOR_HANDOFF_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/editor-handoff-returned-media-fixtures.js";
+import {
+  MEDIA_RETURN_REVIEW_PERMISSION_FIXTURES,
+  MEDIA_RETURN_REVIEW_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/returned-editor-review-final-source-fixtures.js";
 import { startOperationsConsole } from "../src/operations-console/server.js";
 import { OperationsConsoleService } from "../src/operations-console/service.js";
 import {
@@ -583,6 +599,10 @@ async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
     ...SCHEDULING_PERMISSION_FIXTURES,
     ...JOB_SERVICE_PERMISSION_FIXTURES,
     ...MISSION_PLAN_PERMISSION_FIXTURES,
+    ...MEDIA_CAPTURE_PERMISSION_FIXTURES,
+    ...MEDIA_CULL_PERMISSION_FIXTURES,
+    ...MEDIA_EDITOR_HANDOFF_PERMISSION_FIXTURES,
+    ...MEDIA_RETURN_REVIEW_PERMISSION_FIXTURES,
   ]);
   inserted += await insertRows(client, "permission_sets", [PERMISSION_SET_FIXTURE]);
   inserted += await insertRows(client, "permission_set_permissions", [
@@ -593,6 +613,10 @@ async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
     ...SCHEDULING_PERMISSION_SET_PERMISSION_FIXTURES,
     ...JOB_SERVICE_PERMISSION_SET_PERMISSION_FIXTURES,
     ...MISSION_PLAN_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...MEDIA_CAPTURE_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...MEDIA_CULL_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...MEDIA_EDITOR_HANDOFF_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...MEDIA_RETURN_REVIEW_PERMISSION_SET_PERMISSION_FIXTURES,
   ]);
   inserted += await insertRows(client, "membership_permission_sets", MEMBERSHIP_PERMISSION_SET_FIXTURES);
   for (const fixtureTable of CURRENT_REAL_ESTATE_CATALOG_TABLES) {

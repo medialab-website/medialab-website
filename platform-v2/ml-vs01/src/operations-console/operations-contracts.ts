@@ -97,6 +97,73 @@ export interface MissionPlanActionReceipt {
 }
 export interface MissionPlanOfflinePacket { filename: string; html: string }
 
+export type ProductionLane = "PHOTO" | "VIDEO";
+export type ProductionLaneStage =
+  | "NOT_ORDERED"
+  | "NOT_STARTED"
+  | "CAPTURED"
+  | "CULLING"
+  | "READY_FOR_HANDOFF"
+  | "EDITOR_HANDOFF"
+  | "RETURNING"
+  | "READY_FOR_REVIEW"
+  | "REVIEW"
+  | "COMPLETE"
+  | "EXCEPTION";
+
+export interface ProductionLaneWorkspace {
+  lane: ProductionLane;
+  expected: boolean;
+  workstreams: Array<{ workstreamId: string; displayName: string; state: string }>;
+  stage: ProductionLaneStage;
+  stageLabel: string;
+  nextAction: string;
+  capture: { sessionCount: number; states: string[] };
+  cull: { workspaceCount: number; currentState: string | null; inventorySealed: boolean;
+    activeCandidateCount: number; hasCurrentSelection: boolean };
+  handoff: { batchCount: number; currentState: string | null; itemCount: number;
+    returnedSourceCount: number; outstandingSourceCount: number; unresolvedReturnCount: number };
+  review: { batchCount: number; currentState: string | null; itemCount: number;
+    resolvedCount: number; unresolvedCount: number };
+  exceptions: string[];
+}
+
+export interface ProductionWorkspace {
+  schema: typeof OPERATIONS_SCHEMA;
+  contract: "ProductionWorkspaceV1";
+  evidenceClassification: "NONPRODUCTION_CANONICAL_READ_ONLY";
+  disclosure: string;
+  context: OperationsContext;
+  missionPlan: null | {
+    missionPlanId: string;
+    issuedVersionId: string;
+    versionNumber: number;
+    integritySha256: string;
+    issuedAt: string;
+  };
+  desktopWorkPacketReady: boolean;
+  lanes: [ProductionLaneWorkspace, ProductionLaneWorkspace];
+  exceptions: string[];
+}
+
+export interface DesktopWorkPacket {
+  schema: "ML_DESKTOP_WORK_PACKET_V1";
+  contract: "DesktopWorkPacketV1";
+  contractVersion: 1;
+  evidenceClassification: "NONPRODUCTION_CANONICAL_READ_ONLY";
+  organizationId: string;
+  job: { jobId: string; orderId: string; propertyDisplayReference: string };
+  missionPlan: { missionPlanId: string; issuedVersionId: string; versionNumber: number;
+    integritySha256: string; issuedAt: string; readAuthority: "IMMUTABLE_ISSUED_VERSION" };
+  workstreams: ReadonlyArray<{ workstreamId: string; displayName: string; state: string;
+    laneExpectations: readonly ProductionLane[] }>;
+  allowedNativeCapabilities: readonly string[];
+  prohibitedEffects: readonly string[];
+  packetFingerprintSha256: string;
+}
+
+export interface DesktopWorkPacketDownload { filename: string; packet: DesktopWorkPacket }
+
 export interface OperationsContext {
   orderId: string;
   organizationId: string;

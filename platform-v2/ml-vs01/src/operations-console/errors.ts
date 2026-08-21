@@ -21,6 +21,7 @@ const ERROR_DEFINITIONS = {
   CATALOG_CHANGED: { statusCode: 409, message: "Catalog pricing changed. Review a new preview before creating the listing." },
   IDEMPOTENCY_CONFLICT: { statusCode: 409, message: "The listing submission conflicts with an earlier request." },
   CREATION_IN_PROGRESS: { statusCode: 409, message: "This listing submission is already being created." },
+  PREREQUISITE_REQUIRED: { statusCode: 409, message: "Save an issued Mission Plan version before preparing Desktop work." },
   SERVICE_UNAVAILABLE: { statusCode: 503, message: "The nonproduction operations console is temporarily unavailable." },
   INTERNAL_ERROR: { statusCode: 500, message: "The request could not be completed." },
 } as const satisfies Record<OperationsConsoleErrorCodeV1, ErrorDefinition>;

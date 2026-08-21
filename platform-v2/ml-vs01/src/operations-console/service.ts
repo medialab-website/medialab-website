@@ -16,6 +16,7 @@ import {
   sha256Evidence,
   type CatalogProjection,
   type ListingTransactionResult,
+  type ProductionEvidenceProjection,
   type ResolvedCatalogLine,
   type ServerCatalogSelection,
 } from "./database.js";
@@ -28,6 +29,8 @@ import {
   type AssignmentInput,
   type CancelAppointmentInput,
   type ConfirmAppointmentInput,
+  type DesktopWorkPacket,
+  type DesktopWorkPacketDownload,
   type MissionPlanActionReceipt,
   type MissionPlanNoteInput,
   type MissionPlanOfflinePacket,
@@ -38,6 +41,10 @@ import {
   type OperationsContext,
   type OperationsHome,
   type OperationsWindowInput,
+  type ProductionLane,
+  type ProductionLaneStage,
+  type ProductionLaneWorkspace,
+  type ProductionWorkspace,
   type ReplacementInput,
   type RescheduleAppointmentInput,
 } from "./operations-contracts.js";
@@ -45,6 +52,99 @@ import {
 const CATALOG_TTL_MS = 10 * 60 * 1_000;
 const PREVIEW_TTL_MS = 15 * 60 * 1_000;
 const DISCLOSURE = "Controlled nonproduction reconstruction evidence. Listing creation does not itself schedule, assign crew, create a Mission Plan, process payment or media, review work, or deliver files.";
+const PRODUCTION_DISCLOSURE = "Read-only canonical production status. Source media stays in the native Desktop workflow; this web page does not upload, rename, copy, process, or delete media.";
+const EMPTY_PRODUCTION_EVIDENCE: ProductionEvidenceProjection = Object.freeze({
+  captureSessions: [], cullWorkspaces: [], handoffBatches: [], reviewBatches: [],
+});
+
+type WorkstreamSummary = { workstreamId: string; displayName: string; state: string };
+
+export function workstreamLaneExpectations(displayName: string): ProductionLane[] {
+  const lanes: ProductionLane[] = [];
+  if (/photo|photograph|hdr|image|twilight|home package|estate package/iu.test(displayName)) lanes.push("PHOTO");
+  if (/video|reel|cinematic|walkthrough|film/iu.test(displayName)) lanes.push("VIDEO");
+  return lanes;
+}
+
+function newest<T>(values: T[], timestamp: (value: T) => string, identity: (value: T) => string): T | null {
+  return [...values].sort((left, right) => timestamp(right).localeCompare(timestamp(left)) ||
+    identity(right).localeCompare(identity(left)))[0] ?? null;
+}
+
+function stagePresentation(stage: ProductionLaneStage, lane: ProductionLane): { stageLabel: string; nextAction: string } {
+  const media = lane === "PHOTO" ? "photo" : "video";
+  return ({
+    NOT_ORDERED: { stageLabel: "Not ordered", nextAction: `No ${media} lane work is expected for this Mission Plan.` },
+    NOT_STARTED: { stageLabel: "Not started", nextAction: `Use Desktop to ingest the approved ${media} source.` },
+    CAPTURED: { stageLabel: "Ready to cull", nextAction: `Open the ${media} cull in Desktop.` },
+    CULLING: { stageLabel: "Culling", nextAction: `Finish and seal the ${media} cull in Desktop.` },
+    READY_FOR_HANDOFF: { stageLabel: "Ready for editor handoff", nextAction: "Prepare the editor handoff from the sealed selection." },
+    EDITOR_HANDOFF: { stageLabel: "With editor", nextAction: "Track dispatch, acknowledgement, and returned work in the web app." },
+    RETURNING: { stageLabel: "Returns arriving", nextAction: "Finish returned-media intake and resolve any unmatched files." },
+    READY_FOR_REVIEW: { stageLabel: "Ready for review", nextAction: "Open editor review in the web app." },
+    REVIEW: { stageLabel: "Review in progress", nextAction: "Complete editor review in the web app." },
+    COMPLETE: { stageLabel: "Review complete", nextAction: "Continue to the approved publication and delivery workflow." },
+    EXCEPTION: { stageLabel: "Needs attention", nextAction: "Resolve the visible production exception before continuing." },
+  } satisfies Record<ProductionLaneStage, { stageLabel: string; nextAction: string }>)[stage];
+}
+
+export function deriveProductionLane(
+  lane: ProductionLane,
+  workstreams: WorkstreamSummary[],
+  evidence: ProductionEvidenceProjection,
+): ProductionLaneWorkspace {
+  const culls = evidence.cullWorkspaces.filter((item) => item.workspace.lane === lane);
+  const handoffs = evidence.handoffBatches.filter((item) => item.batch.lane === lane);
+  const reviews = evidence.reviewBatches.filter((item) => item.batch.lane === lane);
+  const latestCull = newest(culls, (item) => item.current.updated_at, (item) => item.workspace.id);
+  const latestHandoff = newest(handoffs, (item) => item.current.updated_at, (item) => item.batch.id);
+  const latestReview = newest(reviews, (item) => item.current.updated_at, (item) => item.batch.id);
+  const expected = workstreams.length > 0 || culls.length > 0 || handoffs.length > 0 || reviews.length > 0;
+  const exceptions: string[] = [];
+  if (latestCull?.current.current_state === "COMPLETE" && !latestCull.is_current_selection) {
+    exceptions.push("The completed cull is not the current selected-media result.");
+  }
+  if ((latestHandoff?.current.unresolved_return_count ?? 0) > 0 ||
+      latestHandoff?.current.current_state === "RECONCILIATION_REQUIRED") {
+    exceptions.push("Returned media requires reconciliation.");
+  }
+  if (latestReview?.current.current_state === "COMPLETED" && (latestReview.current.unresolved_count ?? 0) > 0) {
+    exceptions.push("The completed review still reports unresolved items.");
+  }
+  let stage: ProductionLaneStage;
+  if (exceptions.length) stage = "EXCEPTION";
+  else if (!expected) stage = "NOT_ORDERED";
+  else if (evidence.captureSessions.length === 0 && culls.length === 0) stage = "NOT_STARTED";
+  else if (culls.length === 0) stage = "CAPTURED";
+  else if (latestCull?.current.current_state !== "COMPLETE") stage = "CULLING";
+  else if (handoffs.length === 0) stage = "READY_FOR_HANDOFF";
+  else if (latestHandoff?.current.current_state === "RETURNS_COMPLETE") {
+    if (reviews.length === 0) stage = "READY_FOR_REVIEW";
+    else if (latestReview?.current.current_state === "COMPLETED") stage = "COMPLETE";
+    else stage = "REVIEW";
+  } else if (["PARTIAL_RETURN"].includes(latestHandoff?.current.current_state ?? "")) stage = "RETURNING";
+  else stage = "EDITOR_HANDOFF";
+  const presentation = stagePresentation(stage, lane);
+  return Object.freeze({
+    lane, expected, workstreams: Object.freeze(workstreams.map((workstream) => Object.freeze({ ...workstream }))) as WorkstreamSummary[],
+    stage, ...presentation,
+    capture: Object.freeze({ sessionCount: evidence.captureSessions.length,
+      states: Object.freeze([...new Set(evidence.captureSessions.map((item) => item.state))].sort()) as string[] }),
+    cull: Object.freeze({ workspaceCount: culls.length, currentState: latestCull?.current.current_state ?? null,
+      inventorySealed: latestCull?.current.inventory_sealed ?? false,
+      activeCandidateCount: Number(latestCull?.current.active_candidate_count ?? 0),
+      hasCurrentSelection: latestCull?.is_current_selection ?? false }),
+    handoff: Object.freeze({ batchCount: handoffs.length, currentState: latestHandoff?.current.current_state ?? null,
+      itemCount: Number(latestHandoff?.current.item_count ?? 0),
+      returnedSourceCount: Number(latestHandoff?.current.returned_source_count ?? 0),
+      outstandingSourceCount: Number(latestHandoff?.current.outstanding_source_count ?? 0),
+      unresolvedReturnCount: Number(latestHandoff?.current.unresolved_return_count ?? 0) }),
+    review: Object.freeze({ batchCount: reviews.length, currentState: latestReview?.current.current_state ?? null,
+      itemCount: Number(latestReview?.current.item_count ?? 0), resolvedCount: Number(latestReview?.current.resolved_count ?? 0),
+      unresolvedCount: Number(latestReview?.current.unresolved_count ?? 0) }),
+    exceptions: Object.freeze(exceptions) as string[],
+  });
+}
 
 interface BoundCatalogState {
   effectiveAt: string;
@@ -400,6 +500,116 @@ export class OperationsConsoleService {
       return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "MissionPlanWorkspaceV1" as const,
         readiness, context: this.#safeContext(result.context), plan: result.plan, controls: result.controls });
     } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  #latestIssuedVersion(plan: MissionPlanRecord | null): MissionPlanRecord["versions"][number] | null {
+    return plan?.versions.reduce<MissionPlanRecord["versions"][number] | null>((latest, version) =>
+      !latest || version.version_number > latest.version_number ? version : latest, null) ?? null;
+  }
+
+  #issuedWorkstreams(
+    context: OperationsContext,
+    version: MissionPlanRecord["versions"][number] | null,
+  ): WorkstreamSummary[] {
+    const live = new Map((context.job?.workstreams ?? []).map((workstream) => [workstream.workstreamId, workstream]));
+    if (!version) return [...(context.job?.workstreams ?? [])]
+      .map((workstream) => ({ workstreamId: workstream.workstreamId, displayName: workstream.displayName, state: workstream.state }))
+      .sort((left, right) => left.workstreamId.localeCompare(right.workstreamId));
+    return version.content.selected_workstreams.map((item) => {
+      const workstreamId = String(item.service_workstream_id ?? "");
+      const current = live.get(workstreamId);
+      return {
+        workstreamId,
+        displayName: String(item.source_description ?? current?.displayName ?? "Service workstream"),
+        state: String(item.state ?? current?.state ?? "UNKNOWN"),
+      };
+    }).filter((workstream) => workstream.workstreamId.length > 0)
+      .sort((left, right) => left.workstreamId.localeCompare(right.workstreamId));
+  }
+
+  async productionWorkspace(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<ProductionWorkspace> {
+    try {
+      const relationship = await this.#database.getMissionPlanWorkspace(session.databaseSessionToken, orderId);
+      const context = this.#safeContext(relationship.context);
+      const version = this.#latestIssuedVersion(relationship.plan);
+      const workstreams = this.#issuedWorkstreams(context, version);
+      const evidence = context.job
+        ? await this.#database.getProductionEvidence(session.databaseSessionToken, context.organizationId,
+          context.job.jobId, context.job.workstreams.map((workstream) => workstream.workstreamId))
+        : EMPTY_PRODUCTION_EVIDENCE;
+      const laneWorkstreams = (lane: ProductionLane) => workstreams
+        .filter((workstream) => workstreamLaneExpectations(workstream.displayName).includes(lane));
+      const exceptions: string[] = [];
+      if (!context.job) exceptions.push("Start Mission Control before production work can begin.");
+      if (!version) exceptions.push("Save an issued Mission Plan version before preparing Desktop work.");
+      const lanes = (["PHOTO", "VIDEO"] as const).map((lane) => deriveProductionLane(lane, laneWorkstreams(lane), evidence)) as
+        [ProductionLaneWorkspace, ProductionLaneWorkspace];
+      return Object.freeze({
+        schema: OPERATIONS_SCHEMA,
+        contract: "ProductionWorkspaceV1" as const,
+        evidenceClassification: "NONPRODUCTION_CANONICAL_READ_ONLY" as const,
+        disclosure: PRODUCTION_DISCLOSURE,
+        context,
+        missionPlan: version && relationship.plan ? Object.freeze({
+          missionPlanId: relationship.plan.mission_plan_id,
+          issuedVersionId: version.mission_plan_version_id,
+          versionNumber: version.version_number,
+          integritySha256: version.canonical_json_sha256,
+          issuedAt: version.issued_at,
+        }) : null,
+        desktopWorkPacketReady: Boolean(context.job && version),
+        lanes,
+        exceptions: Object.freeze(exceptions) as string[],
+      });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async desktopWorkPacket(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<DesktopWorkPacketDownload> {
+    try {
+      const relationship = await this.#database.getMissionPlanWorkspace(session.databaseSessionToken, orderId);
+      const context = this.#safeContext(relationship.context);
+      const version = this.#latestIssuedVersion(relationship.plan);
+      if (!context.job || !relationship.plan || !version) throw operationsConsoleError("PREREQUISITE_REQUIRED");
+      const workstreams = this.#issuedWorkstreams(context, version).map((workstream) => Object.freeze({
+        ...workstream, laneExpectations: Object.freeze(workstreamLaneExpectations(workstream.displayName)) as ProductionLane[],
+      }));
+      const propertyDisplayReference = [context.property.addressLine1, context.property.addressLine2,
+        context.property.locality, context.property.administrativeArea, context.property.postalCode]
+        .filter(Boolean).join(", ");
+      const payload = Object.freeze({
+        schema: "ML_DESKTOP_WORK_PACKET_V1" as const,
+        contract: "DesktopWorkPacketV1" as const,
+        contractVersion: 1 as const,
+        evidenceClassification: "NONPRODUCTION_CANONICAL_READ_ONLY" as const,
+        organizationId: context.organizationId,
+        job: Object.freeze({ jobId: context.job.jobId, orderId: context.orderId, propertyDisplayReference }),
+        missionPlan: Object.freeze({ missionPlanId: relationship.plan.mission_plan_id,
+          issuedVersionId: version.mission_plan_version_id, versionNumber: version.version_number,
+          integritySha256: version.canonical_json_sha256, issuedAt: version.issued_at,
+          readAuthority: "IMMUTABLE_ISSUED_VERSION" as const }),
+        workstreams: Object.freeze(workstreams),
+        allowedNativeCapabilities: Object.freeze([
+          "READ_ISSUED_MISSION_PLAN_IDENTITY",
+          "SCAN_OWNER_SELECTED_LOCAL_SOURCE_READ_ONLY",
+          "INGEST_AND_CULL_INSIDE_MANAGED_APP_DATA",
+          "GENERATE_MANAGED_PROXIES_AND_PREVIEWS",
+          "SEAL_LOCAL_MEDIA_MANIFEST",
+        ]),
+        prohibitedEffects: Object.freeze([
+          "PLATFORM_WRITEBACK",
+          "PROVIDER_OR_CLOUD_CONTACT",
+          "SOURCE_MEDIA_MUTATION",
+          "BROWSER_FILESYSTEM_AUTHORITY",
+          "CREDENTIAL_OR_SECRET_TRANSPORT",
+          "PRODUCTION_INSTALLATION_OR_DEPLOYMENT",
+        ]),
+      });
+      const packet: DesktopWorkPacket = Object.freeze({ ...payload, packetFingerprintSha256: sha256Evidence(payload) });
+      return Object.freeze({ filename: `medialab-desktop-work-${context.job.jobId}-mpv${version.version_number}.json`, packet });
+    } catch (error) {
+      if (error instanceof Error && error.name === "OperationsConsoleHttpError") throw error;
+      return this.#translateOperationsError(error);
+    }
   }
 
   #defaultMissionPlanSections(context: OperationsContext): MissionPlanSectionInput[] {
