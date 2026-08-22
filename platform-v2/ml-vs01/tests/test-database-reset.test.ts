@@ -25,6 +25,15 @@ const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
 const TEST_PORT = 55447;
 
 const EXACT_ROUTINE_NAMES = [
+  'reject_client_foundation_mutation',
+  'require_client_account_permission',
+  'client_intake_replay',
+  'reconcile_client_account_intake',
+  'reconcile_customer_contact_intake',
+  'link_client_account_person',
+  'link_order_client_account',
+  'get_client_account_record',
+  'list_client_accounts',
   'operations_review_version_summary',
   'operations_review_actions',
   'operations_review_batch_workspace',
@@ -329,6 +338,13 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['client_account_external_refs_immutability_guard', 'client_account_external_references', 'reject_client_foundation_mutation'],
+  ['client_account_people_immutability_guard', 'client_account_people', 'reject_client_foundation_mutation'],
+  ['client_account_revisions_immutability_guard', 'client_account_revisions', 'reject_client_foundation_mutation'],
+  ['client_accounts_immutability_guard', 'client_accounts', 'reject_client_foundation_mutation'],
+  ['client_contact_source_evidence_immutability_guard', 'client_contact_source_evidence', 'reject_client_foundation_mutation'],
+  ['client_intake_idempotency_immutability_guard', 'client_intake_idempotency_records', 'reject_client_foundation_mutation'],
+  ['order_client_accounts_immutability_guard', 'order_client_accounts', 'reject_client_foundation_mutation'],
   ['organization_record_access_events_immutability_guard', 'organization_record_access_events', 'reject_organization_record_evidence_mutation'],
   ['organization_record_export_items_immutability_guard', 'organization_record_export_items', 'reject_organization_record_evidence_mutation'],
   ['organization_record_exports_immutability_guard', 'organization_record_export_snapshots', 'reject_organization_record_evidence_mutation'],
@@ -600,7 +616,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(27);
+    expect(ledgerRes.rows).toHaveLength(28);
     expect(ledgerRes.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');
@@ -630,6 +646,8 @@ describe('P01C Test Database Reset Tooling Tests', () => {
     expect(ledgerRes.rows[19].filename).toBe('0020_disposable_delivery_surface_local_fixture_foundation.sql');
     expect(ledgerRes.rows[20].filename).toBe('0021_provider_neutral_file_backed_disposable_delivery_foundation.sql');
     expect(ledgerRes.rows[21].filename).toBe('0022_organization_records_dashboard_audited_export_foundation.sql');
+    expect(ledgerRes.rows[26].filename).toBe('0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql');
+    expect(ledgerRes.rows[27].filename).toBe('0028_client_account_and_operator_contact_intake_foundation.sql');
     expect(ledgerRes.rows[6].sha256).toMatch(/^[0-9a-f]{64}$/);
 
     // Verify row counts across the predecessor and packet fixture inventories.

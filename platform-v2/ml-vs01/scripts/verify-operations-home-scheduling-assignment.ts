@@ -25,7 +25,7 @@ pass("entry", head === "2fa5a404ec76e185d259c4d32a7b60fe79038921" && tree === "1
   `branch=${branch}; HEAD=${head}; tree=${tree}; platform=${platform}; main=${main}`);
 
 const migrations = readdirSync(join(moduleRoot, "db/migrations")).filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-pass("migrationInventory", migrations.length === 27 && migrations.every((name, index) => name.startsWith(String(index + 1).padStart(4, "0")))
+pass("migrationInventory", migrations.length === 28 && migrations.every((name, index) => name.startsWith(String(index + 1).padStart(4, "0")))
   && migrations[23] === "0024_operations_home_scheduling_assignment_console.sql"
   && migrations[25] === "0026_editorial_segment_foundation.sql"
   && migrations[26] === "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql", migrations.join(","));

@@ -265,6 +265,15 @@ const CONTEXTUAL_REVIEW_APIS = [
   'submit_operations_editor_review'
 ];
 
+const CLIENT_ACCOUNT_APIS = [
+  'get_client_account_record',
+  'link_client_account_person',
+  'link_order_client_account',
+  'list_client_accounts',
+  'reconcile_client_account_intake',
+  'reconcile_customer_contact_intake'
+];
+
 const ALL_RUNTIME_APIS = [
   ...PUBLIC_APIS,
   ...CATALOG_APIS,
@@ -286,7 +295,8 @@ const ALL_RUNTIME_APIS = [
   ...RUNTIME_INTAKE_APIS,
   ...OPERATIONS_HOME_APIS,
   ...EDITORIAL_SEGMENT_APIS,
-  ...CONTEXTUAL_REVIEW_APIS
+  ...CONTEXTUAL_REVIEW_APIS,
+  ...CLIENT_ACCOUNT_APIS
 ].sort();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -509,6 +519,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0025_operations_mission_plan_draft_controls.sql'
       ,'0026_editorial_segment_foundation.sql'
       ,'0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'
+      ,'0028_client_account_and_operator_contact_intake_foundation.sql'
     ]);
 
     const result = await runMigrations({
@@ -545,6 +556,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
       ,'0025_operations_mission_plan_draft_controls.sql'
       ,'0026_editorial_segment_foundation.sql'
       ,'0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'
+      ,'0028_client_account_and_operator_contact_intake_foundation.sql'
     ]);
   });
 
@@ -944,7 +956,7 @@ describe('P02-M02-A Person Contacts and Account Lifecycle', () => {
           WHERE n.nspname = 'medialab_core' AND p.prosecdef
           ORDER BY p.proname`
       );
-      expect(searchPaths.rows).toHaveLength(271);
+      expect(searchPaths.rows).toHaveLength(279);
       for (const row of searchPaths.rows) {
         expect(row.proconfig).toEqual(['search_path=pg_catalog, medialab_core, pg_temp']);
       }

@@ -216,13 +216,14 @@ describe('Migration Engine Substantive Behavior', () => {
       ,'0025_operations_mission_plan_draft_controls.sql'
       ,'0026_editorial_segment_foundation.sql'
       ,'0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'
+      ,'0028_client_account_and_operator_contact_intake_foundation.sql'
     ]);
   });
 
   it('11. verifies canonical test database contains ledger rows and domain tables', async () => {
     const devRes = await client.query('SELECT COUNT(*)::int AS cnt, MAX(filename) AS fname FROM medialab_meta.schema_migrations;');
-    expect(devRes.rows[0].cnt).toBe(27);
-    expect(devRes.rows[0].fname).toBe('0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql');
+    expect(devRes.rows[0].cnt).toBe(28);
+    expect(devRes.rows[0].fname).toBe('0028_client_account_and_operator_contact_intake_foundation.sql');
 
     const tablesRes = await client.query(
       "SELECT tablename FROM pg_tables WHERE schemaname = 'medialab_core' ORDER BY tablename;"

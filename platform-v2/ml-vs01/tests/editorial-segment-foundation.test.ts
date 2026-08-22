@@ -180,11 +180,12 @@ describe('P02-M20-A editorial segment foundation', () => {
     await reset();
   });
 
-  it('replays exact 0001-0027, seeds permissions only, and grants only seven controlled runtime APIs', async () => {
+  it('replays exact 0001-0028, seeds permissions only, and grants only seven controlled runtime APIs', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(27);
+    expect(ledger.rows).toHaveLength(28);
     expect(ledger.rows[25].filename).toBe('0026_editorial_segment_foundation.sql');
     expect(ledger.rows[26].filename).toBe('0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql');
+    expect(ledger.rows[27].filename).toBe('0028_client_account_and_operator_contact_intake_foundation.sql');
     const permissions = await owner.query("SELECT code FROM medialab_core.permissions WHERE code LIKE 'editorial_segment.%' ORDER BY code");
     expect(permissions.rows.map((row) => row.code)).toEqual(['editorial_segment.manage', 'editorial_segment.read']);
     const seeded = await owner.query(`SELECT sum(n)::int AS n FROM (

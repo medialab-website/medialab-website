@@ -195,7 +195,7 @@ function assertEvidencePrivacy(label: string, serialized: string): void {
 
 function exactMigrationLedger(ledger: BootstrapObservation["ledger"]): boolean {
   return Array.isArray(ledger)
-    && ledger.length === 27
+    && ledger.length === 28
     && ledger.every((entry, index) => (
       typeof entry?.filename === "string"
       && entry.filename.startsWith(`${String(index + 1).padStart(4, "0")}_`)
@@ -303,7 +303,7 @@ function directRuntimeSources(
   const http = observations.httpFlow;
   const authority = observations.authority;
 
-  if (id === 5) add("runtime:migration-ledger", "Both fresh reset ledgers contain the exact ordered 0001 through 0027 inventory with matching hashes.");
+  if (id === 5) add("runtime:migration-ledger", "Both fresh reset ledgers contain the exact ordered 0001 through 0028 inventory with matching hashes.");
   if (id === 6) add("runtime:double-reset", `Fresh reset observations 1 and 2 each seeded deterministic rows (${observations.bootstrap.firstReset.seededRows}, ${observations.bootstrap.secondReset.seededRows}).`);
   if (id === 13) add("runtime:loopback-http", "The complete HTTP scenario succeeded on the fixed 127.0.0.1:4317 boundary.");
   if (id === 14) add("runtime:restricted-role", `Business execution used the fixed ${observations.boundary.runtimeRole} role boundary.`);
@@ -663,7 +663,7 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
       database: OPERATIONS_CONSOLE_DATABASE.database,
       user: OWNER_ROLE,
     });
-    if (migration.failed || migration.applied.length !== 27 || migration.skipped.length !== 0) {
+    if (migration.failed || migration.applied.length !== 28 || migration.skipped.length !== 0) {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     await client.query("BEGIN");
@@ -678,9 +678,11 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
     const ledger = await client.query<{ filename: string; sha256: string }>(
       "SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename",
     );
-    if (ledger.rows.length !== 27 || !ledger.rows[0]?.filename.startsWith("0001_") ||
+    if (ledger.rows.length !== 28 || !ledger.rows[0]?.filename.startsWith("0001_") ||
         !ledger.rows[24]?.filename.startsWith("0025_") || !ledger.rows[25]?.filename.startsWith("0026_") ||
-        ledger.rows[26]?.filename !== "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql") {
+        ledger.rows[26]?.filename !== "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql" ||
+        ledger.rows[27]?.filename !== "0028_client_account_and_operator_contact_intake_foundation.sql" ||
+        ledger.rows[27]?.filename !== "0028_client_account_and_operator_contact_intake_foundation.sql") {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     return { ledger: ledger.rows, resetNumber, seededRows };

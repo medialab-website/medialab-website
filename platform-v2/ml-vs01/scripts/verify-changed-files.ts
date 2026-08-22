@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { compareExactPathSets, readCandidateStatus, readChangedFilesInventory } from "./p02-m17-a-changed-files.js";
 
 const MODULE_ROOT = "platform-v2/ml-vs01/";
-const EXPECTED_PATH_COUNT = 83;
-const EXPECTED_INVENTORY_SHA256 = "f2e96555dbb2a21bc52568e2c2cfa6219d71a6646951593dc542c7d1f7504cbf";
+const EXPECTED_PATH_COUNT = 77;
+const EXPECTED_INVENTORY_SHA256 = "3556f08151112d20ddab83523ee62cc642577b3bbb2244e9012b3bf5b32838c8";
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(baseDir, "../..");
 const states = readCandidateStatus(repoRoot);
@@ -15,7 +15,7 @@ const documentedHash = createHash("sha256").update(`${documentedPaths.join("\n")
 const failures = compareExactPathSets(actualPaths, documentedPaths);
 
 if (documentedPaths.length !== EXPECTED_PATH_COUNT || documentedHash !== EXPECTED_INVENTORY_SHA256) {
-  failures.push(`P02-M22-A exact path inventory mismatch: count=${documentedPaths.length} sha256=${documentedHash}`);
+  failures.push(`P02-M23-A exact path inventory mismatch: count=${documentedPaths.length} sha256=${documentedHash}`);
 }
 for (const state of states) {
   if (state.kind === "unsupported") failures.push(`unsupported Git state for '${state.path}'`);
@@ -34,7 +34,7 @@ for (const state of states) {
 if (actualPaths.length !== EXPECTED_PATH_COUNT) failures.push(`candidate path count is ${actualPaths.length}, expected ${EXPECTED_PATH_COUNT}`);
 
 const result = {
-  verifier: "P02-M22-A_CHANGED_FILES_V1",
+  verifier: "P02-M23-A_CHANGED_FILES_V1",
   pass: failures.length === 0,
   candidateMode: "uncommitted-unstaged-plus-bounded-new-files",
   inventorySha256: documentedHash,

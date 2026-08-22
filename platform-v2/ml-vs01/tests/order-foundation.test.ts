@@ -159,7 +159,7 @@ describe('P02-M04-A provider-neutral Order foundation', () => {
 
   it('1. records the exact nine-migration ledger while preserving 0001 through 0006', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(27);
+    expect(ledger.rows).toHaveLength(28);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows.slice(0, 5)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },
@@ -180,6 +180,7 @@ describe('P02-M04-A provider-neutral Order foundation', () => {
     const tables = await owner.query(
       `SELECT tablename FROM pg_tables
         WHERE schemaname = 'medialab_core' AND tablename LIKE 'order%'
+          AND tablename <> 'order_client_accounts'
         ORDER BY tablename`
     );
     expect(tables.rows.map((row) => row.tablename)).toEqual([

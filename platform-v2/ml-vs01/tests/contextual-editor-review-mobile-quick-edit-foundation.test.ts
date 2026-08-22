@@ -319,7 +319,8 @@ describe('P02-M22-A contextual Editor Review and mobile Quick Edit database brid
     const ledger = await owner.query<{ filename: string }>(
       'SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename',
     );
-    expect(ledger.rows.at(-1)?.filename).toBe('0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql');
+    expect(ledger.rows[26]?.filename).toBe('0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql');
+    expect(ledger.rows.at(-1)?.filename).toBe('0028_client_account_and_operator_contact_intake_foundation.sql');
     const signatures = [
       'medialab_core.start_operations_editor_review(text,text,uuid,text)',
       'medialab_core.list_operations_review_attention(text)',

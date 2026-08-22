@@ -109,7 +109,7 @@ describe('P02-M12-A editor handoff and returned-media intake foundation', () => 
 
   it('replays fifteen migrations with permission-only fixtures and exact restricted authority', async()=>{
     const ledger=await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(27);
+    expect(ledger.rows).toHaveLength(28);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql'); expect(ledger.rows[14].filename).toBe('0015_editor_handoff_returned_media_intake_foundation.sql');
     const permissions=await owner.query("SELECT code FROM medialab_core.permissions WHERE code LIKE 'media_editor_handoff.%' ORDER BY code");
     expect(permissions.rows.map(r=>r.code)).toEqual(['media_editor_handoff.manage','media_editor_handoff.read']);

@@ -173,11 +173,12 @@ try {
   await client.connect();
   const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
   const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql')) !== JSON.stringify(expectedLedger)) fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'))}`);
+  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'&&row.filename!=='0028_client_account_and_operator_contact_intake_foundation.sql')) !== JSON.stringify(expectedLedger)) fail(`Twenty-two-row migration ledger mismatch: ${JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'&&row.filename!=='0028_client_account_and_operator_contact_intake_foundation.sql'))}`);
 
   const tables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables
       WHERE schemaname = 'medialab_core' AND tablename LIKE 'order%'
+        AND tablename <> 'order_client_accounts'
       ORDER BY tablename`
   );
   exact('Database packet table inventory', tables.rows.map((row) => row.tablename), packetTables);
@@ -211,6 +212,7 @@ try {
        JOIN pg_namespace n ON n.oid = c.relnamespace
        JOIN pg_proc p ON p.oid = t.tgfoid
       WHERE NOT t.tgisinternal AND n.nspname = 'medialab_core' AND c.relname LIKE 'order%'
+        AND c.relname <> 'order_client_accounts'
       ORDER BY c.relname, t.tgname`
   );
   const normalizedTriggers = triggers.rows.map((row) => [row.tgname, row.relname, row.proname]);

@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const moduleRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(moduleRoot, "../..");
-const base = "d38f458690769024fc64e284f191d346915488df";
-const baseTree = "af2d6c486953ada2f251891121734a7c27f6c04b";
-const branchName = "platform-v2-p02-m22-a-contextual-editor-review-mobile-quick-edit-r01";
+const base = "39abb2f01277c10a94d0e99a691724af03b66c46";
+const baseTree = "335f3314892e3cc71724ef336ade61e90ce08fec";
+const branchName = "platform-v2-p02-m23-a-current-operations-admission-dual-run-readiness-r01";
 const failures: string[] = [];
 const checks: Record<string, string> = {};
 const read = (path: string) => readFileSync(join(moduleRoot, path), "utf8");
@@ -23,7 +23,7 @@ pass("entry", head === base && tree === baseTree && platform === base && branch 
   `branch=${branch}; HEAD=${head}; tree=${tree}; origin/platform=${platform}`);
 
 const migrations = readdirSync(join(moduleRoot, "db/migrations")).filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-pass("migrationInventory", migrations.length === 27 && migrations.every((name, index) => name.startsWith(String(index + 1).padStart(4, "0")))
+pass("migrationInventory", migrations.length === 28 && migrations.every((name, index) => name.startsWith(String(index + 1).padStart(4, "0")))
   && migrations[24] === "0025_operations_mission_plan_draft_controls.sql"
   && migrations[25] === "0026_editorial_segment_foundation.sql"
   && migrations[26] === "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql", migrations.join(","));

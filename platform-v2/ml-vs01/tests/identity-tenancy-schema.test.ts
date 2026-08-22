@@ -8,6 +8,15 @@ import fs from 'fs';
 import path from 'path';
 
 const EXACT_ROUTINE_NAMES = [
+  'reject_client_foundation_mutation',
+  'require_client_account_permission',
+  'client_intake_replay',
+  'reconcile_client_account_intake',
+  'reconcile_customer_contact_intake',
+  'link_client_account_person',
+  'link_order_client_account',
+  'get_client_account_record',
+  'list_client_accounts',
   'clear_editorial_segment_decision',
   'create_editorial_segment',
   'decide_editorial_segment',
@@ -334,6 +343,13 @@ const EXACT_ROUTINE_NAMES = [
 ];
 
 const EXACT_TRIGGERS = [
+  ['client_account_external_refs_immutability_guard', 'client_account_external_references', 'reject_client_foundation_mutation'],
+  ['client_account_people_immutability_guard', 'client_account_people', 'reject_client_foundation_mutation'],
+  ['client_account_revisions_immutability_guard', 'client_account_revisions', 'reject_client_foundation_mutation'],
+  ['client_accounts_immutability_guard', 'client_accounts', 'reject_client_foundation_mutation'],
+  ['client_contact_source_evidence_immutability_guard', 'client_contact_source_evidence', 'reject_client_foundation_mutation'],
+  ['client_intake_idempotency_immutability_guard', 'client_intake_idempotency_records', 'reject_client_foundation_mutation'],
+  ['order_client_accounts_immutability_guard', 'order_client_accounts', 'reject_client_foundation_mutation'],
   ['organization_record_access_events_immutability_guard', 'organization_record_access_events', 'reject_organization_record_evidence_mutation'],
   ['organization_record_export_items_immutability_guard', 'organization_record_export_items', 'reject_organization_record_evidence_mutation'],
   ['organization_record_exports_immutability_guard', 'organization_record_export_snapshots', 'reject_organization_record_evidence_mutation'],
@@ -577,6 +593,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0025_operations_mission_plan_draft_controls.sql'
       ,'0026_editorial_segment_foundation.sql'
       ,'0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'
+      ,'0028_client_account_and_operator_contact_intake_foundation.sql'
     ]);
   });
 

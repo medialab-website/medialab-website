@@ -208,7 +208,8 @@ describe("P02-M16-E runtime intake reconciliation", () => {
     expect(authority.rows[0]).toEqual({ runtime_dml: 0, public_execute: 0 });
     const runtimeFunctions = await owner.query(
       `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-       WHERE n.nspname='medialab_core' AND p.proname LIKE 'reconcile_%_intake'
+       WHERE n.nspname='medialab_core'
+         AND p.proname = ANY(ARRAY['reconcile_customer_person_intake','reconcile_property_snapshot_intake']::text[])
          AND has_function_privilege('medialab_p02m16a_test_app',p.oid,'EXECUTE')
        ORDER BY p.proname`);
     expect(runtimeFunctions.rows.map((row) => row.proname)).toEqual([

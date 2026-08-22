@@ -1,14 +1,16 @@
-# P02-M22-A Changed Files
+# P02-M23-A Changed Files
 
-The candidate contains this exact 83-path set relative to accepted P02-M21-A commit `d38f458690769024fc64e284f191d346915488df`. Migration `0027` is the sole new migration. The existing `0001`–`0026` files, fixtures, dependencies, and `package-lock.json` remain byte-identical; prior verifier/test edits are mechanical exact-ledger rollover only.
+The candidate contains this exact 77-path set relative to accepted predecessor commit `39abb2f01277c10a94d0e99a691724af03b66c46`. Migration `0028` is the sole new migration. Existing migrations `0001`–`0027`, dependencies, and `package-lock.json` remain byte-identical; predecessor verifier/test changes are mechanical exact-ledger rollover only.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
+- platform-v2/ml-vs01/db/fixtures/client-account-contact-foundation-fixtures.ts
 - platform-v2/ml-vs01/db/migrate.ts
-- platform-v2/ml-vs01/db/migrations/0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql
+- platform-v2/ml-vs01/db/migrations/0028_client_account_and_operator_contact_intake_foundation.sql
 - platform-v2/ml-vs01/db/migrations/README.md
-- platform-v2/ml-vs01/package.json
-- platform-v2/ml-vs01/scripts/run-contextual-editor-review-owner-preview.ts
+- platform-v2/ml-vs01/scripts/acquire-aryeo-current-operations.ts
+- platform-v2/ml-vs01/scripts/run-current-operations-admission-dry-run.ts
+- platform-v2/ml-vs01/scripts/run-current-operations-admission.ts
 - platform-v2/ml-vs01/scripts/run-internal-operations-console-new-listing.ts
 - platform-v2/ml-vs01/scripts/verify-business-replay-harness.ts
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
@@ -42,21 +44,18 @@ The candidate contains this exact 83-path set relative to accepted P02-M21-A com
 - platform-v2/ml-vs01/scripts/verify-scheduling-appointment-foundation-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-access-credential-gateway-schema.ts
 - platform-v2/ml-vs01/scripts/verify-temporary-download-center-external-sharing-schema.ts
-- platform-v2/ml-vs01/src/operations-console/app.ts
-- platform-v2/ml-vs01/src/operations-console/contracts.ts
-- platform-v2/ml-vs01/src/operations-console/database.ts
-- platform-v2/ml-vs01/src/operations-console/errors.ts
-- platform-v2/ml-vs01/src/operations-console/operations-contracts.ts
-- platform-v2/ml-vs01/src/operations-console/public/app.js
-- platform-v2/ml-vs01/src/operations-console/public/index.html
-- platform-v2/ml-vs01/src/operations-console/public/styles.css
-- platform-v2/ml-vs01/src/operations-console/review-media-store.ts
-- platform-v2/ml-vs01/src/operations-console/service.ts
+- platform-v2/ml-vs01/src/current-admission/aryeo-acquisition.ts
+- platform-v2/ml-vs01/src/current-admission/contracts.ts
+- platform-v2/ml-vs01/src/current-admission/normalization.ts
+- platform-v2/ml-vs01/src/current-admission/platform-admission.ts
 - platform-v2/ml-vs01/tests/capture-session-ingest-custody-foundation.test.ts
 - platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts
+- platform-v2/ml-vs01/tests/client-account-contact-foundation.test.ts
 - platform-v2/ml-vs01/tests/contextual-editor-review-mobile-quick-edit-foundation.test.ts
-- platform-v2/ml-vs01/tests/contextual-editor-review-owner-preview-harness.test.ts
 - platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts
+- platform-v2/ml-vs01/tests/current-operations-aryeo-acquisition.test.ts
+- platform-v2/ml-vs01/tests/current-operations-normalization.test.ts
+- platform-v2/ml-vs01/tests/current-operations-platform-admission.test.ts
 - platform-v2/ml-vs01/tests/durable-media-operations-reconciliation-foundation.test.ts
 - platform-v2/ml-vs01/tests/editor-handoff-returned-media-intake-foundation.test.ts
 - platform-v2/ml-vs01/tests/editorial-segment-foundation.test.ts
@@ -66,13 +65,7 @@ The candidate contains this exact 83-path set relative to accepted P02-M21-A com
 - platform-v2/ml-vs01/tests/media-cull-workspace-selected-media-foundation.test.ts
 - platform-v2/ml-vs01/tests/migration-engine.test.ts
 - platform-v2/ml-vs01/tests/mission-plan-foundation.test.ts
-- platform-v2/ml-vs01/tests/operations-console-ui.test.ts
-- platform-v2/ml-vs01/tests/operations-contextual-review-app.test.ts
-- platform-v2/ml-vs01/tests/operations-contextual-review-service.test.ts
-- platform-v2/ml-vs01/tests/operations-contextual-review-ui.test.ts
 - platform-v2/ml-vs01/tests/operations-home-scheduling-assignment.test.ts
-- platform-v2/ml-vs01/tests/operations-production-bridge.test.ts
-- platform-v2/ml-vs01/tests/operations-review-media-store.test.ts
 - platform-v2/ml-vs01/tests/order-foundation.test.ts
 - platform-v2/ml-vs01/tests/organization-records-dashboard-audited-export-foundation.test.ts
 - platform-v2/ml-vs01/tests/person-contacts-account-lifecycle-schema.test.ts
@@ -81,6 +74,7 @@ The candidate contains this exact 83-path set relative to accepted P02-M21-A com
 - platform-v2/ml-vs01/tests/provider-neutral-file-backed-delivery.test.ts
 - platform-v2/ml-vs01/tests/publication-delivery-entitlement-foundation.test.ts
 - platform-v2/ml-vs01/tests/returned-editor-review-final-source-foundation.test.ts
+- platform-v2/ml-vs01/tests/runtime-intake-reconciliation.test.ts
 - platform-v2/ml-vs01/tests/scheduling-appointment-foundation.test.ts
 - platform-v2/ml-vs01/tests/temporary-download-center-access-credential-gateway-foundation.test.ts
 - platform-v2/ml-vs01/tests/temporary-download-center-external-sharing-foundation.test.ts

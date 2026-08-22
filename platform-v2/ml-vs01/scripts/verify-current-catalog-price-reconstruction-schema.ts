@@ -132,7 +132,7 @@ for (const [filename, expectedHash] of expectedMigrations) {
   const actualHash = crypto.createHash('sha256').update(bytes).digest('hex');
   if (actualHash !== expectedHash) fail(`${filename} SHA-256 mismatch. Expected ${expectedHash}, got ${actualHash}`);
 }
-const migrationFiles = fs.readdirSync(path.join(baseDir, 'db/migrations')).filter((name) => name.endsWith('.sql') && name !== '0025_operations_mission_plan_draft_controls.sql' && name !== '0026_editorial_segment_foundation.sql' && name !== '0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql').sort();
+const migrationFiles = fs.readdirSync(path.join(baseDir, 'db/migrations')).filter((name) => name.endsWith('.sql') && name !== '0025_operations_mission_plan_draft_controls.sql' && name !== '0026_editorial_segment_foundation.sql' && name !== '0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql' && name !== '0028_client_account_and_operator_contact_intake_foundation.sql').sort();
 exact('Canonical migration inventory', migrationFiles, expectedMigrations.map(([filename]) => filename));
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(baseDir, 'package.json'), 'utf8')) as {
@@ -245,7 +245,7 @@ async function verifyDatabase(): Promise<void> {
   try {
     const ledger = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
     const expectedLedger = expectedMigrations.map(([filename, sha256]) => ({ filename, sha256 }));
-    if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql')) !== JSON.stringify(expectedLedger)) fail('Database migration ledger does not match the exact twenty-two-file inventory');
+    if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'&&row.filename!=='0028_client_account_and_operator_contact_intake_foundation.sql')) !== JSON.stringify(expectedLedger)) fail('Database migration ledger does not match the exact twenty-two-file inventory');
 
     const tables = await client.query(
       `SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'medialab_core' AND tablename IN ${tableListSql} ORDER BY tablename`
