@@ -151,7 +151,9 @@ try {
     throw new Error("M23A_REPLAY_FAILURE: repeated admission changed canonical identity or counts");
   }
   const authority = await database.authorityProof();
-  if (authority.runtimeCanonicalTableDmlGrants || authority.publicCanonicalTableDmlGrants || authority.publicFunctionExecutionGrants) {
+  if (authority.runtimeCanonicalTableDmlGrants || authority.runtimeCanonicalSequenceGrants ||
+      authority.publicCanonicalTableDmlGrants || authority.publicCanonicalSequenceGrants ||
+      authority.publicFunctionExecutionGrants) {
     throw new Error("M23A_AUTHORITY_BOUNDARY_FAILURE: canonical write authority is excessive");
   }
   const admittedAppointments = first.reduce((sum, value) => sum + value.appointmentCount, 0);

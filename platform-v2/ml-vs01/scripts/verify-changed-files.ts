@@ -6,8 +6,8 @@ import { compareExactPathSets, readCandidateStatus, readChangedFilesInventory } 
 
 const MODULE_ROOT = "platform-v2/ml-vs01/";
 const ACCEPTED_PREDECESSOR = "632a4e402ea89fe1526f1e9f2a3dbac467a7ea32";
-const EXPECTED_PATH_COUNT = 14;
-const EXPECTED_INVENTORY_SHA256 = "6efb3174c9e7663bf478d392da5c9542d0e3ea36ed760eecb73f0dc5589b70ad";
+const EXPECTED_PATH_COUNT = 18;
+const EXPECTED_INVENTORY_SHA256 = "29d5339030c78e218a499412d69be5c42f033b8b189c5f9bcf5491337ce1ddbf";
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(baseDir, "../..");
 const states = readCandidateStatus(repoRoot);

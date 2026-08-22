@@ -79,11 +79,13 @@ export interface ControlledPilotStateV1 {
   };
   canonical: ControlledPilotCanonicalCounts;
   exactAdmittedOrderTotalCents: 2631600;
+  authority: Awaited<ReturnType<CurrentOperationsAdmissionDatabase["authorityProof"]>>;
   checks: {
     firstPassStable: true;
     sequentialReplayStable: true;
     concurrentReplayStable: true;
     injectedFailureRolledBack: true;
+    injectedFailureRetryStable: true;
     noSyntheticOrders: true;
     restrictedRuntimeOnly: true;
   };
@@ -260,13 +262,14 @@ export async function admitControlledPilotCurrentOperations(
       replay.every((result, index) => exactObservationIdentity(result, first[index]!));
     if (!sequentialReplayStable) throw new Error("M24A_SEQUENTIAL_REPLAY_DIVERGENCE");
 
-    const [concurrentOne, concurrentTwo] = await Promise.all([
-      database.admitOrder(databaseSessionToken, normalized.sourceManifestSha256, cohort[0]!),
-      database.admitOrder(databaseSessionToken, normalized.sourceManifestSha256, cohort[0]!),
-    ]);
+    const concurrentReplay: CurrentOrderAdmissionObservationV1[] = [];
+    for (let offset = 0; offset < cohort.length; offset += 4) {
+      concurrentReplay.push(...await Promise.all(cohort.slice(offset, offset + 4).map((order) =>
+        database.admitOrder(databaseSessionToken, normalized.sourceManifestSha256, order))));
+    }
     const concurrentCounts = await canonicalCounts();
-    const concurrentReplayStable = exactObservationIdentity(concurrentOne, concurrentTwo) &&
-      exactObservationIdentity(concurrentOne, first[0]!) && sameCounts(replayCounts, concurrentCounts);
+    const concurrentReplayStable = concurrentReplay.every((result, index) =>
+      exactObservationIdentity(result, first[index]!)) && sameCounts(replayCounts, concurrentCounts);
     if (!concurrentReplayStable) throw new Error("M24A_CONCURRENT_REPLAY_DIVERGENCE");
 
     let injectedFailureRejected = false;
@@ -281,10 +284,18 @@ export async function admitControlledPilotCurrentOperations(
     const failureCounts = await canonicalCounts();
     const injectedFailureRolledBack = injectedFailureRejected && sameCounts(concurrentCounts, failureCounts);
     if (!injectedFailureRolledBack) throw new Error("M24A_INJECTED_FAILURE_ROLLBACK_DIVERGENCE");
+    const retry = await database.admitOrder(databaseSessionToken, normalized.sourceManifestSha256, cohort[0]!);
+    const retryCounts = await canonicalCounts();
+    const injectedFailureRetryStable = exactObservationIdentity(retry, first[0]!) && sameCounts(failureCounts, retryCounts);
+    if (!injectedFailureRetryStable) throw new Error("M24A_INJECTED_FAILURE_RETRY_DIVERGENCE");
 
     const authority = await database.authorityProof();
     const restrictedRuntimeOnly = authority.runtimeCanonicalTableDmlGrants === 0 &&
-      authority.publicCanonicalTableDmlGrants === 0 && authority.publicFunctionExecutionGrants === 0 &&
+      authority.runtimeCanonicalSequenceGrants === 0 && authority.publicCanonicalTableDmlGrants === 0 &&
+      authority.publicCanonicalSequenceGrants === 0 && authority.publicFunctionExecutionGrants === 0 &&
+      authority.runtimeRoleCanLogin && !authority.runtimeRoleInherit && !authority.runtimeRoleSuperuser &&
+      !authority.runtimeRoleCreateDatabase && !authority.runtimeRoleCreateRole && !authority.runtimeRoleReplication &&
+      !authority.runtimeRoleBypassRls && authority.runtimeRoleMembershipCount === 0 &&
       authority.businessExecutionRole === "medialab_p02m24a_pilot_app";
     if (!restrictedRuntimeOnly) throw new Error("M24A_RUNTIME_AUTHORITY_DIVERGENCE");
 
@@ -309,11 +320,13 @@ export async function admitControlledPilotCurrentOperations(
       },
       canonical: failureCounts,
       exactAdmittedOrderTotalCents: 2_631_600,
+      authority,
       checks: {
         firstPassStable: true,
         sequentialReplayStable: true,
         concurrentReplayStable: true,
         injectedFailureRolledBack: true,
+        injectedFailureRetryStable: true,
         noSyntheticOrders: true,
         restrictedRuntimeOnly: true,
       },

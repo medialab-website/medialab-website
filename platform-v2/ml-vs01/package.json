@@ -17,7 +17,7 @@
     "verify:placeholders": "tsx scripts/verify-no-placeholders.ts",
     "verify:changed-files": "tsx scripts/verify-changed-files.ts",
     "verify:migration-engine": "tsx scripts/verify-migration-engine.ts",
-    "verify:identity-tenancy-schema": "tsx scripts/verify-person-contacts-account-lifecycle-schema.ts",
+    "verify:identity-tenancy-schema": "tsx scripts/verify-identity-tenancy-schema.ts",
     "verify:property-snapshot-schema": "tsx scripts/verify-property-snapshot-schema.ts",
     "verify:person-contacts-account-lifecycle-schema": "tsx scripts/verify-person-contacts-account-lifecycle-schema.ts",
     "verify:current-catalog-price-reconstruction-schema": "tsx scripts/verify-current-catalog-price-reconstruction-schema.ts",

@@ -96,8 +96,18 @@ export interface CurrentOperationsAdmissionReceiptV1 {
     businessExecutionRole: string;
     businessWriteBoundary: "SUPPORTED_SECURITY_DEFINER_COMMANDS_ONLY";
     runtimeCanonicalTableDmlGrants: number;
+    runtimeCanonicalSequenceGrants: number;
     publicCanonicalTableDmlGrants: number;
+    publicCanonicalSequenceGrants: number;
     publicFunctionExecutionGrants: number;
+    runtimeRoleCanLogin: boolean;
+    runtimeRoleInherit: boolean;
+    runtimeRoleSuperuser: boolean;
+    runtimeRoleCreateDatabase: boolean;
+    runtimeRoleCreateRole: boolean;
+    runtimeRoleReplication: boolean;
+    runtimeRoleBypassRls: boolean;
+    runtimeRoleMembershipCount: number;
   };
   containsCustomerPii: false;
   containsProviderSecret: false;
@@ -654,11 +664,11 @@ export class CurrentOperationsAdmissionDatabase {
       );
       await fault?.("before_commit");
       await client.query("COMMIT"); open = false;
-      const postCommit = await this.pool.query<{ get_order_record: CanonicalOrderRecord | null }>(
+      const postCommit = await client.query<{ get_order_record: CanonicalOrderRecord | null }>(
         "SELECT medialab_core.get_order_record($1,$2::uuid)", [token, orderId],
       );
       exactReadback(postCommit.rows[0]?.get_order_record ?? null, orderId, order, property, snapshotIds);
-      const groupReadback = await this.pool.query<{ get_client_account_record: ClientAccountRecord | null }>(
+      const groupReadback = await client.query<{ get_client_account_record: ClientAccountRecord | null }>(
         "SELECT medialab_core.get_client_account_record($1,$2::uuid)", [token, customerGroupAccountId],
       );
       exactClientAccountReadback(groupReadback.rows[0]?.get_client_account_record ?? null, {
@@ -668,7 +678,7 @@ export class CurrentOperationsAdmissionDatabase {
         customerPersonId: customer.person_id, orderId,
       });
       if (customerTeamAccountId && order.clientAccount.externalCustomerTeamId && order.clientAccount.customerTeamName) {
-        const teamReadback = await this.pool.query<{ get_client_account_record: ClientAccountRecord | null }>(
+        const teamReadback = await client.query<{ get_client_account_record: ClientAccountRecord | null }>(
           "SELECT medialab_core.get_client_account_record($1,$2::uuid)", [token, customerTeamAccountId],
         );
         exactClientAccountReadback(teamReadback.rows[0]?.get_client_account_record ?? null, {
@@ -726,10 +736,45 @@ export class CurrentOperationsAdmissionDatabase {
        CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a
        WHERE n.nspname='medialab_core' AND a.grantee=0 AND a.privilege_type='EXECUTE'`,
     );
+    const runtimeSequences = await this.pool.query<{ count: string }>(
+      `SELECT count(*)::text FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+       CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('S',c.relowner))) a
+       JOIN pg_roles r ON r.oid=a.grantee
+       WHERE n.nspname='medialab_core' AND c.relkind='S' AND r.rolname=$1
+         AND a.privilege_type IN ('USAGE','SELECT','UPDATE')`, [this.boundary.user],
+    );
+    const publicSequences = await this.pool.query<{ count: string }>(
+      `SELECT count(*)::text FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+       CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('S',c.relowner))) a
+       WHERE n.nspname='medialab_core' AND c.relkind='S' AND a.grantee=0
+         AND a.privilege_type IN ('USAGE','SELECT','UPDATE')`,
+    );
+    const role = await this.pool.query<{ rolcanlogin: boolean; rolinherit: boolean; rolsuper: boolean;
+      rolcreatedb: boolean; rolcreaterole: boolean; rolreplication: boolean; rolbypassrls: boolean }>(
+      `SELECT rolcanlogin,rolinherit,rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls
+       FROM pg_roles WHERE rolname=$1`, [this.boundary.user],
+    );
+    const memberships = await this.pool.query<{ count: string }>(
+      `SELECT count(*)::text FROM pg_auth_members m
+       JOIN pg_roles r ON r.oid=m.member OR r.oid=m.roleid
+       WHERE r.rolname=$1`, [this.boundary.user],
+    );
+    if (role.rowCount !== 1) throw new Error("M24A_RUNTIME_ROLE_DIVERGENCE");
+    const runtimeRole = role.rows[0]!;
     return {
       runtimeCanonicalTableDmlGrants: Number(runtime.rows[0]!.count),
+      runtimeCanonicalSequenceGrants: Number(runtimeSequences.rows[0]!.count),
       publicCanonicalTableDmlGrants: Number(publicTable.rows[0]!.count),
+      publicCanonicalSequenceGrants: Number(publicSequences.rows[0]!.count),
       publicFunctionExecutionGrants: Number(publicFunctions.rows[0]!.count),
+      runtimeRoleCanLogin: runtimeRole.rolcanlogin,
+      runtimeRoleInherit: runtimeRole.rolinherit,
+      runtimeRoleSuperuser: runtimeRole.rolsuper,
+      runtimeRoleCreateDatabase: runtimeRole.rolcreatedb,
+      runtimeRoleCreateRole: runtimeRole.rolcreaterole,
+      runtimeRoleReplication: runtimeRole.rolreplication,
+      runtimeRoleBypassRls: runtimeRole.rolbypassrls,
+      runtimeRoleMembershipCount: Number(memberships.rows[0]!.count),
       businessExecutionRole: this.boundary.user,
       businessWriteBoundary: "SUPPORTED_SECURITY_DEFINER_COMMANDS_ONLY",
     };

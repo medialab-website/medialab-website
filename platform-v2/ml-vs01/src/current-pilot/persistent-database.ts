@@ -55,8 +55,10 @@ function clusterStatus(dataRoot: string): "ABSENT" | "RUNNING" | "STOPPED" {
 
 async function assertDataRoot(paths: ControlledPilotPaths): Promise<void> {
   const info = await lstat(paths.dataRoot);
-  if (!info.isDirectory() || info.isSymbolicLink() || await realpath(paths.dataRoot) !== paths.dataRoot) {
-    throw new Error("M24A_DATABASE_BOUNDARY_FAILURE: data root is not canonical");
+  const currentUid = process.getuid?.();
+  if (!info.isDirectory() || info.isSymbolicLink() || await realpath(paths.dataRoot) !== paths.dataRoot ||
+      (info.mode & 0o777) !== 0o700 || (currentUid !== undefined && info.uid !== currentUid)) {
+    throw new Error("M24A_DATABASE_BOUNDARY_FAILURE: data root ownership or mode diverged");
   }
   const version = await lstat(resolve(paths.dataRoot, "PG_VERSION"));
   if (!version.isFile() || version.isSymbolicLink()) {
@@ -115,15 +117,27 @@ async function ensureRolesAndDatabase(): Promise<{ roleCreated: boolean; databas
   const client = ownerClient();
   await client.connect();
   try {
-    const role = await client.query<{ rolname: string; rolsuper: boolean; rolcreatedb: boolean; rolcreaterole: boolean }>(
-      "SELECT rolname,rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname=$1", [CONTROLLED_PILOT_RUNTIME_ROLE],
+    const role = await client.query<{ rolname: string; rolsuper: boolean; rolcreatedb: boolean; rolcreaterole: boolean;
+      rolcanlogin: boolean; rolinherit: boolean; rolreplication: boolean; rolbypassrls: boolean }>(
+      `SELECT rolname,rolsuper,rolcreatedb,rolcreaterole,rolcanlogin,rolinherit,rolreplication,rolbypassrls
+       FROM pg_roles WHERE rolname=$1`, [CONTROLLED_PILOT_RUNTIME_ROLE],
     );
     let roleCreated = false;
     if (role.rowCount === 0) {
-      await client.query(`CREATE ROLE ${CONTROLLED_PILOT_RUNTIME_ROLE} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+      await client.query(`CREATE ROLE ${CONTROLLED_PILOT_RUNTIME_ROLE}
+        LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS`);
       roleCreated = true;
-    } else if (role.rows[0]!.rolsuper || role.rows[0]!.rolcreatedb || role.rows[0]!.rolcreaterole) {
-      throw new Error("M24A_RUNTIME_ROLE_DIVERGENCE");
+    } else {
+      const existing = role.rows[0]!;
+      const memberships = await client.query<{ count: number }>(
+        `SELECT count(*)::int AS count FROM pg_auth_members m
+         JOIN pg_roles r ON r.oid=m.member OR r.oid=m.roleid
+         WHERE r.rolname=$1`, [CONTROLLED_PILOT_RUNTIME_ROLE],
+      );
+      if (existing.rolsuper || existing.rolcreatedb || existing.rolcreaterole || !existing.rolcanlogin ||
+          existing.rolinherit || existing.rolreplication || existing.rolbypassrls || memberships.rows[0]!.count !== 0) {
+        throw new Error("M24A_RUNTIME_ROLE_DIVERGENCE");
+      }
     }
     const database = await client.query<{ owner_name: string }>(
       `SELECT r.rolname AS owner_name FROM pg_database d JOIN pg_roles r ON r.oid=d.datdba WHERE d.datname=$1`,

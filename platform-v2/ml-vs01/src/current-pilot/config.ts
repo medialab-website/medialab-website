@@ -35,6 +35,15 @@ async function canonicalExistingDirectory(path: string, label: string): Promise<
   return resolved;
 }
 
+async function assertPrivateDirectory(path: string, label: string): Promise<void> {
+  const info = await lstat(path);
+  const currentUid = process.getuid?.();
+  if (!info.isDirectory() || info.isSymbolicLink() || await realpath(path) !== path ||
+      (info.mode & 0o777) !== 0o700 || (currentUid !== undefined && info.uid !== currentUid)) {
+    throw new Error(`M24A_${label}_BOUNDARY_FAILURE: private directory ownership or mode diverged`);
+  }
+}
+
 async function narrowPilotRoot(path: string): Promise<string> {
   if (!isAbsolute(path)) throw new Error("M24A_PILOT_BOUNDARY_FAILURE: pilot root must be absolute");
   const resolved = resolve(path);
@@ -92,9 +101,12 @@ export async function ensureControlledPilotDirectories(paths: ControlledPilotPat
     ["EVIDENCE", paths.evidenceRoot],
   ] as const) {
     await canonicalExistingDirectory(path, label);
+    await assertPrivateDirectory(path, label);
   }
   const socketInfo = await lstat(paths.socketRoot);
-  if (!socketInfo.isDirectory() || socketInfo.isSymbolicLink()) {
-    throw new Error("M24A_SOCKET_BOUNDARY_FAILURE: socket root must be a non-symlink directory");
+  const currentUid = process.getuid?.();
+  if (!socketInfo.isDirectory() || socketInfo.isSymbolicLink() || (socketInfo.mode & 0o777) !== 0o700 ||
+      (currentUid !== undefined && socketInfo.uid !== currentUid)) {
+    throw new Error("M24A_SOCKET_BOUNDARY_FAILURE: socket root ownership or mode diverged");
   }
 }

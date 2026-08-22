@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, realpath, readFile, symlink } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, realpath, readFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,6 +69,14 @@ describe("P02-M24-A controlled Mission Control pilot boundaries", () => {
       .rejects.toThrow(/source and pilot roots must be isolated/);
   });
 
+  it("rejects private pilot directory mode drift", async () => {
+    const roots = await isolatedRoots();
+    const paths = await resolveControlledPilotPaths(roots);
+    await ensureControlledPilotDirectories(paths);
+    await chmod(paths.evidenceRoot, 0o755);
+    await expect(ensureControlledPilotDirectories(paths)).rejects.toThrow(/ownership or mode diverged/);
+  });
+
   it("keeps the pilot persistent, loopback-only, secretless, and provider-nonmutating", async () => {
     const [launcher, persistence, admission, localConfig] = await Promise.all([
       readFile(join(MODULE_ROOT, "scripts/run-controlled-mission-control-pilot.ts"), "utf8"),
@@ -82,7 +90,11 @@ describe("P02-M24-A controlled Mission Control pilot boundaries", () => {
     expect(launcher).not.toMatch(/ARYEO_API_KEY|acquireAryeo|fetch\s*\(/u);
     expect(persistence).not.toMatch(/resetTestDatabase|DROP\s+(?:DATABASE|SCHEMA)/u);
     expect(persistence).toContain("migrationsSkipped");
+    expect(persistence).toContain("rolcanlogin,rolinherit,rolreplication,rolbypassrls");
+    expect(persistence).toContain("pg_auth_members");
     expect(admission).toContain("providerMutationCount: 0");
+    expect(admission).toContain("runtimeCanonicalSequenceGrants === 0");
+    expect(admission).toContain("runtimeRoleMembershipCount === 0");
     expect(admission).toContain("containsCustomerPii: false");
     expect(admission).toContain('contract: "ControlledPilotPrivateExceptionRegisterV1"');
     expect(admission).toContain('contract: "ControlledPilotOwnerExclusionReceiptV1"');
@@ -96,5 +108,8 @@ describe("P02-M24-A controlled Mission Control pilot boundaries", () => {
     expect(admission).not.toMatch(/ARYEO_API_KEY|Bearer\s+/u);
     expect(localConfig).toContain("P02_M24_A_SOURCE_ROOT");
     expect(localConfig).toContain("P02_M24_A_PILOT_ROOT");
+    expect(launcher).toContain('contract: "ControlledPilotMissionControlQueueReceiptV1"');
+    expect(launcher).toContain("opaqueUpcomingOrderHashes");
+    expect(launcher).toContain("missionControlQueueReceiptSha256");
   });
 });

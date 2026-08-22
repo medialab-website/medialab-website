@@ -39,14 +39,14 @@ if (sha256 !== expectedSha256) {
   errors = true;
 }
 
-// 3. Reject prohibited patterns (Fastify, UI, HTTP, unapproved code)
+// 3. Reject the original foundation's prohibited source paths. Later accepted
+// packets may add HTTP dependencies without changing migration 0001.
 const prohibitedPatterns = [
   'src/api',
   'src/auth',
   'src/ui',
   'ui',
   'components',
-  'fastify',
   'openapi'
 ];
 
@@ -80,7 +80,7 @@ if (fs.existsSync(testFile)) {
 const lockFile = path.join(baseDir, 'package-lock.json');
 const lockContent = fs.readFileSync(lockFile);
 const lockSha256 = crypto.createHash('sha256').update(lockContent).digest('hex').toLowerCase();
-const expectedLockSha256 = '11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258';
+const expectedLockSha256 = '2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a';
 if (lockSha256 !== expectedLockSha256) {
   console.error(`ERROR: package-lock.json SHA256 mismatch. Expected: ${expectedLockSha256}, Actual: ${lockSha256}`);
   errors = true;

@@ -6,6 +6,7 @@
 
 | Package | Version | Registry | Scope |
 |---|---|---|---|
+| `fastify` | `5.11.2` | Official npm | Loopback Operations Console HTTP Runtime |
 | `pg` | `8.22.0` | Official npm | PostgreSQL Client |
 
 ### Development Dependencies
@@ -21,4 +22,4 @@
 ## Lockfile Verification
 
 * **Lockfile Name:** `package-lock.json`
-* **Lockfile SHA-256:** `11cc280ef7ff1c66638bc1cc3e85c750844f6041bcf338a5b59c55b0f79d9258`
+* **Lockfile SHA-256:** `2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a`

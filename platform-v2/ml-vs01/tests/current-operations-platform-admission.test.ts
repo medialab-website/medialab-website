@@ -177,7 +177,11 @@ describe.sequential("P02-M23-A restricted-runtime current operations admission",
     expect(result.jobId).toMatch(/^[0-9a-f-]{36}$/);
     const authority = await database!.authorityProof();
     expect(authority).toMatchObject({ runtimeCanonicalTableDmlGrants: 0, publicCanonicalTableDmlGrants: 0,
-      publicFunctionExecutionGrants: 0, businessWriteBoundary: "SUPPORTED_SECURITY_DEFINER_COMMANDS_ONLY" });
+      runtimeCanonicalSequenceGrants: 0, publicCanonicalSequenceGrants: 0, publicFunctionExecutionGrants: 0,
+      runtimeRoleCanLogin: true, runtimeRoleInherit: true, runtimeRoleSuperuser: false,
+      runtimeRoleCreateDatabase: false, runtimeRoleCreateRole: false, runtimeRoleReplication: false,
+      runtimeRoleBypassRls: false, runtimeRoleMembershipCount: 0,
+      businessWriteBoundary: "SUPPORTED_SECURITY_DEFINER_COMMANDS_ONLY" });
   });
 
   it("replays and concurrent retries without duplicate canonical state", async () => {
@@ -193,12 +197,14 @@ describe.sequential("P02-M23-A restricted-runtime current operations admission",
 
     const concurrentOrder = fixtureOrder("concurrent");
     const beforeConcurrent = await sourceCounts();
-    const [left, right] = await Promise.all([
+    const concurrent = await Promise.all([
+      database!.admitOrder(token, MANIFEST_SHA, concurrentOrder),
+      database!.admitOrder(token, MANIFEST_SHA, concurrentOrder),
       database!.admitOrder(token, MANIFEST_SHA, concurrentOrder),
       database!.admitOrder(token, MANIFEST_SHA, concurrentOrder),
     ]);
     const afterConcurrent = await sourceCounts();
-    expect(right.orderId).toBe(left.orderId);
+    expect(new Set(concurrent.map((result) => result.orderId)).size).toBe(1);
     expect(afterConcurrent.orders - beforeConcurrent.orders).toBe(1);
     expect(afterConcurrent.property_hubs - beforeConcurrent.property_hubs).toBe(1);
     expect(afterConcurrent.jobs - beforeConcurrent.jobs).toBe(1);
