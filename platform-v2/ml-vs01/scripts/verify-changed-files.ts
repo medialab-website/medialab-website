@@ -1,15 +1,21 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compareExactPathSets, readCandidateStatus, readChangedFilesInventory } from "./p02-m17-a-changed-files.js";
 
 const MODULE_ROOT = "platform-v2/ml-vs01/";
-const EXPECTED_PATH_COUNT = 77;
-const EXPECTED_INVENTORY_SHA256 = "3556f08151112d20ddab83523ee62cc642577b3bbb2244e9012b3bf5b32838c8";
+const ACCEPTED_PREDECESSOR = "39abb2f01277c10a94d0e99a691724af03b66c46";
+const EXPECTED_PATH_COUNT = 85;
+const EXPECTED_INVENTORY_SHA256 = "d868590df23223f0ada9db1c55c62329d9342bc267d748921b9d5bdddde39e80";
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(baseDir, "../..");
 const states = readCandidateStatus(repoRoot);
-const actualPaths = states.map((state) => state.path).sort();
+const committedPaths = execFileSync("git", ["diff", "--name-only", ACCEPTED_PREDECESSOR, "HEAD", "--", MODULE_ROOT], {
+  cwd: repoRoot,
+  encoding: "utf8",
+}).trim().split(/\r?\n/u).filter(Boolean);
+const actualPaths = [...new Set([...committedPaths, ...states.map((state) => state.path)])].sort();
 const documentedPaths = readChangedFilesInventory(path.join(baseDir, "CHANGED_FILES.md")).sort();
 const documentedHash = createHash("sha256").update(`${documentedPaths.join("\n")}\n`, "utf8").digest("hex");
 const failures = compareExactPathSets(actualPaths, documentedPaths);
@@ -36,7 +42,7 @@ if (actualPaths.length !== EXPECTED_PATH_COUNT) failures.push(`candidate path co
 const result = {
   verifier: "P02-M23-A_CHANGED_FILES_V1",
   pass: failures.length === 0,
-  candidateMode: "uncommitted-unstaged-plus-bounded-new-files",
+  candidateMode: "cumulative-accepted-predecessor-to-worktree",
   inventorySha256: documentedHash,
   actualCount: actualPaths.length,
   documentedCount: documentedPaths.length,

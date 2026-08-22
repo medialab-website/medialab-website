@@ -5,7 +5,7 @@ This workspace implements the TypeScript ordered-SQL migration engine and physic
 ## Active Boundaries
 
 * Branch: `platform-v2-vs01-repair-p01b-r01`
-* Worktree: `/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/TCML_Website-VS01-Repair-P01B`
+* Worktree: dedicated bounded packet worktree
 * Base Commit: `b179722abf34a71bd07eafb8013c34df8335620f`
 * Root: `platform-v2/ml-vs01`
 * Physical Ledger Table: `medialab_meta.schema_migrations`

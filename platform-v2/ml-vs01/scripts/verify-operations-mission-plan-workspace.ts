@@ -19,8 +19,12 @@ const pass = (name: string, condition: boolean, observation: string) => {
 
 const head = git(["rev-parse", "HEAD"]); const tree = git(["rev-parse", "HEAD^{tree}"]);
 const branch = git(["symbolic-ref", "--short", "HEAD"]); const platform = git(["rev-parse", "refs/remotes/origin/platform"]);
-pass("entry", head === base && tree === baseTree && platform === base && branch === branchName,
-  `branch=${branch}; HEAD=${head}; tree=${tree}; origin/platform=${platform}`);
+const baselineTree = git(["rev-parse", `${base}^{tree}`]);
+const baselineIsAncestor = (() => {
+  try { git(["merge-base", "--is-ancestor", base, head]); return true; } catch { return false; }
+})();
+pass("entry", baselineTree === baseTree && baselineIsAncestor && platform === base && branch === branchName,
+  `branch=${branch}; HEAD=${head}; tree=${tree}; baseline=${base}; baselineTree=${baselineTree}; origin/platform=${platform}`);
 
 const migrations = readdirSync(join(moduleRoot, "db/migrations")).filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
 pass("migrationInventory", migrations.length === 28 && migrations.every((name, index) => name.startsWith(String(index + 1).padStart(4, "0")))

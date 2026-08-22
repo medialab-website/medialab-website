@@ -3,8 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runCurrentEraIntakeReproof } from "../src/current-shadow/index.js";
+import { resolveLocalSourcePath } from "../src/local-source-config.js";
 
-const SOURCE_PATH = "/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/HistoricalReplay/2024_SOURCE_VAULT/ARYEO/Orders - Aug 15 2026.xlsx";
+const SOURCE_PATH = resolveLocalSourcePath("P02_M16_E_SOURCE_PATH");
 
 describe("P02-M16-E current-era runtime-intake re-proof", () => {
   it("reconstructs the exact 42-member cohort with returned canonical identities and no fixture substitution", async () => {

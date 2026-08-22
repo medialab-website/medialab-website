@@ -3,7 +3,7 @@
 - Controlling authority: owner-approved `P02-M23-A — Current Operations Admission and Dual-Run Readiness`, packet `210`, activation/source authorization `211`, and client/account consolidation authorization `212`.
 - Accepted predecessor commit: `39abb2f01277c10a94d0e99a691724af03b66c46`.
 - Branch: `platform-v2-p02-m23-a-current-operations-admission-dual-run-readiness-r01`.
-- Candidate state: implementation, exact Aryeo admission, inherited validation, and focused closeout validation complete; exact local candidate freeze pending.
+- Candidate state: original frozen candidate `158b44fec4fe5997327ea7cc79ffb78ac70df376` received a blocked cumulative independent review. The Quick Edit finding was an outdated review-brief contradiction with later owner direction; the valid private-source-path finding is repaired through generic ignored local configuration. Focused and full inherited repair validation pass; exact R02 freeze is pending.
 - Database boundary: isolated disposable Platform test database and restricted runtime role only. No production PostgreSQL contact or write is authorized.
 - Source boundary: the immutable local Aryeo snapshot contains 306 listings, 324 orders, and 327 appointments. Snapshot manifest SHA-256 is `02e3a65bdbfe77479dd61206a40a5b5fb6bf14cac0a34332d85eef942ebaeb53`.
 - Admission boundary: the exact current Home Package cohort contains 77 orders; 71 passed readiness and were admitted, while 6 remain explicit exceptions. All 247 older orders remain preserved as legacy-source evidence and are not silently normalized into current packages.
@@ -15,6 +15,7 @@
 - Runtime authority: exact controlled functions with fixed search paths; restricted runtime and PUBLIC retain zero canonical table or sequence DML. The client-account surface grants only six controlled runtime functions.
 - Replay law: repeated acquisition, normalization, and admission converge without duplicate Orders, Hubs, Jobs, appointments, accounts, contacts, links, revisions, or service references. Invalid provider appointment intervals remain blocking exceptions rather than being repaired silently.
 - Data privacy: public receipts contain aggregate counts, hashes, and bounded exception codes only. The private index stays outside the candidate source tree. No customer PII or source JSON is packaged.
+- Local source configuration: historical replay source locations are required through process environment or an ignored module-local `.env`; no private volume, user-home, or source-vault location is embedded in committed source, tests, documentation, or review-package bytes.
 - Provider boundary: source acquisition is read-only. No Aryeo, Stripe, Drive, payment, notification, deployment, or provider mutation is authorized or performed.
 - Product direction: MediaLab OS remains web-first for mobile operational surfaces, with Desktop reserved for native large-file ingestion/culling/media work and a future securely isolated embedded web-app shell.
 - Dependency boundary: no dependency or lockfile change.

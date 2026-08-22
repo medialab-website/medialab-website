@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { scanHistoricalPrivacyArtifact, scanHistoricalPrivacyArtifacts } from "../src/historical-replay/privacy.js";
 import { CURRENT_ERA_SOURCE_IDENTITY } from "../src/current-shadow/source.js";
+import { resolveLocalSourcePath } from "../src/local-source-config.js";
 
 const base = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(base, "../..");
@@ -13,9 +14,8 @@ const outputRoot = resolve(process.argv.find((value) => value.startsWith("--outp
 const compareRootArg = process.argv.find((value) => value.startsWith("--compare-root="))?.slice(15);
 const inventoryPath = resolve(process.argv.find((value) => value.startsWith("--coupling-inventory="))?.slice(21) ??
   "/tmp/mlvs01-p02m16e-output/M16E_STALE_MIGRATION_COUPLING_INVENTORY.json");
-const sourcePath = resolve(process.argv.find((value) => value.startsWith("--source-path="))?.slice(14) ??
-  process.env.P02_M16_E_SOURCE_PATH ??
-  "/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/HistoricalReplay/2024_SOURCE_VAULT/ARYEO/Orders - Aug 15 2026.xlsx");
+const sourcePath = resolveLocalSourcePath("P02_M16_E_SOURCE_PATH",
+  process.argv.find((value) => value.startsWith("--source-path="))?.slice(14));
 const fail = (message: string): never => { throw new Error("M16E_VALIDATION_FAILURE: " + message); };
 const parse = (root: string, name: string) => JSON.parse(readFileSync(join(root, name), "utf8"));
 

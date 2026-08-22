@@ -1,12 +1,12 @@
-import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { observed } from "../src/business-replay/contracts.js";
 import { runCorpus } from "../src/business-replay/runner.js";
 import { assertReplayScenarioSafety } from "../src/business-replay/sanitization.js";
 import { normalizeHistoricalCorpus } from "../src/historical-replay/index.js";
 import { scanHistoricalPrivacyArtifact, scanHistoricalPrivacyArtifacts } from "../src/historical-replay/privacy.js";
+import { resolveLocalSourcePath } from "../src/local-source-config.js";
 
-const vault = resolve(process.env.P02_M16_C_SOURCE_VAULT ?? "/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/HistoricalReplay/2024_SOURCE_VAULT");
+const vault = resolveLocalSourcePath("P02_M16_C_SOURCE_VAULT");
 
 describe("P02-M16-C historical normalization", () => {
   it("accepts only sanitized historical-normalized scenarios and preserves source limitations", async () => {

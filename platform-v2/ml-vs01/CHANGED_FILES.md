@@ -1,9 +1,10 @@
 # P02-M23-A Changed Files
 
-The candidate contains this exact 77-path set relative to accepted predecessor commit `39abb2f01277c10a94d0e99a691724af03b66c46`. Migration `0028` is the sole new migration. Existing migrations `0001`–`0027`, dependencies, and `package-lock.json` remain byte-identical; predecessor verifier/test changes are mechanical exact-ledger rollover only.
+The repaired candidate contains this exact 85-path cumulative set relative to accepted predecessor commit `39abb2f01277c10a94d0e99a691724af03b66c46`. Migration `0028` is the sole new migration. Existing migrations `0001`–`0027`, dependencies, and `package-lock.json` remain byte-identical; predecessor verifier/test changes are mechanical exact-ledger rollover or the independent-review repair that moves private source locations into ignored local configuration.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
+- platform-v2/ml-vs01/README.md
 - platform-v2/ml-vs01/db/fixtures/client-account-contact-foundation-fixtures.ts
 - platform-v2/ml-vs01/db/migrate.ts
 - platform-v2/ml-vs01/db/migrations/0028_client_account_and_operator_contact_intake_foundation.sql
@@ -11,6 +12,9 @@ The candidate contains this exact 77-path set relative to accepted predecessor c
 - platform-v2/ml-vs01/scripts/acquire-aryeo-current-operations.ts
 - platform-v2/ml-vs01/scripts/run-current-operations-admission-dry-run.ts
 - platform-v2/ml-vs01/scripts/run-current-operations-admission.ts
+- platform-v2/ml-vs01/scripts/run-current-era-intake-reproof.ts
+- platform-v2/ml-vs01/scripts/run-current-era-shadow.ts
+- platform-v2/ml-vs01/scripts/run-historical-business-replay.ts
 - platform-v2/ml-vs01/scripts/run-internal-operations-console-new-listing.ts
 - platform-v2/ml-vs01/scripts/verify-business-replay-harness.ts
 - platform-v2/ml-vs01/scripts/verify-capture-session-ingest-custody-schema.ts
@@ -48,17 +52,21 @@ The candidate contains this exact 77-path set relative to accepted predecessor c
 - platform-v2/ml-vs01/src/current-admission/contracts.ts
 - platform-v2/ml-vs01/src/current-admission/normalization.ts
 - platform-v2/ml-vs01/src/current-admission/platform-admission.ts
+- platform-v2/ml-vs01/src/local-source-config.ts
 - platform-v2/ml-vs01/tests/capture-session-ingest-custody-foundation.test.ts
 - platform-v2/ml-vs01/tests/catalog-administration-lifecycle.test.ts
 - platform-v2/ml-vs01/tests/client-account-contact-foundation.test.ts
 - platform-v2/ml-vs01/tests/contextual-editor-review-mobile-quick-edit-foundation.test.ts
 - platform-v2/ml-vs01/tests/current-catalog-price-reconstruction.test.ts
+- platform-v2/ml-vs01/tests/current-era-intake-reproof.test.ts
+- platform-v2/ml-vs01/tests/current-era-shadow.test.ts
 - platform-v2/ml-vs01/tests/current-operations-aryeo-acquisition.test.ts
 - platform-v2/ml-vs01/tests/current-operations-normalization.test.ts
 - platform-v2/ml-vs01/tests/current-operations-platform-admission.test.ts
 - platform-v2/ml-vs01/tests/durable-media-operations-reconciliation-foundation.test.ts
 - platform-v2/ml-vs01/tests/editor-handoff-returned-media-intake-foundation.test.ts
 - platform-v2/ml-vs01/tests/editorial-segment-foundation.test.ts
+- platform-v2/ml-vs01/tests/historical-business-replay.test.ts
 - platform-v2/ml-vs01/tests/identity-tenancy-schema.test.ts
 - platform-v2/ml-vs01/tests/job-service-workstream-foundation.test.ts
 - platform-v2/ml-vs01/tests/media-asset-identity-lineage-foundation.test.ts

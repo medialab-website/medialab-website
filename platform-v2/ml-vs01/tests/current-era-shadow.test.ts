@@ -1,12 +1,11 @@
-import { resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { runCurrentEraShadow } from "../src/current-shadow/index.js";
 import { resetCurrentShadowDatabase } from "../src/current-shadow/database.js";
 import { loadCurrentEraCohort, selectPilot } from "../src/current-shadow/source.js";
 import { scanHistoricalPrivacyArtifact, scanHistoricalPrivacyArtifacts } from "../src/historical-replay/privacy.js";
+import { resolveLocalSourcePath } from "../src/local-source-config.js";
 
-const source = resolve(process.env.P02_M16_D_SOURCE_PATH ??
-  "/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/HistoricalReplay/2024_SOURCE_VAULT/ARYEO/Orders - Aug 15 2026.xlsx");
+const source = resolveLocalSourcePath("P02_M16_D_SOURCE_PATH");
 
 describe("P02-M16-D current-era controlled shadow", () => {
   afterAll(async () => { await resetCurrentShadowDatabase(); });

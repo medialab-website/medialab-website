@@ -5,13 +5,14 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { COVERAGE_DIMENSIONS } from "../src/business-replay/coverage.js";
 import { FROZEN_SOURCES } from "../src/historical-replay/index.js";
+import { resolveLocalSourcePath } from "../src/local-source-config.js";
 
 const base = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(base, "../..");
 const outputRoot = resolve(process.argv.find((value) => value.startsWith("--output-root="))?.slice(14) ??
   process.env.P02_M16_C_OUTPUT_ROOT ?? "/tmp/mlvs01-p02m16c-output/verify-all");
-const vaultRoot = resolve(process.argv.find((value) => value.startsWith("--vault-root="))?.slice(13) ??
-  process.env.P02_M16_C_SOURCE_VAULT ?? "/Volumes/MEDIALAB_OS/MediaLab Clean Room Build/APFS-Workspace/HistoricalReplay/2024_SOURCE_VAULT");
+const vaultRoot = resolveLocalSourcePath("P02_M16_C_SOURCE_VAULT",
+  process.argv.find((value) => value.startsWith("--vault-root="))?.slice(13));
 const fail = (message: string): never => { throw new Error(`HISTORICAL_VALIDATION_FAILURE: ${message}`); };
 const parse = (name: string) => JSON.parse(readFileSync(join(outputRoot, name), "utf8"));
 
