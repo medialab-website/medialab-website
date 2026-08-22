@@ -74,11 +74,29 @@ describe("P02-M18-A Operations Home, scheduling, and assignment", () => {
     expect(source).not.toMatch(/new Date\((?:item\.appointment|windowRecord|appointment)\.startsAt\)\.toLocaleString/u);
   });
 
+  it("uses one appointment date with start and end times for the same onsite visit", () => {
+    const source = readFileSync(new URL("../src/operations-console/public/app.js", import.meta.url), "utf8");
+    const start = source.indexOf("function appointmentWindowFromDateAndTimes");
+    const end = source.indexOf("function schedulingForm", start);
+    const sandbox: Record<string, unknown> = {};
+    runInNewContext(`${source.slice(start, end)}\n;globalThis.__appointmentWindow = appointmentWindowFromDateAndTimes;`, sandbox);
+    const appointmentWindow = sandbox.__appointmentWindow as (date: string, startTime: string, endTime: string) => {
+      startsAt: string; endsAt: string; localStartsAt: string; localEndsAt: string;
+    } | null;
+    const window = appointmentWindow("2026-08-21", "09:00", "10:30")!;
+    expect(window.localStartsAt).toBe("2026-08-21T09:00");
+    expect(window.localEndsAt).toBe("2026-08-21T10:30");
+    expect(new Date(window.endsAt).valueOf() - new Date(window.startsAt).valueOf()).toBe(90 * 60 * 1000);
+    expect(appointmentWindow("2026-08-21", "10:30", "09:00")).toBeNull();
+    expect(source).not.toContain('field("Ends", "datetime-local"');
+    expect(source).not.toContain('field("New end", "datetime-local"');
+  });
+
   it("preserves exact 0001-0024 authority under the additive M19 read projection with no table-read/write or sequence grant expansion", async () => {
     const client = new pg.Client(owner); await client.connect();
     try {
       const ledger = await client.query<{ filename: string }>("SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename");
-      expect(ledger.rows).toHaveLength(26);
+      expect(ledger.rows).toHaveLength(27);
       expect(ledger.rows[23]!.filename).toBe("0024_operations_home_scheduling_assignment_console.sql");
       expect(ledger.rows[24]!.filename).toBe("0025_operations_mission_plan_draft_controls.sql");
       const grants = await client.query<{ name: string }>(`SELECT p.proname AS name FROM pg_proc p
@@ -156,6 +174,12 @@ describe("P02-M18-A Operations Home, scheduling, and assignment", () => {
       expect(initial.customer.contacts).toEqual(expect.arrayContaining([
         expect.objectContaining({ contactType: "EMAIL", displayValue: expect.any(String) }),
       ]));
+      expect(initial.services[0]).toMatchObject({
+        unitAmountCents: expect.any(Number),
+        lineTotalCents: expect.any(Number),
+        currency: "USD",
+      });
+      expect(initial.services[0]!.lineTotalCents).toBeGreaterThan(0);
       const requestId = initial.scheduling!.requestId;
       const requested = await database.addRequestedWindow(token, orderId, requestId, {
         startsAt: "2026-08-21T13:00:00.000Z", endsAt: "2026-08-21T14:30:00.000Z",

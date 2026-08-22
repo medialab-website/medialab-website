@@ -49,7 +49,7 @@ for (const source of Object.values(FROZEN_SOURCES)) {
   if (hash !== source.sha256) fail(`post-run raw identity changed: ${source.relativePath}`);
 }
 const migrations = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrations.length !== 26 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrations[23] !== "0024_operations_home_scheduling_assignment_console.sql" || migrations[24] !== "0025_operations_mission_plan_draft_controls.sql" || migrations[25] !== "0026_editorial_segment_foundation.sql") fail("migration inventory is not exact 0001-0026");
+if (migrations.length !== 27 || migrations[22] !== "0023_runtime_intake_reconciliation_commands.sql" || migrations[23] !== "0024_operations_home_scheduling_assignment_console.sql" || migrations[24] !== "0025_operations_mission_plan_draft_controls.sql" || migrations[25] !== "0026_editorial_segment_foundation.sql" || migrations[26] !== "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql") fail("migration inventory is not exact 0001-0027");
 for (const name of migrations.slice(0, 22)) {
   const predecessor = execFileSync("git", ["show", "5f456d2ae5e9262a7a2b6595ed33d92ade19767c:platform-v2/ml-vs01/db/migrations/" + name], { cwd: repo });
   if (!readFileSync(join(base, "db/migrations", name)).equals(predecessor)) fail(`predecessor migration changed: ${name}`);

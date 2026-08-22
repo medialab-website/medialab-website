@@ -94,7 +94,7 @@ describe('P02-M08-A Media Asset Identity and Lineage foundation', () => {
 
   it('replays thirteen migrations, preserves 0010 and 0011, and exposes only the controlled runtime inventory', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(26);
+    expect(ledger.rows).toHaveLength(27);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[9]).toEqual({
       filename: '0010_mission_plan_foundation.sql',
@@ -135,6 +135,7 @@ describe('P02-M08-A Media Asset Identity and Lineage foundation', () => {
     publicNames.push('activate_media_publication', 'add_media_publication_item',
       'create_media_publication', 'get_media_publication', 'revoke_media_publication',
       'seal_media_publication');
+    publicNames.push('resolve_operations_review_media_source');
     expect(grants.rows.filter((row) => row.runtime_execute).map((row) => row.proname).sort()).toEqual(publicNames.sort());
     expect(grants.rows.some((row) => row.public_execute)).toBe(false);
   });

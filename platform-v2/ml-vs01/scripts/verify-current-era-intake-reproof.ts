@@ -98,13 +98,14 @@ if (inventory.schema !== "M16E_STALE_MIGRATION_COUPLING_INVENTORY_V1" ||
 }
 
 const migrationFiles = readdirSync(join(base, "db/migrations")).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-if (migrationFiles.length !== 26 ||
+if (migrationFiles.length !== 27 ||
     migrationFiles[22] !== "0023_runtime_intake_reconciliation_commands.sql" ||
     migrationFiles[23] !== "0024_operations_home_scheduling_assignment_console.sql" ||
     migrationFiles[24] !== "0025_operations_mission_plan_draft_controls.sql" ||
     migrationFiles[25] !== "0026_editorial_segment_foundation.sql" ||
+    migrationFiles[26] !== "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql" ||
     migrationFiles.some((name, index) => !name.startsWith(String(index + 1).padStart(4, "0")))) {
-  fail("canonical migration inventory is not exact 0001-0026");
+  fail("canonical migration inventory is not exact 0001-0027");
 }
 for (const name of migrationFiles.slice(0, 22)) {
   const current = readFileSync(join(base, "db/migrations", name));

@@ -45,7 +45,7 @@ try {
   const ledger = await client.query<{ filename: string; sha256: string }>(
     'SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename'
   );
-  exact('migration count', ledger.rows.length, 26);
+  exact('migration count', ledger.rows.length, 27);
   exact('migration 0026 identity', ledger.rows[25], { filename: migrationName, sha256: migrationSha256 });
 
   const tables = await client.query<{ relname: string }>(`SELECT c.relname FROM pg_class c

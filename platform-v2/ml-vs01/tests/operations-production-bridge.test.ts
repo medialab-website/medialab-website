@@ -82,6 +82,7 @@ function fakeDatabase(overrides: Partial<{
       return { context, jobAppointmentId: plan.job_appointment_id, plan: overrides.plan === undefined ? plan : overrides.plan, controls: null };
     },
     async getProductionEvidence() { return overrides.evidence ?? emptyEvidence; },
+    async getOperationsReviewAttention() { return []; },
     async close() {},
   } as unknown as OperationsConsoleDatabase;
 }
@@ -111,7 +112,8 @@ describe("P02-M21-A web-first real-estate production bridge", () => {
         updated_at: "2026-08-21T13:20:00.000Z" } }],
       reviewBatches: [{ batch: { id: "review", service_workstream_id: ids.photoWorkstream, lane: "PHOTO",
         created_at: "2026-08-21T13:25:00.000Z" }, current: { current_state: "COMPLETED", item_count: 25,
-        resolved_count: 25, unresolved_count: 0, updated_at: "2026-08-21T13:30:00.000Z" } }],
+        resolved_count: 25, final_source_count: 25, revision_routed_count: 0, quick_edit_routed_count: 0,
+        unresolved_count: 0, lifecycle_generation: 2, updated_at: "2026-08-21T13:30:00.000Z" } }],
     };
     expect(deriveProductionLane("PHOTO", workstream, complete)).toMatchObject({ stage: "COMPLETE",
       cull: { inventorySealed: true, hasCurrentSelection: true }, review: { resolvedCount: 25 } });

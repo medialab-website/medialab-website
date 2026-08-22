@@ -81,7 +81,7 @@ for (const [filename, expectedHash] of predecessorMigrations) {
   if (actualHash !== expectedHash) fail(`${filename} predecessor SHA-256 mismatch`);
 }
 
-const migrationFiles = fs.readdirSync(migrationDir).filter((filename) => filename.endsWith('.sql') && filename !== '0025_operations_mission_plan_draft_controls.sql' && filename !== '0026_editorial_segment_foundation.sql').sort();
+const migrationFiles = fs.readdirSync(migrationDir).filter((filename) => filename.endsWith('.sql') && filename !== '0025_operations_mission_plan_draft_controls.sql' && filename !== '0026_editorial_segment_foundation.sql' && filename !== '0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql').sort();
 exact('Canonical migration inventory', migrationFiles, [...predecessorMigrations.map(([filename]) => filename), packetMigration, successorMigration, secondSuccessorMigration, thirdSuccessorMigration, fourthSuccessorMigration, fifthSuccessorMigration, sixthSuccessorMigration, seventhSuccessorMigration, eighthSuccessorMigration, ninthSuccessorMigration, tenthSuccessorMigration, eleventhSuccessorMigration, twelfthSuccessorMigration, runtimeIntakeSuccessorMigration, operationsSuccessorMigration]);
 
 const packetBytes = fs.readFileSync(path.join(migrationDir, packetMigration));
@@ -140,7 +140,7 @@ try {
     { filename: runtimeIntakeSuccessorMigration, sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, runtimeIntakeSuccessorMigration))).digest('hex') },
     { filename: operationsSuccessorMigration, sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir, operationsSuccessorMigration))).digest('hex') }
   ];
-  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql')) !== JSON.stringify(expectedLedger)) fail('Twenty-four-row predecessor migration ledger mismatch');
+  if (JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql')) !== JSON.stringify(expectedLedger)) fail('Twenty-four-row predecessor migration ledger mismatch');
 
   const tables = await client.query(
     `SELECT tablename, tableowner FROM pg_tables

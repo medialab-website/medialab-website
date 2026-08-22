@@ -175,7 +175,7 @@ for (const relPath of requiredFiles) {
 }
 
 const migrationsDir = path.join(baseDir, 'db/migrations');
-const migrationFiles = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql') && file !== '0025_operations_mission_plan_draft_controls.sql' && file !== '0026_editorial_segment_foundation.sql').sort();
+const migrationFiles = fs.readdirSync(migrationsDir).filter((file) => file.endsWith('.sql') && file !== '0025_operations_mission_plan_draft_controls.sql' && file !== '0026_editorial_segment_foundation.sql' && file !== '0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql').sort();
 exactNames('Canonical migration inventory', migrationFiles, [
   ...expectedMigrations.map((entry) => entry.filename),
   '0010_mission_plan_foundation.sql',

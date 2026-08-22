@@ -46,7 +46,8 @@ This directory contains the canonical SQL migrations for MediaLab Platform V2.
    * `0024_operations_home_scheduling_assignment_console.sql` is the bounded P02-M18-A additive staff Operations Home read/command projection foundation.
    * `0025_operations_mission_plan_draft_controls.sql` is the bounded P02-M19-A additive Mission Plan draft-control and customer-contact projection foundation.
    * `0026_editorial_segment_foundation.sql` is the bounded P02-M20-A additive foundation for immutable technical-media observations, nondestructive exact-tick editorial segments, revisions, and attributable segment decisions without media contact or byte duplication.
-   * Migrations `0001` through `0025` remain immutable predecessor inputs.
+   * `0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql` is the bounded P02-M22-A additive web bridge for contextual Editor Review projections and fail-closed mobile Quick Edit upload-intent and revision-registration evidence without provider contact or production-storage authority.
+   * Migrations `0001` through `0026` remain immutable predecessor inputs.
 
 6. **Owner and Runtime Role Separation**
    * `PGUSER` identifies the dedicated migration owner used for migrations, seed, and reset.

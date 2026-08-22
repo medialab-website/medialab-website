@@ -21,6 +21,7 @@ import {
   type ServerCatalogSelection,
 } from "./database.js";
 import { operationsConsoleError } from "./errors.js";
+import { ReviewMediaStore, ReviewMediaStoreError, type ReviewMediaDescriptor } from "./review-media-store.js";
 import type { ResolvedDevelopmentOperatorSession } from "./session.js";
 import {
   OPERATIONS_SCHEMA,
@@ -40,11 +41,19 @@ import {
   type OperationsActionReceipt,
   type OperationsContext,
   type OperationsHome,
+  type OperationsReviewAttention,
+  type OperationsReviewAttentionItem,
+  type OperationsReviewWorkspace,
   type OperationsWindowInput,
   type ProductionLane,
   type ProductionLaneStage,
   type ProductionLaneWorkspace,
   type ProductionWorkspace,
+  type QuickEditUploadReceipt,
+  type ReviewActionReceipt,
+  type ReviewMediaDownload,
+  type ReviewStartInput,
+  type ReviewSubmissionInput,
   type ReplacementInput,
   type RescheduleAppointmentInput,
 } from "./operations-contracts.js";
@@ -53,6 +62,7 @@ const CATALOG_TTL_MS = 10 * 60 * 1_000;
 const PREVIEW_TTL_MS = 15 * 60 * 1_000;
 const DISCLOSURE = "Controlled nonproduction reconstruction evidence. Listing creation does not itself schedule, assign crew, create a Mission Plan, process payment or media, review work, or deliver files.";
 const PRODUCTION_DISCLOSURE = "Read-only canonical production status. Source media stays in the native Desktop workflow; this web page does not upload, rename, copy, process, or delete media.";
+const REVIEW_DISCLOSURE = "Controlled nonproduction review evidence. Decisions are canonical; protected images remain server-resolved, and an explicit Quick Edit upload finalizes the corrected version with immutable lineage.";
 const EMPTY_PRODUCTION_EVIDENCE: ProductionEvidenceProjection = Object.freeze({
   captureSessions: [], cullWorkspaces: [], handoffBatches: [], reviewBatches: [],
 });
@@ -141,7 +151,10 @@ export function deriveProductionLane(
       unresolvedReturnCount: Number(latestHandoff?.current.unresolved_return_count ?? 0) }),
     review: Object.freeze({ batchCount: reviews.length, currentState: latestReview?.current.current_state ?? null,
       itemCount: Number(latestReview?.current.item_count ?? 0), resolvedCount: Number(latestReview?.current.resolved_count ?? 0),
-      unresolvedCount: Number(latestReview?.current.unresolved_count ?? 0) }),
+      unresolvedCount: Number(latestReview?.current.unresolved_count ?? 0),
+      finalSourceCount: Number(latestReview?.current.final_source_count ?? 0),
+      revisionRoutedCount: Number(latestReview?.current.revision_routed_count ?? 0),
+      quickEditRoutedCount: Number(latestReview?.current.quick_edit_routed_count ?? 0) }),
     exceptions: Object.freeze(exceptions) as string[],
   });
 }
@@ -204,11 +217,14 @@ export class OperationsConsoleService {
   readonly #previews = new Map<string, BoundPreviewState>();
   readonly #confirmations = new Map<string, BoundConfirmationState>();
   readonly #inFlight = new Map<string, Promise<ListingCreationReceiptV1>>();
+  readonly #quickEditInFlight = new Map<string, Promise<QuickEditUploadReceipt>>();
   readonly #now: () => number;
+  readonly #reviewMediaStore: ReviewMediaStore | null;
 
-  constructor(database: OperationsConsoleDatabase, options: { now?: () => number } = {}) {
+  constructor(database: OperationsConsoleDatabase, options: { now?: () => number; reviewMediaStore?: ReviewMediaStore } = {}) {
     this.#database = database;
     this.#now = options.now ?? Date.now;
+    this.#reviewMediaStore = options.reviewMediaStore ?? null;
   }
 
   async catalog(session: ResolvedDevelopmentOperatorSession): Promise<SelectableCatalogV1> {
@@ -420,28 +436,274 @@ export class OperationsConsoleService {
     if (error instanceof OperationsConsoleDatabaseError) {
       if (error.code === "AUTHORITY") throw operationsConsoleError("FORBIDDEN", { cause: error });
       if (error.code === "VALIDATION") throw operationsConsoleError("INVALID_REQUEST", { cause: error });
-      if (error.code === "CONFLICT") throw operationsConsoleError("IDEMPOTENCY_CONFLICT", { cause: error });
+      if (error.code === "CONFLICT") throw operationsConsoleError("STATE_CONFLICT", { cause: error });
       throw operationsConsoleError("SERVICE_UNAVAILABLE", { cause: error });
+    }
+    if (error instanceof ReviewMediaStoreError) {
+      const invalidRequest = ["INVALID_DESCRIPTOR", "INVALID_UPLOAD", "UNSUPPORTED_MEDIA", "UPLOAD_TOO_LARGE"]
+        .includes(error.code);
+      throw operationsConsoleError(invalidRequest ? "INVALID_REQUEST" : "MEDIA_UNAVAILABLE", { cause: error });
     }
     throw error;
   }
 
+  #reviewActionsByOrder(attention: OperationsReviewAttentionItem[]): Map<string, OperationsReviewAttentionItem["actions"]> {
+    return new Map(attention.map((item) => [item.orderId, item.actions]));
+  }
+
+  #withReviewAttention(
+    context: OperationsContext,
+    actionsByOrder: Map<string, OperationsReviewAttentionItem["actions"]>,
+  ): OperationsContext {
+    const actions = actionsByOrder.get(context.orderId) ?? [];
+    return Object.freeze({ ...this.#safeContext(context),
+      attention: Object.freeze([...new Set([...context.attention, ...actions.map((action) => action.code)])].sort()) as string[] });
+  }
+
+  async reviewAttention(session: ResolvedDevelopmentOperatorSession): Promise<OperationsReviewAttention> {
+    try {
+      const items = await this.#database.getOperationsReviewAttention(session.databaseSessionToken);
+      return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "OperationsReviewAttentionV1" as const,
+        items: Object.freeze(items.map((item) => Object.freeze({ ...item,
+          actions: Object.freeze(item.actions.map((action) => Object.freeze({ ...action }))) as typeof item.actions }))) as OperationsReviewAttentionItem[] });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
   async operationsHome(session: ResolvedDevelopmentOperatorSession, from: string, to: string): Promise<OperationsHome> {
     try {
-      const projection = await this.#database.getOperationsHome(session.databaseSessionToken, from, to);
-      return Object.freeze({ ...projection, items: projection.items.map((item) => this.#safeContext(item)),
-        sections: {
-          today: projection.sections.today.map((item) => this.#safeContext(item)),
-          upcoming: projection.sections.upcoming.map((item) => this.#safeContext(item)),
-          needsAttention: projection.sections.needsAttention.map((item) => this.#safeContext(item)),
-        },
+      const [projection, reviewAttention] = await Promise.all([
+        this.#database.getOperationsHome(session.databaseSessionToken, from, to),
+        this.#database.getOperationsReviewAttention(session.databaseSessionToken),
+      ]);
+      const actionsByOrder = this.#reviewActionsByOrder(reviewAttention);
+      const contexts = new Map(projection.items.map((item) => [item.orderId, item]));
+      for (const item of reviewAttention) {
+        if (!contexts.has(item.orderId)) {
+          contexts.set(item.orderId, await this.#database.getOperationsContext(session.databaseSessionToken, item.orderId));
+        }
+      }
+      const decorated = new Map([...contexts.values()].map((item) => {
+        const context = this.#withReviewAttention(item, actionsByOrder); return [context.orderId, context];
+      }));
+      const items = [...decorated.values()].sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.orderId.localeCompare(right.orderId));
+      const section = (values: OperationsContext[]) => values.map((item) => decorated.get(item.orderId)!).filter(Boolean);
+      const needsAttention = items.filter((item) => item.attention.length > 0);
+      return Object.freeze({ ...projection, items,
+        sections: { today: section(projection.sections.today), upcoming: section(projection.sections.upcoming), needsAttention },
+        counts: { today: projection.counts.today, upcoming: projection.counts.upcoming, needsAttention: needsAttention.length },
         schema: OPERATIONS_SCHEMA, contract: "OperationsHomeV1" as const });
     } catch (error) { return this.#translateOperationsError(error); }
   }
 
   async operationsContext(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<OperationsContext> {
-    try { return this.#safeContext(await this.#database.getOperationsContext(session.databaseSessionToken, orderId)); }
+    try {
+      const [context, attention] = await Promise.all([
+        this.#database.getOperationsContext(session.databaseSessionToken, orderId),
+        this.#database.getOperationsReviewAttention(session.databaseSessionToken),
+      ]);
+      return this.#withReviewAttention(context, this.#reviewActionsByOrder(attention));
+    }
     catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async reviewWorkspace(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<OperationsReviewWorkspace> {
+    try {
+      const projection = await this.#database.getOperationsReviewWorkspace(session.databaseSessionToken, orderId);
+      return Object.freeze({
+        schema: OPERATIONS_SCHEMA,
+        contract: "OperationsReviewWorkspaceV1" as const,
+        evidenceClassification: "NONPRODUCTION_CANONICAL_REVIEW" as const,
+        disclosure: REVIEW_DISCLOSURE,
+        context: this.#safeContext(projection.context),
+        actions: projection.actions.map((action) => ({ ...action })),
+        activeReview: projection.activeReview,
+        quickEdits: projection.quickEdits.map((item) => ({ ...item })),
+        completedHistory: projection.completedHistory.map((item) => ({ ...item })),
+      });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async startReview(
+    session: ResolvedDevelopmentOperatorSession,
+    orderId: string,
+    input: ReviewStartInput,
+  ): Promise<ReviewActionReceipt> {
+    try {
+      await this.#database.startOperationsEditorReview(
+        session.databaseSessionToken, input.idempotencyKey, orderId, input.lane,
+      );
+      return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "ReviewActionReceiptV1" as const,
+        action: "REVIEW_STARTED" as const, replaySafe: true as const,
+        workspace: await this.reviewWorkspace(session, orderId) });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async submitReview(
+    session: ResolvedDevelopmentOperatorSession,
+    orderId: string,
+    reviewBatchId: string,
+    input: ReviewSubmissionInput,
+  ): Promise<ReviewActionReceipt> {
+    try {
+      await this.#database.submitOperationsReview(
+        session.databaseSessionToken,
+        input.idempotencyKey,
+        orderId,
+        reviewBatchId,
+        input.expectedGeneration,
+        input.decisions,
+      );
+      return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "ReviewActionReceiptV1" as const,
+        action: "REVIEW_SUBMITTED" as const, replaySafe: true as const,
+        workspace: await this.reviewWorkspace(session, orderId) });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  #requiredReviewMediaStore(): ReviewMediaStore {
+    if (!this.#reviewMediaStore) throw operationsConsoleError("MEDIA_UNAVAILABLE");
+    return this.#reviewMediaStore;
+  }
+
+  async reviewMedia(
+    session: ResolvedDevelopmentOperatorSession,
+    orderId: string,
+    reviewBatchId: string,
+    reviewItemId: string,
+    purpose: "REVIEW_PREVIEW" | "QUICK_EDIT_DOWNLOAD",
+  ): Promise<ReviewMediaDownload> {
+    try {
+      const source = await this.#database.resolveOperationsReviewMediaSource(
+        session.databaseSessionToken, orderId, reviewBatchId, reviewItemId, purpose,
+      );
+      const descriptor: ReviewMediaDescriptor = {
+        objectIdentifier: source.object_identifier,
+        filename: source.filename,
+        byteSize: Number(source.byte_size),
+        sha256: source.checksum_sha256,
+        mediaType: source.media_type,
+      };
+      const verified = await this.#requiredReviewMediaStore().download(descriptor);
+      return Object.freeze({ ...descriptor, checksumSha256: descriptor.sha256, bytes: verified.bytes });
+    } catch (error) { return this.#translateOperationsError(error); }
+  }
+
+  async uploadQuickEditRevision(
+    session: ResolvedDevelopmentOperatorSession,
+    orderId: string,
+    requestId: string,
+    input: { idempotencyKey: string; filename: string; mediaType: "image/jpeg" | "image/png";
+      body: Buffer | AsyncIterable<Uint8Array> },
+  ): Promise<QuickEditUploadReceipt> {
+    const inFlightKey = sha256Evidence([orderId, requestId, input.idempotencyKey]);
+    const existing = this.#quickEditInFlight.get(inFlightKey);
+    if (existing) return existing;
+    const operation = this.#uploadQuickEditRevision(session, orderId, requestId, input)
+      .finally(() => {
+        if (this.#quickEditInFlight.get(inFlightKey) === operation) this.#quickEditInFlight.delete(inFlightKey);
+      });
+    this.#quickEditInFlight.set(inFlightKey, operation);
+    return operation;
+  }
+
+  async #uploadQuickEditRevision(
+    session: ResolvedDevelopmentOperatorSession,
+    orderId: string,
+    requestId: string,
+    input: { idempotencyKey: string; filename: string; mediaType: "image/jpeg" | "image/png";
+      body: Buffer | AsyncIterable<Uint8Array> },
+  ): Promise<QuickEditUploadReceipt> {
+    try {
+      const workspace = await this.#database.getOperationsReviewWorkspace(session.databaseSessionToken, orderId);
+      const quickEdit = workspace.quickEdits.find((item) => item.quickEditRequestId === requestId);
+      if (quickEdit && !quickEdit.downloadAvailable) {
+        throw new OperationsConsoleDatabaseError("AUTHORITY", "The Quick Edit request is not outstanding for this order.");
+      }
+      const intent = quickEdit
+        ? await this.#database.createOperationsQuickEditUploadIntent(
+          session.databaseSessionToken, input.idempotencyKey, orderId, quickEdit.reviewBatchId,
+          quickEdit.reviewItemId, requestId, quickEdit.expectedReviewLifecycleGeneration,
+          quickEdit.expectedDecisionGeneration,
+        )
+        : await this.#database.getOperationsQuickEditUploadIntent(
+          session.databaseSessionToken, orderId, requestId,
+        );
+      const reviewBatchId = quickEdit?.reviewBatchId ?? intent.reviewBatchId;
+      const reviewItemId = quickEdit?.reviewItemId ?? intent.reviewItemId;
+      const expectedReviewLifecycleGeneration = quickEdit?.expectedReviewLifecycleGeneration
+        ?? intent.expectedReviewLifecycleGeneration;
+      const expectedDecisionGeneration = quickEdit?.expectedDecisionGeneration
+        ?? intent.expectedDecisionGeneration;
+      if (!reviewBatchId || !reviewItemId || typeof expectedReviewLifecycleGeneration !== "number" ||
+          !Number.isSafeInteger(expectedReviewLifecycleGeneration) || typeof expectedDecisionGeneration !== "number" ||
+          !Number.isSafeInteger(expectedDecisionGeneration)) {
+        throw new OperationsConsoleDatabaseError("AUTHORITY", "The Quick Edit request is not outstanding for this order.");
+      }
+      const mediaStore = this.#requiredReviewMediaStore();
+      const staged = await mediaStore.upload({
+        body: input.body, filename: input.filename, mediaType: input.mediaType,
+        ownershipKey: sha256Evidence([intent.uploadIntentId, input.idempotencyKey]),
+      });
+      let registration;
+      try {
+        registration = await this.#database.registerOperationsQuickEditRevision(session.databaseSessionToken, {
+          idempotencyKey: input.idempotencyKey,
+          orderId,
+          reviewBatchId,
+          reviewItemId,
+          requestId,
+          uploadIntentId: intent.uploadIntentId,
+          expectedReviewLifecycleGeneration,
+          expectedDecisionGeneration,
+          expectedUploadGeneration: intent.generation,
+          filename: staged.filename,
+          byteSize: staged.byteSize,
+          mediaType: staged.mediaType,
+          checksumSha256: staged.sha256,
+          objectIdentifier: staged.objectIdentifier,
+          reason: "Operator submitted an explicitly selected Quick Edit correction.",
+        });
+        if (registration.providerObjectIdentifier !== staged.objectIdentifier) {
+          await mediaStore.cleanupRejected(staged);
+        }
+      } catch (error) {
+        if (!(error instanceof OperationsConsoleDatabaseError) || error.code !== "UNAVAILABLE") {
+          await mediaStore.cleanupRejected(staged);
+          throw error;
+        }
+        let readback;
+        try {
+          readback = await this.#database.getOperationsQuickEditUploadIntent(
+            session.databaseSessionToken, orderId, intent.uploadIntentId,
+          );
+        } catch {
+          throw error;
+        }
+        if (readback.state !== "FINALIZED" || !readback.correctedVersionId || !readback.successorReviewBatchId ||
+            !readback.successorDecisionId || !readback.successorCompletionEventId ||
+            readback.correctedChecksumSha256 !== staged.sha256 || !readback.registeredObjectIdentifier) {
+          await mediaStore.cleanupRejected(staged);
+          throw error;
+        }
+        if (readback.registeredObjectIdentifier !== staged.objectIdentifier) {
+          await mediaStore.cleanupRejected(staged);
+        }
+        registration = { requestId, correctedVersionId: readback.correctedVersionId,
+          successorReviewBatchId: readback.successorReviewBatchId,
+          successorDecisionId: readback.successorDecisionId,
+          successorCompletionEventId: readback.successorCompletionEventId,
+          finalSourceVersionId: readback.correctedVersionId,
+          providerObjectIdentifier: readback.registeredObjectIdentifier, replayed: true };
+      }
+      return Object.freeze({ schema: OPERATIONS_SCHEMA, contract: "QuickEditUploadReceiptV1" as const,
+        accepted: true as const, replaySafe: true as const, requestId: registration.requestId,
+        correctedVersionId: registration.correctedVersionId,
+        successorReviewBatchId: registration.successorReviewBatchId,
+        successorDecisionId: registration.successorDecisionId,
+        successorCompletionEventId: registration.successorCompletionEventId,
+        finalSourceVersionId: registration.finalSourceVersionId,
+        uploadState: "FINALIZED" as const,
+        workspace: await this.reviewWorkspace(session, orderId) });
+    } catch (error) { return this.#translateOperationsError(error); }
   }
 
   async assignmentCandidates(session: ResolvedDevelopmentOperatorSession, organizationId: string): Promise<AssignmentCandidates> {
@@ -537,12 +799,23 @@ export class OperationsConsoleService {
         ? await this.#database.getProductionEvidence(session.databaseSessionToken, context.organizationId,
           context.job.jobId, context.job.workstreams.map((workstream) => workstream.workstreamId))
         : EMPTY_PRODUCTION_EVIDENCE;
+      const reviewAttention = context.job
+        ? (await this.#database.getOperationsReviewAttention(session.databaseSessionToken))
+          .find((item) => item.orderId === orderId)?.actions ?? []
+        : [];
       const laneWorkstreams = (lane: ProductionLane) => workstreams
         .filter((workstream) => workstreamLaneExpectations(workstream.displayName).includes(lane));
       const exceptions: string[] = [];
       if (!context.job) exceptions.push("Start Mission Control before production work can begin.");
       if (!version) exceptions.push("Save an issued Mission Plan version before preparing Desktop work.");
-      const lanes = (["PHOTO", "VIDEO"] as const).map((lane) => deriveProductionLane(lane, laneWorkstreams(lane), evidence)) as
+      const lanes = (["PHOTO", "VIDEO"] as const).map((lane) => {
+        const derived = deriveProductionLane(lane, laneWorkstreams(lane), evidence);
+        const actions = reviewAttention.filter((action) => action.lane === lane);
+        if (!actions.length) return derived;
+        const presentation = stagePresentation("EXCEPTION", lane);
+        return Object.freeze({ ...derived, stage: "EXCEPTION" as const, ...presentation,
+          exceptions: Object.freeze([...derived.exceptions, ...actions.map((action) => action.label)]) as string[] });
+      }) as
         [ProductionLaneWorkspace, ProductionLaneWorkspace];
       return Object.freeze({
         schema: OPERATIONS_SCHEMA,

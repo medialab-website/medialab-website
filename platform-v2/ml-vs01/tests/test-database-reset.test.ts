@@ -25,6 +25,17 @@ const TEST_SOCKET = '/tmp/mlvs01-p02m16a-pg';
 const TEST_PORT = 55447;
 
 const EXACT_ROUTINE_NAMES = [
+  'operations_review_version_summary',
+  'operations_review_actions',
+  'operations_review_batch_workspace',
+  'start_operations_editor_review',
+  'list_operations_review_attention',
+  'get_operations_review_workspace',
+  'submit_operations_editor_review',
+  'resolve_operations_review_media_source',
+  'create_operations_quick_edit_upload_intent',
+  'get_operations_quick_edit_upload_intent',
+  'register_operations_quick_edit_revision',
   'clear_editorial_segment_decision',
   'create_editorial_segment',
   'decide_editorial_segment',
@@ -464,6 +475,8 @@ const EXACT_TRIGGERS = [
   ,['media_designations_immutability_guard', 'media_approved_source_designations', 'reject_media_evidence_mutation']
   ,['media_manifests_immutability_guard', 'media_manifests', 'reject_media_evidence_mutation']
   ,['media_command_idempotency_immutability_guard', 'media_command_idempotency', 'reject_media_evidence_mutation']
+  ,['operations_quick_edit_upload_events_immutability_guard', 'operations_quick_edit_upload_events', 'reject_media_evidence_mutation']
+  ,['operations_quick_edit_upload_intents_immutability_guard', 'operations_quick_edit_upload_intents', 'reject_media_evidence_mutation']
   ,['media_operations_immutability_guard', 'media_operations', 'reject_media_operation_evidence_mutation']
   ,['media_operation_targets_validation_guard', 'media_operation_targets', 'validate_media_operation_target']
   ,['media_operation_targets_immutability_guard', 'media_operation_targets', 'reject_media_operation_evidence_mutation']
@@ -587,7 +600,7 @@ describe('P01C Test Database Reset Tooling Tests', () => {
 
     // Verify canonical migration ledger
     const ledgerRes = await client.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename ASC;');
-    expect(ledgerRes.rows).toHaveLength(26);
+    expect(ledgerRes.rows).toHaveLength(27);
     expect(ledgerRes.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledgerRes.rows[0].filename).toBe('0001_identity_and_tenancy.sql');
     expect(ledgerRes.rows[0].sha256).toBe('29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31');

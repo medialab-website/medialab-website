@@ -50,6 +50,7 @@ const RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION = '0023_runtime_intake_reco
 const OPERATIONS_HOME_PACKET_MIGRATION = '0024_operations_home_scheduling_assignment_console.sql';
 const OPERATIONS_MISSION_PLAN_PACKET_MIGRATION = '0025_operations_mission_plan_draft_controls.sql';
 const EDITORIAL_SEGMENT_PACKET_MIGRATION = '0026_editorial_segment_foundation.sql';
+const CONTEXTUAL_REVIEW_PACKET_MIGRATION = '0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql';
 
 const CONTACT_PUBLIC_MUTATION_FUNCTIONS = [
   'medialab_core.create_contact_method(uuid, text, uuid, text, text)',
@@ -308,6 +309,17 @@ const EDITORIAL_SEGMENT_PUBLIC_FUNCTIONS = [
   'medialab_core.list_editorial_segments(text, uuid, uuid, text)'
 ];
 
+const CONTEXTUAL_REVIEW_PUBLIC_FUNCTIONS = [
+  'medialab_core.list_operations_review_attention(text)',
+  'medialab_core.get_operations_review_workspace(text, uuid)',
+  'medialab_core.start_operations_editor_review(text, text, uuid, text)',
+  'medialab_core.submit_operations_editor_review(text, text, uuid, uuid, bigint, jsonb)',
+  'medialab_core.resolve_operations_review_media_source(text, uuid, uuid, uuid, text)',
+  'medialab_core.create_operations_quick_edit_upload_intent(text, text, uuid, uuid, uuid, uuid, bigint, bigint)',
+  'medialab_core.get_operations_quick_edit_upload_intent(text, uuid, uuid)',
+  'medialab_core.register_operations_quick_edit_revision(text, text, uuid, uuid, uuid, uuid, uuid, bigint, bigint, bigint, text, bigint, text, text, text, text)'
+];
+
 export function validateMigrationFilenames(filenames: string[]): void {
   const filenameRegex = /^[0-9]{4}_[a-z0-9_]+\.sql$/;
   const prefixes = new Set<string>();
@@ -382,7 +394,8 @@ async function applyRuntimePrivilegePolicy(
   includeRuntimeIntakeReconciliationFunctions = false,
   includeOperationsHomeFunctions = false,
   includeOperationsMissionPlanFunctions = false,
-  includeEditorialSegmentFunctions = false
+  includeEditorialSegmentFunctions = false,
+  includeContextualReviewFunctions = false
 ): Promise<void> {
   const safeRuntimeRole = await validateRuntimeRole(client, runtimeUser);
   const databaseResult = await client.query<{ database_name: string }>('SELECT current_database() AS database_name');
@@ -421,7 +434,8 @@ async function applyRuntimePrivilegePolicy(
       ...(includeRuntimeIntakeReconciliationFunctions ? RUNTIME_INTAKE_RECONCILIATION_PUBLIC_FUNCTIONS : []),
       ...(includeOperationsHomeFunctions ? OPERATIONS_HOME_PUBLIC_FUNCTIONS : []),
       ...(includeOperationsMissionPlanFunctions ? OPERATIONS_MISSION_PLAN_PUBLIC_FUNCTIONS : []),
-      ...(includeEditorialSegmentFunctions ? EDITORIAL_SEGMENT_PUBLIC_FUNCTIONS : [])
+      ...(includeEditorialSegmentFunctions ? EDITORIAL_SEGMENT_PUBLIC_FUNCTIONS : []),
+      ...(includeContextualReviewFunctions ? CONTEXTUAL_REVIEW_PUBLIC_FUNCTIONS : [])
     ].map((signature) =>
       `GRANT EXECUTE ON FUNCTION ${signature} TO ${safeRuntimeRole};`
     ).join('\n    ')}
@@ -626,6 +640,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
             await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true);
             authorityPolicyApplied = true;
           }
+          if (file === CONTEXTUAL_REVIEW_PACKET_MIGRATION) {
+            await applyRuntimePrivilegePolicy(client, runtimeUser!, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true);
+            authorityPolicyApplied = true;
+          }
           await client.query(
             `INSERT INTO ${safeTable} (filename, sha256) VALUES ($1, $2);`,
             [file, fileSha256]
@@ -671,7 +689,8 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrationR
           sqlFiles.includes(RUNTIME_INTAKE_RECONCILIATION_PACKET_MIGRATION),
           sqlFiles.includes(OPERATIONS_HOME_PACKET_MIGRATION),
           sqlFiles.includes(OPERATIONS_MISSION_PLAN_PACKET_MIGRATION),
-          sqlFiles.includes(EDITORIAL_SEGMENT_PACKET_MIGRATION)
+          sqlFiles.includes(EDITORIAL_SEGMENT_PACKET_MIGRATION),
+          sqlFiles.includes(CONTEXTUAL_REVIEW_PACKET_MIGRATION)
         );
         await client.query('COMMIT;');
       } catch (err) {

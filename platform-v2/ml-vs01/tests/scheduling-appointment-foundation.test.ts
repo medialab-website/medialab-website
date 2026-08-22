@@ -175,7 +175,7 @@ describe('P02-M05-A provider-neutral Scheduling Request and Appointment foundati
 
   it('1. applies exactly ten immutable migrations and preserves predecessor checksums', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(26);
+    expect(ledger.rows).toHaveLength(27);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows.slice(0, 7)).toEqual([
       { filename: '0001_identity_and_tenancy.sql', sha256: '29dc9fd8e500ba4c7bfaeb967773b17f7f2d7d05fd98b9df755d9179eb033f31' },

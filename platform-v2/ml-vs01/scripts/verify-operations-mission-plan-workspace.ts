@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const moduleRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(moduleRoot, "../..");
-const base = "9bf956f1ba43cecd3acd412549b65b582bafa55b";
-const baseTree = "ffaec955264a81c8a785b95b095a4d97d4a5a6c3";
-const branchName = "platform-v2-p02-m20-a-editorial-segment-foundation-r01";
+const base = "d38f458690769024fc64e284f191d346915488df";
+const baseTree = "af2d6c486953ada2f251891121734a7c27f6c04b";
+const branchName = "platform-v2-p02-m22-a-contextual-editor-review-mobile-quick-edit-r01";
 const failures: string[] = [];
 const checks: Record<string, string> = {};
 const read = (path: string) => readFileSync(join(moduleRoot, path), "utf8");
@@ -23,9 +23,10 @@ pass("entry", head === base && tree === baseTree && platform === base && branch 
   `branch=${branch}; HEAD=${head}; tree=${tree}; origin/platform=${platform}`);
 
 const migrations = readdirSync(join(moduleRoot, "db/migrations")).filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-pass("migrationInventory", migrations.length === 26 && migrations.every((name, index) => name.startsWith(String(index + 1).padStart(4, "0")))
+pass("migrationInventory", migrations.length === 27 && migrations.every((name, index) => name.startsWith(String(index + 1).padStart(4, "0")))
   && migrations[24] === "0025_operations_mission_plan_draft_controls.sql"
-  && migrations[25] === "0026_editorial_segment_foundation.sql", migrations.join(","));
+  && migrations[25] === "0026_editorial_segment_foundation.sql"
+  && migrations[26] === "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql", migrations.join(","));
 const acceptedMigrationDiff = git(["diff", "--name-only", base, "--", "platform-v2/ml-vs01/db/migrations/0001_identity_and_tenancy.sql",
   "platform-v2/ml-vs01/db/migrations/0002_property_identity_and_snapshots.sql", "platform-v2/ml-vs01/db/migrations/0003_person_contacts_and_account_lifecycle.sql",
   "platform-v2/ml-vs01/db/migrations/0004_current_catalog_and_price_snapshots.sql", "platform-v2/ml-vs01/db/migrations/0005_catalog_administration_lifecycle.sql",
@@ -78,10 +79,11 @@ pass("brandAndLayout", html.includes('/brand-logo.jpg') && existsSync(resolve(mo
 pass("ownerVisibleWorkflow", ["Choose a property package", "Choose à la carte", "What’s included", "Recommended for this square footage"]
   .every((value) => client.includes(value))
   && client.includes('["Video", "Photo", "Matterport", "Zillow 3D Home", "CubiCasa & floor plans"]')
-  && ["Needs attention", "Today", "Upcoming", "Completed"].every((value) => html.includes(value))
+  && ["Needs attention", "Upcoming", "Completed"].every((value) => html.includes(value))
+  && !html.includes('data-queue="today"')
   && ["Confirm this appointment", "Crew assignment saved.", "Edit Mission Plan", "Save Mission Plan Offline", "Get Directions"].every((value) => client.includes(value))
   && css.includes('.field input[type="text"]') && css.includes(".operations-dialog") && css.includes(".mission-control-summary"),
-  "package-first ordering, grouped add-ons, high-contrast controls, four Mission Control views, focused confirmation, hidden edit controls, and collapsible Mission Plan");
+  "package-first ordering, grouped add-ons, high-contrast controls, three approved Mission Control queues, focused confirmation, hidden edit controls, and collapsible Mission Plan");
 pass("contactIdentifierCompatibility", contracts.includes("DATABASE_UUID") && contracts.includes("databaseUuid(contact.contactMethodId")
   && contracts.includes("uuid(contact.personId"),
   "database-issued contact-method UUIDs are accepted without weakening canonical person and authority identifiers");

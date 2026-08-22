@@ -20,8 +20,10 @@ const ERROR_DEFINITIONS = {
   PREVIEW_MISMATCH: { statusCode: 409, message: "The listing preview does not match this session." },
   CATALOG_CHANGED: { statusCode: 409, message: "Catalog pricing changed. Review a new preview before creating the listing." },
   IDEMPOTENCY_CONFLICT: { statusCode: 409, message: "The listing submission conflicts with an earlier request." },
+  STATE_CONFLICT: { statusCode: 409, message: "This work changed. Refresh it before trying again." },
   CREATION_IN_PROGRESS: { statusCode: 409, message: "This listing submission is already being created." },
   PREREQUISITE_REQUIRED: { statusCode: 409, message: "Save an issued Mission Plan version before preparing Desktop work." },
+  MEDIA_UNAVAILABLE: { statusCode: 409, message: "The exact protected review image is not available." },
   SERVICE_UNAVAILABLE: { statusCode: 503, message: "The nonproduction operations console is temporarily unavailable." },
   INTERNAL_ERROR: { statusCode: 500, message: "The request could not be completed." },
 } as const satisfies Record<OperationsConsoleErrorCodeV1, ErrorDefinition>;

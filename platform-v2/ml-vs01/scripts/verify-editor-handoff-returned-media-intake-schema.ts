@@ -54,7 +54,7 @@ for(const [name,sha] of predecessors){
 const bytes=fs.readFileSync(path.join(migrationDir,packetMigration));
 const packetHash=crypto.createHash('sha256').update(bytes).digest('hex');
 const sql=bytes.toString('utf8');
-exact('Migration inventory',fs.readdirSync(migrationDir).filter(x=>x.endsWith('.sql') && x!=='0025_operations_mission_plan_draft_controls.sql'&&x!=='0026_editorial_segment_foundation.sql'),[...predecessors.map(x=>x[0]),packetMigration,successorMigration,secondSuccessorMigration,thirdSuccessorMigration,fourthSuccessorMigration,fifthSuccessorMigration,sixthSuccessorMigration,seventhSuccessorMigration,runtimeIntakeSuccessorMigration,operationsSuccessorMigration]);
+exact('Migration inventory',fs.readdirSync(migrationDir).filter(x=>x.endsWith('.sql') && x!=='0025_operations_mission_plan_draft_controls.sql'&&x!=='0026_editorial_segment_foundation.sql'&&x!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'),[...predecessors.map(x=>x[0]),packetMigration,successorMigration,secondSuccessorMigration,thirdSuccessorMigration,fourthSuccessorMigration,fifthSuccessorMigration,sixthSuccessorMigration,seventhSuccessorMigration,runtimeIntakeSuccessorMigration,operationsSuccessorMigration]);
 exact('Packet tables',[...sql.matchAll(/CREATE TABLE medialab_core\.([a-z0-9_]+)/g)].map(x=>x[1]),tables);
 exact('Packet functions',[...sql.matchAll(/CREATE OR REPLACE FUNCTION medialab_core\.([a-z0-9_]+)/g)].map(x=>x[1]),[...publicFunctions,...helpers]);
 for(const required of ['PHOTO','VIDEO','EDITOR_HANDOFF','EDITOR_RETURN','REVISION_RETURN','ORIGINAL_TO_EDITOR_RETURN',
@@ -78,7 +78,7 @@ try{
   const runtimeIntakeSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,runtimeIntakeSuccessorMigration))).digest('hex');
   const operationsSuccessorHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(migrationDir,operationsSuccessorMigration))).digest('hex');
   const expected=[...predecessors.map(([filename,sha256])=>({filename,sha256})),{filename:packetMigration,sha256:packetHash},{filename:successorMigration,sha256:successorHash},{filename:secondSuccessorMigration,sha256:secondSuccessorHash},{filename:thirdSuccessorMigration,sha256:thirdSuccessorHash},{filename:fourthSuccessorMigration,sha256:fourthSuccessorHash},{filename:fifthSuccessorMigration,sha256:fifthSuccessorHash},{filename:sixthSuccessorMigration,sha256:sixthSuccessorHash},{filename:seventhSuccessorMigration,sha256:seventhSuccessorHash},{filename:runtimeIntakeSuccessorMigration,sha256:runtimeIntakeSuccessorHash},{filename:operationsSuccessorMigration,sha256:operationsSuccessorHash}];
-  if(JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'))!==JSON.stringify(expected))fail('Twenty-four-row predecessor migration ledger mismatch');
+  if(JSON.stringify(ledger.rows.filter((row:any)=>row.filename!=='0025_operations_mission_plan_draft_controls.sql'&&row.filename!=='0026_editorial_segment_foundation.sql'&&row.filename!=='0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'))!==JSON.stringify(expected))fail('Twenty-four-row predecessor migration ledger mismatch');
   const dbTables=await client.query(`SELECT tablename,tableowner FROM pg_tables WHERE schemaname='medialab_core'
     AND (tablename LIKE 'editor_handoff_%' OR tablename LIKE 'returned_media_%') ORDER BY tablename`);
   exact('Database tables',dbTables.rows.map(r=>r.tablename),tables);

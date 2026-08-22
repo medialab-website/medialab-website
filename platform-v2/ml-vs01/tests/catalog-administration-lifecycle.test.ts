@@ -122,7 +122,7 @@ describe('P02-M03-B catalog administration lifecycle', () => {
 
   it('1. applies the exact nine-migration ledger while preserving the accepted 0004 hash', async () => {
     const ledger = await owner.query('SELECT filename, sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(26);
+    expect(ledger.rows).toHaveLength(27);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[3]).toEqual({
       filename: '0004_current_catalog_and_price_snapshots.sql',

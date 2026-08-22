@@ -167,6 +167,17 @@ const EXACT_ROUTINE_NAMES = [
   'start_media_operation_attempt',
   'validate_media_operation_safe_json',
   'validate_media_operation_target',
+  'create_operations_quick_edit_upload_intent',
+  'get_operations_quick_edit_upload_intent',
+  'get_operations_review_workspace',
+  'list_operations_review_attention',
+  'operations_review_actions',
+  'operations_review_batch_workspace',
+  'operations_review_version_summary',
+  'register_operations_quick_edit_revision',
+  'resolve_operations_review_media_source',
+  'start_operations_editor_review',
+  'submit_operations_editor_review',
   'add_media_asset_version',
   'check_media_idempotency',
   'create_media_asset',
@@ -458,6 +469,8 @@ const EXACT_TRIGGERS = [
   ,['mission_plan_version_workstreams_immutability_guard', 'mission_plan_version_workstreams', 'reject_mission_plan_evidence_mutation']
   ,['mission_plan_versions_immutability_guard', 'mission_plan_versions', 'reject_mission_plan_evidence_mutation']
   ,['mission_plans_immutability_guard', 'mission_plans', 'reject_mission_plan_evidence_mutation']
+  ,['operations_quick_edit_upload_events_immutability_guard', 'operations_quick_edit_upload_events', 'reject_media_evidence_mutation']
+  ,['operations_quick_edit_upload_intents_immutability_guard', 'operations_quick_edit_upload_intents', 'reject_media_evidence_mutation']
   ,['media_assets_immutability_guard', 'media_assets', 'reject_media_evidence_mutation']
   ,['media_asset_versions_immutability_guard', 'media_asset_versions', 'reject_media_evidence_mutation']
   ,['media_asset_lineage_immutability_guard', 'media_asset_lineage', 'reject_media_evidence_mutation']
@@ -563,6 +576,7 @@ describe('M02 Identity and Tenancy Schema', () => {
       ,'0024_operations_home_scheduling_assignment_console.sql'
       ,'0025_operations_mission_plan_draft_controls.sql'
       ,'0026_editorial_segment_foundation.sql'
+      ,'0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'
     ]);
   });
 

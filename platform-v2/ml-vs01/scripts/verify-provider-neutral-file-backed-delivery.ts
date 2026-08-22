@@ -39,7 +39,7 @@ const client = new pg.Client({ host: '/tmp/mlvs01-p02m16a-pg', port: 55447, data
 await client.connect();
 try {
   const ledger = await client.query('SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename');
-  if (ledger.rows.length !== 26 || ledger.rows[20].filename !== migration || ledger.rows[20].sha256 !== migrationSha256 || ledger.rows[22].filename !== '0023_runtime_intake_reconciliation_commands.sql') fail('migration ledger identity mismatch');
+  if (ledger.rows.length !== 27 || ledger.rows[20].filename !== migration || ledger.rows[20].sha256 !== migrationSha256 || ledger.rows[22].filename !== '0023_runtime_intake_reconciliation_commands.sql') fail('migration ledger identity mismatch');
   const fn = await client.query(`SELECT p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner,
       pg_get_function_identity_arguments(p.oid) arguments,pg_get_functiondef(p.oid) definition,
       has_function_privilege($1,p.oid,'EXECUTE') runtime,has_function_privilege('public',p.oid,'EXECUTE') public

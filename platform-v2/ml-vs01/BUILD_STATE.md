@@ -1,26 +1,36 @@
-# P02-M21-A Build State
+# P02-M22-A Build State
 
-- Controlling authority: owner-approved `P02-M21-A — Web-First Real-Estate Production Bridge`, R133 packet `181`, activation record `182`, and the web-first/Desktop-native course correction in R132 records `179–180`.
-- Candidate state: owner-visible checkpoint accepted; bounded synthetic nonproduction candidate validated and ready for exact commit/tree freeze.
-- Base Platform commit: `71b3990ee325cce024ba773e29def11174bf2ec1`.
-- Base Platform tree: `3160b9f3133021adce07f08b4e04312b1a32245a`.
+- Controlling authority: owner-approved `P02-M22-A — Contextual Editor Review + Mobile Quick Edit Web Bridge`, R134 packet `196`, activation record `197`, and technical reconciliation `198`.
+- Candidate state: owner-visible checkpoint accepted; full inherited and focused validation complete; exact local candidate freeze ready.
+- Accepted predecessor commit: `d38f458690769024fc64e284f191d346915488df`.
+- Accepted predecessor tree: `af2d6c486953ada2f251891121734a7c27f6c04b`.
 - Observed production/default `main`: `28517e4d2131014cfdf090fa3aa40d6bcf7b6398`; observational only and unchanged.
-- Branch: `platform-v2-p02-m21-a-real-estate-production-bridge-r01`.
-- Database boundary: existing isolated disposable Platform test databases and restricted runtime roles only.
-- Permission boundary: the isolated Operations Console fixture permission set receives only the four already-accepted media read permissions needed to compose the production view; no media manage permission, direct table access, public execution grant, or production entitlement is added.
-- Migration boundary: accepted migrations `0001`–`0026` remain byte-identical; no migration `0027` is present or authorized.
-- Dependency boundary: byte-identical `package-lock.json`, SHA-256 `2ab08e114391b67604e1c11d6462609616959d6d75cc8acbd90a48c22e59308a`; no dependency change.
-- Production workspace: read-only canonical PHOTO and VIDEO progress composed from accepted Capture, Cull, Editor Handoff, Returned Intake, Review, Job, and Mission Plan projections.
-- Desktop packet: deterministic secretless JSON bound to the exact immutable issued Mission Plan version/hash and selected service-workstream identities.
-- Split law: the web application owns Mission Plans, production status, handoff, returned intake, and editor review; Desktop remains the native large-file ingestion/culling/media worker.
-- UI law: PHOTO and VIDEO are direct visible lane cards; the production surface adds no dropdown.
-- Validation state: focused production-bridge `7/7`, Operations/Mission Plan `21/21`, editorial-segment `7/7`, two-reset determinism, schema, replay, security, dependency, migration, and changed-file checks pass. The inherited M19/M20 closeout wrapper remains intentionally branch/entry-bound to its historical candidate; its substantive tests and checks pass separately on this successor branch.
-- Non-effect boundary: no media was scanned, renamed, trimmed, copied, uploaded, downloaded, archived, handed off, deleted, or otherwise contacted. No provider, credential, production database, deployment, payment, notification, or `main` action occurred.
-- Freeze authority: staging and one exact candidate commit are allowed only for immutable independent review identity and package construction.
-- Prohibited before owner disposition: no push, remote branch, Platform fast-forward, deployment, production mutation, provider connection, real-media access, Desktop change, or next-packet work.
+- Branch: `platform-v2-p02-m22-a-contextual-editor-review-mobile-quick-edit-r01`.
+- Database boundary: isolated disposable Platform test databases and restricted runtime roles only.
+- Migration boundary: accepted migrations `0001`–`0026` remain ordered predecessors; candidate migration `0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql` adds only the contextual review/Quick Edit controlled surface and durable upload-intent state.
+- Runtime authority: exact SECURITY DEFINER functions with fixed search paths; no runtime or PUBLIC table/sequence DML. The Operations Console actor has capture/cull/editor-handoff read only, returned-review read/manage, and media-asset read/manage. Capture, cull, and editor-handoff manage remain false.
+- Review law: returned evidence must be complete and unambiguous before a deterministic sealed review starts. Review decisions are generation-bound; submission is blocked until all items resolve; completed history is read-only and appears only after submission.
+- Review presentation: the operator can switch between a status-marked thumbnail grid and a focused single-photo room with a compact, centered, floating thumbnail strip between the large image and decision controls. Grid mode supports explicit multi-selection, Select All/Deselect All, and bulk Accept/Reject/Quick Edit; bulk Reject and Quick Edit may carry one optional note to every selected item. Staged state is gray when undecided, green for Accept, yellow for Quick Edit, and red for Reject; the decision buttons use the same colors and clicking the primary photo opens the protected full-size inspection view. In single-photo mode Accept advances immediately, while Reject and Quick Edit stay on the photo and reveal the optional note.
+- Attention law: Editor Review, requested editor revision, and Quick Edit appear only when actionable. No permanent Review or Quick Edit tab is added.
+- Listing presentation: the selected listing uses one compact unlabeled overview card for appointment status and one displayed visit time, assigned crew, expandable service descriptions with immutable order prices, and client Call/Text/Email/Details actions. Canonical client editing remains assigned to the Clients workspace rather than being faked in this packet.
+- Scheduling presentation: one onsite appointment uses one calendar date plus start and end times for that same date. A multi-day job is represented by additional appointments, not a second end-date field on one visit.
+- Queue presentation: Today is folded into Upcoming, with today's non-completed jobs listed first. The standalone Today tab is removed.
+- Recorded follow-on direction: one job may later own multiple onsite appointments and additional service orders. This packet presents the accepted single active scheduling context and does not silently change appointment cardinality or scheduling state-machine law.
+- Recorded navigation direction: retain pipeline headers for Real Estate, Weddings, Commercial, and Creative. Add a separate hamburger menu for Mission Control, Clients, Financial, and Admin; remove Clients from the pipeline header when that navigation slice is implemented. The Weddings pipeline should later support an explicitly bounded collaborator view for Elena without broad internal access.
+- Recorded queue direction: Upcoming should later toggle between a compact order-card list and a calendar view with jobs placed on their appointment dates and contextual details on selection. Completed begins when a listing has been shot and its media cull is complete; Completed is the entry point to that job's Property Hub.
+- Current queue law: Upcoming opens into Mission Plan by default. Production is hidden until canonical cull evidence is complete (or its inventory is sealed with a current selection), then becomes available beside Mission Plan.
+- Owner presentation checkpoint: the current Mission Control and review-room direction is accepted. The single-photo filmstrip now preserves its prior viewport before moving only the neighboring distance to the newly selected thumbnail, eliminating the full-row recenter animation.
+- Quick Edit law: one explicit JPEG/PNG selection is streamed to the isolated managed store, verified, registered with immutable storage/verification/lineage evidence, linked to the request, and placed into a sealed successor review. Exact retries and concurrent equivalent uploads converge; conflicting bytes fail closed; definite rejection cleans only its attempt-owned bytes; ambiguous failure preserves recoverable bytes for retry.
+- Media access: same-origin opaque session, exact order/batch/item/purpose scope, verified checksum, one unambiguous `LOCAL_FIXTURE` object, no-store responses, and no path/provider disclosure. The synthetic owner preview uses only generated 70-byte PNG fixtures.
+- Mobile boundary: responsive iPhone workflow is proven locally. Physical-phone hosted HTTPS/auth/deployment remains outside this packet.
+- Dependency boundary: `package-lock.json` remains byte-identical; no dependency was added.
+- Validation state: all `59` inherited serial test files pass; strict TypeScript, runtime/dependency/placeholders, exact `83`-path inventory, migrations `0001–0027`, all schema gates, operational pilot, business/historical/current-era replay, current-era intake re-proof, two-reset determinism, diff hygiene, and the `44/44` integrated M22-A closeout suite pass. The only first-run failures were stale mechanical ledgers (81 versus 83 paths, predecessor START_FRESH wording, and the removed Today queue); each was reconciled without changing canonical product law and its affected gate then passed.
+- Non-effect boundary: no real media, AppSheet data, provider, cloud object, credential, production database, deployment, payment, notification, or `main` action was accessed or mutated.
+- Freeze/review boundary: exact local archive, readable expansion, hashes, and separate read-only review are required because this packet changes canonical review state, protected media resolution, and recoverable upload semantics. Drive publication is not required for this local-efficiency phase.
+- Prohibited before owner disposition: no push, Platform fast-forward, hosted mobile deployment, provider connection, real-media access, production mutation, or next-packet work.
 
 ## Preserved predecessor law
 
-P02-M17-A through P02-M20-A remain `GOVERNANCE_CLOSED` at canonical Platform `71b3990ee325cce024ba773e29def11174bf2ec1`. Their Operations Console, scheduling, assignment, Mission Plan, media-foundation, editorial-segment, replay, authority, and production-boundary decisions remain intact.
+P02-M17-A through P02-M20-A remain `GOVERNANCE_CLOSED`; P02-M21-A remains the accepted web-first production bridge predecessor. Mission Control, Mission Plans, production status, handoff, returned intake, and editor review remain web-owned. Desktop remains the native large-file ingestion, culling, and media-worker surface.
 
 START_FRESH records recovery intent for the same Person and Identity while preserving existing history. It does not delete or rewrite memberships, contacts, orders, payments, historical evidence, or profile/preferences data. Actual profile/preferences reset behavior remains deferred until those models exist.

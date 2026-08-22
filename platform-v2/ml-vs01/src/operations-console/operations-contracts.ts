@@ -124,7 +124,8 @@ export interface ProductionLaneWorkspace {
   handoff: { batchCount: number; currentState: string | null; itemCount: number;
     returnedSourceCount: number; outstandingSourceCount: number; unresolvedReturnCount: number };
   review: { batchCount: number; currentState: string | null; itemCount: number;
-    resolvedCount: number; unresolvedCount: number };
+    resolvedCount: number; unresolvedCount: number; finalSourceCount: number;
+    revisionRoutedCount: number; quickEditRoutedCount: number };
   exceptions: string[];
 }
 
@@ -164,6 +165,172 @@ export interface DesktopWorkPacket {
 
 export interface DesktopWorkPacketDownload { filename: string; packet: DesktopWorkPacket }
 
+export type ReturnedReviewDisposition =
+  | "ACCEPT"
+  | "REJECT_REVISION"
+  | "USE_ORIGINAL"
+  | "QUICK_EDIT"
+  | "SKIP_QUICK_EDIT";
+
+export type ReviewAttentionCode =
+  | "EDITOR_REVIEW_READY"
+  | "EDITOR_REVIEW_IN_PROGRESS"
+  | "EDITOR_REVISION_REQUIRED"
+  | "QUICK_EDIT_REQUIRED";
+
+export interface ReviewAttentionAction {
+  code: ReviewAttentionCode;
+  label: string;
+  lane: ProductionLane;
+  reviewBatchId: string | null;
+  reviewItemId: string | null;
+  quickEditRequestId: string | null;
+}
+
+export interface OperationsReviewAttentionItem {
+  orderId: string;
+  jobId: string;
+  actions: ReviewAttentionAction[];
+}
+
+export interface OperationsReviewAttention {
+  schema: typeof OPERATIONS_SCHEMA;
+  contract: "OperationsReviewAttentionV1";
+  items: OperationsReviewAttentionItem[];
+}
+
+export interface EditorReviewVersionSummary {
+  mediaAssetId: string;
+  versionId: string;
+  versionKind: string;
+  observedFilename: string;
+  byteSize: number;
+  mediaType: string;
+  checksumSha256: string;
+}
+
+export interface EditorReviewItem {
+  reviewItemId: string;
+  ordinal: number;
+  sourceKind: string;
+  decisionGeneration: number;
+  currentDecisionId: string | null;
+  currentDisposition: ReturnedReviewDisposition | null;
+  currentRouteState: string | null;
+  instructions: string | null;
+  version: EditorReviewVersionSummary;
+  previewAvailable: boolean;
+}
+
+export interface EditorReviewBatchWorkspace {
+  reviewBatchId: string;
+  lane: ProductionLane;
+  reviewCycleNumber: number;
+  currentState: string;
+  lifecycleGeneration: number;
+  itemCount: number;
+  resolvedCount: number;
+  unresolvedCount: number;
+  finalSourceCount: number;
+  revisionRoutedCount: number;
+  quickEditRoutedCount: number;
+  items: EditorReviewItem[];
+}
+
+export interface QuickEditWorkspaceItem {
+  quickEditRequestId: string;
+  reviewBatchId: string;
+  reviewItemId: string;
+  lane: ProductionLane;
+  instructions: string | null;
+  expectedReviewLifecycleGeneration: number;
+  expectedDecisionGeneration: number;
+  sourceVersion: EditorReviewVersionSummary;
+  uploadState: "AWAITING_UPLOAD" | "UPLOADING" | "RETRY_REQUIRED" | "CORRECTION_REGISTERED" | "FINALIZED";
+  uploadMessage: string;
+  downloadAvailable: boolean;
+  correctedVersionId: string | null;
+  successorReviewBatchId: string | null;
+}
+
+export interface CompletedReviewHistorySummary {
+  reviewBatchId: string;
+  lane: ProductionLane;
+  reviewCycleNumber: number;
+  completedAt: string;
+  itemCount: number;
+  finalSourceCount: number;
+  revisionRoutedCount: number;
+  quickEditRoutedCount: number;
+  decisions: Array<{
+    reviewItemId: string;
+    disposition: ReturnedReviewDisposition;
+    reason: string | null;
+    instructions: string | null;
+    decidedAt: string;
+  }>;
+}
+
+export interface OperationsReviewWorkspace {
+  schema: typeof OPERATIONS_SCHEMA;
+  contract: "OperationsReviewWorkspaceV1";
+  evidenceClassification: "NONPRODUCTION_CANONICAL_REVIEW";
+  disclosure: string;
+  context: OperationsContext;
+  actions: ReviewAttentionAction[];
+  activeReview: EditorReviewBatchWorkspace | null;
+  quickEdits: QuickEditWorkspaceItem[];
+  completedHistory: CompletedReviewHistorySummary[];
+}
+
+export interface ReviewStartInput {
+  idempotencyKey: string;
+  lane: ProductionLane;
+}
+
+export interface ReviewSubmissionInput {
+  idempotencyKey: string;
+  expectedGeneration: number;
+  decisions: Array<{
+    reviewItemId: string;
+    disposition: "ACCEPT" | "REJECT_REVISION" | "QUICK_EDIT";
+    instructions: string | null;
+    expectedGeneration: number;
+    currentDecisionId: string | null;
+  }>;
+}
+
+export interface ReviewActionReceipt {
+  schema: typeof OPERATIONS_SCHEMA;
+  contract: "ReviewActionReceiptV1";
+  action: "REVIEW_STARTED" | "DECISION_RECORDED" | "REVIEW_SUBMITTED";
+  replaySafe: true;
+  workspace: OperationsReviewWorkspace;
+}
+
+export interface QuickEditUploadReceipt {
+  schema: typeof OPERATIONS_SCHEMA;
+  contract: "QuickEditUploadReceiptV1";
+  accepted: true;
+  replaySafe: true;
+  requestId: string;
+  correctedVersionId: string;
+  successorReviewBatchId: string;
+  successorDecisionId: string;
+  successorCompletionEventId: string;
+  finalSourceVersionId: string;
+  uploadState: "FINALIZED";
+  workspace: OperationsReviewWorkspace;
+}
+
+export interface ReviewMediaDownload {
+  filename: string;
+  mediaType: "image/jpeg" | "image/png";
+  byteSize: number;
+  checksumSha256: string;
+  bytes: Buffer;
+}
+
 export interface OperationsContext {
   orderId: string;
   organizationId: string;
@@ -176,7 +343,8 @@ export interface OperationsContext {
     propertyId: string; propertySnapshotId: string; addressLine1: string; addressLine2: string | null;
     locality: string; administrativeArea: string; postalCode: string; countryCode: string; squareFeet: number | null;
   };
-  services: Array<{ orderItemId: string; position: number; displayName: string; quantity: number; commercialUnit: string }>;
+  services: Array<{ orderItemId: string; position: number; displayName: string; quantity: number; commercialUnit: string;
+    description?: string; unitAmountCents?: number; lineTotalCents?: number; currency?: string }>;
   propertyHubId: string | null;
   scheduling: null | { requestId: string; state: string; creationMode: string; createdAt: string; windows: Array<{
     windowId: string; kind: "REQUESTED" | "STAFF_PROPOSED"; startsAt: string; endsAt: string;
@@ -231,6 +399,22 @@ function object(value: unknown, keys: readonly string[]): Record<string, unknown
   }
   return result;
 }
+function objectWithOptional(
+  value: unknown,
+  requiredKeys: readonly string[],
+  optionalKeys: readonly string[],
+): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return fail("$", "must be an object");
+  const result = value as Record<string, unknown>;
+  const actual = Object.keys(result);
+  const allowed = new Set([...requiredKeys, ...optionalKeys]);
+  const missing = requiredKeys.filter((key) => !Object.hasOwn(result, key));
+  const unexpected = actual.filter((key) => !allowed.has(key));
+  if (missing.length > 0 || unexpected.length > 0) {
+    return fail("$", `must contain required ${requiredKeys.join(", ")} and only optional ${optionalKeys.join(", ")}`);
+  }
+  return result;
+}
 function string(value: unknown, path: string, max: number): string {
   if (typeof value !== "string" || value !== value.trim() || value.length < 1 || value.length > max) {
     return fail(path, `must be a trimmed string of 1-${max} characters`);
@@ -246,6 +430,22 @@ function uuid(value: unknown, path: string): string {
 function databaseUuid(value: unknown, path: string): string {
   if (typeof value !== "string" || !DATABASE_UUID.test(value)) return fail(path, "must be a database UUID");
   return value.toLowerCase();
+}
+
+function nonnegativeInteger(value: unknown, path: string): number {
+  if (!Number.isSafeInteger(value) || Number(value) < 0) return fail(path, "must be a nonnegative safe integer");
+  return Number(value);
+}
+
+function idempotencyKey(value: unknown, path: string): string {
+  const result = string(value, path, 100);
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{7,99}$/u.test(result)) return fail(path, "must be a bounded opaque key");
+  return result;
+}
+
+function nullableReviewText(value: unknown, path: string, maximum: number): string | null {
+  if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) return null;
+  return string(value, path, maximum);
 }
 function instant(value: unknown, path: string): string {
   const result = string(value, path, 40);
@@ -274,6 +474,59 @@ function window(value: unknown, reasonRequired: boolean): OperationsWindowInput 
 }
 
 export function parseEmpty(value: unknown): Record<string, never> { object(value, []); return Object.freeze({}); }
+
+export function parseReviewStart(value: unknown): ReviewStartInput {
+  const root = object(value, ["idempotencyKey", "lane"]);
+  const lane = string(root.lane, "$.lane", 10) as ProductionLane;
+  if (lane !== "PHOTO" && lane !== "VIDEO") return fail("$.lane", "is invalid");
+  return Object.freeze({ idempotencyKey: idempotencyKey(root.idempotencyKey, "$.idempotencyKey"), lane });
+}
+
+export function parseReviewSubmission(value: unknown): ReviewSubmissionInput {
+  const root = object(value, ["idempotencyKey", "expectedGeneration", "decisions"]);
+  if (!Array.isArray(root.decisions) || root.decisions.length < 1 || root.decisions.length > 500) {
+    return fail("$.decisions", "must be an array of 1-500 complete review decisions");
+  }
+  const decisions = root.decisions.map((value, index) => {
+    const decision = objectWithOptional(
+      value,
+      ["reviewItemId", "disposition", "expectedGeneration", "currentDecisionId"],
+      ["instructions"],
+    );
+    const disposition = string(decision.disposition, `$.decisions[${index}].disposition`, 30);
+    if (!["ACCEPT", "REJECT_REVISION", "QUICK_EDIT"].includes(disposition)) {
+      return fail(`$.decisions[${index}].disposition`, "is invalid for whole-review submission");
+    }
+    const instructions = nullableReviewText(
+      decision.instructions, `$.decisions[${index}].instructions`, 2000,
+    );
+    if (disposition === "ACCEPT" && instructions !== null) {
+      return fail(`$.decisions[${index}].instructions`, "is available only for Send back and Quick Edit");
+    }
+    if (decision.currentDecisionId !== null && typeof decision.currentDecisionId !== "string") {
+      return fail(`$.decisions[${index}].currentDecisionId`, "must be a canonical UUID or null");
+    }
+    return Object.freeze({
+      reviewItemId: uuid(decision.reviewItemId, `$.decisions[${index}].reviewItemId`),
+      disposition: disposition as "ACCEPT" | "REJECT_REVISION" | "QUICK_EDIT",
+      instructions,
+      expectedGeneration: nonnegativeInteger(
+        decision.expectedGeneration, `$.decisions[${index}].expectedGeneration`,
+      ),
+      currentDecisionId: decision.currentDecisionId === null
+        ? null
+        : uuid(decision.currentDecisionId, `$.decisions[${index}].currentDecisionId`),
+    });
+  });
+  if (new Set(decisions.map((decision) => decision.reviewItemId)).size !== decisions.length) {
+    return fail("$.decisions", "must contain each review item at most once");
+  }
+  return Object.freeze({
+    idempotencyKey: idempotencyKey(root.idempotencyKey, "$.idempotencyKey"),
+    expectedGeneration: nonnegativeInteger(root.expectedGeneration, "$.expectedGeneration"),
+    decisions,
+  });
+}
 export function parseRequestedWindow(value: unknown): OperationsWindowInput { return Object.freeze(window(value, false)); }
 export function parseProposedWindow(value: unknown): OperationsWindowInput { return Object.freeze(window(value, true)); }
 export function parseConfirm(value: unknown): ConfirmAppointmentInput {

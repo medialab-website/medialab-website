@@ -15,6 +15,11 @@ import type {
   MissionPlanVisibility,
   ReplacementInput,
   RescheduleAppointmentInput,
+  OperationsReviewAttentionItem,
+  EditorReviewBatchWorkspace,
+  QuickEditWorkspaceItem,
+  CompletedReviewHistorySummary,
+  ReviewSubmissionInput,
 } from "./operations-contracts.js";
 
 const { Pool } = pg;
@@ -63,7 +68,71 @@ export interface EditorHandoffProjection {
 export interface ReturnedReviewProjection {
   batch: { id: string; service_workstream_id: string | null; lane: "PHOTO" | "VIDEO"; created_at: string };
   current: { current_state: string; item_count: number; resolved_count: number;
-    unresolved_count: number; updated_at: string };
+    final_source_count: number; revision_routed_count: number; quick_edit_routed_count: number;
+    unresolved_count: number; lifecycle_generation: number; updated_at: string };
+}
+
+export interface OperationsReviewWorkspaceProjection {
+  context: OperationsContext;
+  actions: OperationsReviewAttentionItem["actions"];
+  activeReview: EditorReviewBatchWorkspace | null;
+  quickEdits: QuickEditWorkspaceItem[];
+  completedHistory: CompletedReviewHistorySummary[];
+}
+
+export interface ReviewMediaSourceProjection {
+  object_identifier: string;
+  filename: string;
+  byte_size: number | string;
+  checksum_sha256: string;
+  media_type: "image/jpeg" | "image/png";
+}
+
+export interface QuickEditUploadIntentProjection {
+  uploadIntentId: string;
+  requestId: string;
+  reviewBatchId?: string;
+  reviewItemId?: string;
+  state: string;
+  generation: number;
+  correctedVersionId?: string | null;
+  successorReviewBatchId?: string | null;
+  successorDecisionId?: string | null;
+  successorCompletionEventId?: string | null;
+  correctedChecksumSha256?: string | null;
+  registeredObjectIdentifier?: string | null;
+  expectedReviewLifecycleGeneration?: number;
+  expectedDecisionGeneration?: number;
+  replayed?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface QuickEditRegistrationProjection {
+  requestId: string;
+  correctedVersionId: string;
+  successorReviewBatchId: string;
+  successorDecisionId: string;
+  successorCompletionEventId: string;
+  finalSourceVersionId: string;
+  providerObjectIdentifier: string;
+  replayed: boolean;
+}
+
+export interface ReviewStartProjection {
+  reviewBatchId: string;
+  lane: "PHOTO" | "VIDEO";
+  itemCount: number;
+  lifecycleGeneration: number;
+  replayed: boolean;
+}
+
+export interface ReviewSubmissionProjection {
+  orderId: string;
+  reviewBatchId: string;
+  completedEventId: string;
+  decisions: Array<{ reviewItemId: string; decisionId: string }>;
+  replayed: boolean;
 }
 
 export interface ProductionEvidenceProjection {
@@ -621,10 +690,32 @@ export class OperationsConsoleDatabase {
   async getOperationsContext(databaseSessionToken: string, orderId: string): Promise<RawOperationsContext> {
     try {
       const context = await this.#context(this.pool, databaseSessionToken, orderId);
-      const result = await this.pool.query<{ get_operations_order_customer_contacts: Array<{
-        contactType: "EMAIL" | "PHONE"; displayValue: string;
-      }> }>("SELECT medialab_core.get_operations_order_customer_contacts($1,$2::uuid)", [databaseSessionToken, orderId]);
-      return { ...context, customer: { ...context.customer, contacts: result.rows[0]!.get_operations_order_customer_contacts } };
+      const [contactsResult, orderResult] = await Promise.all([
+        this.pool.query<{ get_operations_order_customer_contacts: Array<{
+          contactType: "EMAIL" | "PHONE"; displayValue: string;
+        }> }>("SELECT medialab_core.get_operations_order_customer_contacts($1,$2::uuid)", [databaseSessionToken, orderId]),
+        this.pool.query<{ get_order_record: CanonicalOrderRecord | null }>(
+          "SELECT medialab_core.get_order_record($1,$2::uuid)", [databaseSessionToken, orderId]),
+      ]);
+      const orderRecord = orderResult.rows[0]?.get_order_record;
+      if (!orderRecord) throw new OperationsConsoleDatabaseError("AUTHORITY", "The requested Order is unavailable.");
+      const itemsById = new Map(orderRecord.items.map((item) => [String(item.id || ""), item]));
+      const itemsByPosition = new Map(orderRecord.items.map((item) => [Number(item.position), item]));
+      const services = context.services.map((service) => {
+        const item = itemsById.get(service.orderItemId) || itemsByPosition.get(service.position);
+        if (!item) return service;
+        const customReason = typeof item.custom_reason === "string" ? item.custom_reason.trim() : "";
+        const unit = service.commercialUnit.toLowerCase().replaceAll("_", " ");
+        return {
+          ...service,
+          description: customReason || `${service.quantity} ${unit}${service.quantity === 1 ? "" : "s"}`,
+          unitAmountCents: numberValue(item.unit_amount_cents) ?? undefined,
+          lineTotalCents: numberValue(item.line_total_cents) ?? undefined,
+          currency: typeof item.currency === "string" ? item.currency : undefined,
+        };
+      });
+      return { ...context, services,
+        customer: { ...context.customer, contacts: contactsResult.rows[0]!.get_operations_order_customer_contacts } };
     }
     catch (error) { throw this.#databaseError(error); }
   }
@@ -892,6 +983,150 @@ export class OperationsConsoleDatabase {
         handoffBatches: handoff.rows.map((row) => row.evidence),
         reviewBatches: review.rows.map((row) => row.evidence),
       };
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async getOperationsReviewAttention(token: string): Promise<OperationsReviewAttentionItem[]> {
+    try {
+      const result = await this.pool.query<{ evidence: OperationsReviewAttentionItem }>(
+        "SELECT item AS evidence FROM medialab_core.list_operations_review_attention($1) AS item",
+        [token],
+      );
+      return result.rows.map((row) => row.evidence);
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async getOperationsReviewWorkspace(token: string, orderId: string): Promise<OperationsReviewWorkspaceProjection> {
+    try {
+      const result = await this.pool.query<{ get_operations_review_workspace: OperationsReviewWorkspaceProjection }>(
+        "SELECT medialab_core.get_operations_review_workspace($1,$2::uuid)", [token, orderId],
+      );
+      const workspace = result.rows[0]?.get_operations_review_workspace;
+      if (!workspace) throw new OperationsConsoleDatabaseError("AUTHORITY", "The review workspace is unavailable.");
+      return workspace;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async startOperationsEditorReview(
+    token: string,
+    idempotencyKey: string,
+    orderId: string,
+    lane: "PHOTO" | "VIDEO",
+  ): Promise<ReviewStartProjection> {
+    try {
+      const result = await this.pool.query<{ start_operations_editor_review: ReviewStartProjection }>(
+        "SELECT medialab_core.start_operations_editor_review($1,$2,$3::uuid,$4)",
+        [token, idempotencyKey, orderId, lane],
+      );
+      const receipt = result.rows[0]?.start_operations_editor_review;
+      if (!receipt) throw new OperationsConsoleDatabaseError("CONFLICT", "The editor review could not be started.");
+      return receipt;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async resolveOperationsReviewMediaSource(
+    token: string,
+    orderId: string,
+    reviewBatchId: string,
+    reviewItemId: string,
+    purpose: "REVIEW_PREVIEW" | "QUICK_EDIT_DOWNLOAD",
+  ): Promise<ReviewMediaSourceProjection> {
+    try {
+      const result = await this.pool.query<{ resolve_operations_review_media_source: ReviewMediaSourceProjection }>(
+        "SELECT medialab_core.resolve_operations_review_media_source($1,$2::uuid,$3::uuid,$4::uuid,$5)",
+        [token, orderId, reviewBatchId, reviewItemId, purpose],
+      );
+      const source = result.rows[0]?.resolve_operations_review_media_source;
+      if (!source) throw new OperationsConsoleDatabaseError("AUTHORITY", "The review media source is unavailable.");
+      return source;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async submitOperationsReview(
+    token: string,
+    idempotencyKey: string,
+    orderId: string,
+    reviewBatchId: string,
+    expectedGeneration: number,
+    decisions: ReviewSubmissionInput["decisions"],
+  ): Promise<ReviewSubmissionProjection> {
+    try {
+      const result = await this.pool.query<{ submit_operations_editor_review: ReviewSubmissionProjection }>(
+        `SELECT medialab_core.submit_operations_editor_review(
+          $1,$2,$3::uuid,$4::uuid,$5::bigint,$6::jsonb
+        )`,
+        [token, idempotencyKey, orderId, reviewBatchId, expectedGeneration, JSON.stringify(decisions)],
+      );
+      return result.rows[0]!.submit_operations_editor_review;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async createOperationsQuickEditUploadIntent(
+    token: string,
+    idempotencyKey: string,
+    orderId: string,
+    reviewBatchId: string,
+    reviewItemId: string,
+    requestId: string,
+    expectedReviewLifecycleGeneration: number,
+    expectedDecisionGeneration: number,
+  ): Promise<QuickEditUploadIntentProjection> {
+    try {
+      const result = await this.pool.query<{ create_operations_quick_edit_upload_intent: QuickEditUploadIntentProjection }>(
+        "SELECT medialab_core.create_operations_quick_edit_upload_intent($1,$2,$3::uuid,$4::uuid,$5::uuid,$6::uuid,$7::bigint,$8::bigint)",
+        [token, idempotencyKey, orderId, reviewBatchId, reviewItemId, requestId,
+          expectedReviewLifecycleGeneration, expectedDecisionGeneration],
+      );
+      return result.rows[0]!.create_operations_quick_edit_upload_intent;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async getOperationsQuickEditUploadIntent(
+    token: string,
+    orderId: string,
+    uploadIntentId: string,
+  ): Promise<QuickEditUploadIntentProjection> {
+    try {
+      const result = await this.pool.query<{ get_operations_quick_edit_upload_intent: QuickEditUploadIntentProjection }>(
+        "SELECT medialab_core.get_operations_quick_edit_upload_intent($1,$2::uuid,$3::uuid)",
+        [token, orderId, uploadIntentId],
+      );
+      return result.rows[0]!.get_operations_quick_edit_upload_intent;
+    } catch (error) { throw this.#databaseError(error); }
+  }
+
+  async registerOperationsQuickEditRevision(
+    token: string,
+    input: {
+      idempotencyKey: string;
+      orderId: string;
+      reviewBatchId: string;
+      reviewItemId: string;
+      requestId: string;
+      uploadIntentId: string;
+      expectedReviewLifecycleGeneration: number;
+      expectedDecisionGeneration: number;
+      expectedUploadGeneration: number;
+      filename: string;
+      byteSize: number;
+      mediaType: string;
+      checksumSha256: string;
+      objectIdentifier: string;
+      reason: string;
+    },
+  ): Promise<QuickEditRegistrationProjection> {
+    try {
+      const result = await this.pool.query<{ register_operations_quick_edit_revision: QuickEditRegistrationProjection }>(
+        `SELECT medialab_core.register_operations_quick_edit_revision(
+          $1,$2,$3::uuid,$4::uuid,$5::uuid,$6::uuid,$7::uuid,$8::bigint,$9::bigint,$10::bigint,
+          $11,$12::bigint,$13,$14,$15,$16
+        )`,
+        [token, input.idempotencyKey, input.orderId, input.reviewBatchId, input.reviewItemId, input.requestId,
+          input.uploadIntentId, input.expectedReviewLifecycleGeneration, input.expectedDecisionGeneration,
+          input.expectedUploadGeneration, input.filename, input.byteSize, input.mediaType, input.checksumSha256,
+          input.objectIdentifier, input.reason],
+      );
+      return result.rows[0]!.register_operations_quick_edit_revision;
     } catch (error) { throw this.#databaseError(error); }
   }
 

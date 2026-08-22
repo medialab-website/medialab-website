@@ -33,7 +33,7 @@ if (fs.existsSync(canonicalDir)) {
   const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort();
 
   if (
-    sqlFiles.length !== 26 ||
+    sqlFiles.length !== 27 ||
     sqlFiles[0] !== '0001_identity_and_tenancy.sql' ||
     sqlFiles[1] !== '0002_property_identity_and_snapshots.sql' ||
     sqlFiles[2] !== '0003_person_contacts_and_account_lifecycle.sql' ||
@@ -59,9 +59,10 @@ if (fs.existsSync(canonicalDir)) {
     sqlFiles[22] !== '0023_runtime_intake_reconciliation_commands.sql' ||
     sqlFiles[23] !== '0024_operations_home_scheduling_assignment_console.sql' ||
     sqlFiles[24] !== '0025_operations_mission_plan_draft_controls.sql' ||
-    sqlFiles[25] !== '0026_editorial_segment_foundation.sql'
+    sqlFiles[25] !== '0026_editorial_segment_foundation.sql' ||
+    sqlFiles[26] !== '0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql'
   ) {
-    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0026. Found: ${sqlFiles.join(', ')}`);
+    console.error(`ERROR: Canonical migration directory must contain exactly 0001 through 0027. Found: ${sqlFiles.join(', ')}`);
     errors = true;
   }
 
@@ -140,6 +141,7 @@ const allowedCanonical23 = path.join(baseDir, 'db/migrations/0023_runtime_intake
 const allowedCanonical24 = path.join(baseDir, 'db/migrations/0024_operations_home_scheduling_assignment_console.sql');
 const allowedCanonical25 = path.join(baseDir, 'db/migrations/0025_operations_mission_plan_draft_controls.sql');
 const allowedCanonical26 = path.join(baseDir, 'db/migrations/0026_editorial_segment_foundation.sql');
+const allowedCanonical27 = path.join(baseDir, 'db/migrations/0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql');
 
 for (const sqlFile of allSqlFiles) {
   if (
@@ -169,7 +171,8 @@ for (const sqlFile of allSqlFiles) {
     sqlFile !== allowedCanonical23 &&
     sqlFile !== allowedCanonical24 &&
     sqlFile !== allowedCanonical25 &&
-    sqlFile !== allowedCanonical26
+    sqlFile !== allowedCanonical26 &&
+    sqlFile !== allowedCanonical27
   ) {
     console.error(`ERROR: SQL file outside isolated test-fixture directory: ${sqlFile}`);
     errors = true;

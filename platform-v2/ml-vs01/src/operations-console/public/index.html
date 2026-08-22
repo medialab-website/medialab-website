@@ -24,6 +24,13 @@
       </div>
     </header>
 
+    <nav class="workspace-toolbar" aria-label="MediaLab workspace">
+      <a class="workspace-toolbar-link" data-workspace-destination="real-estate" href="/operations?section=real-estate">Real Estate</a>
+      <a class="workspace-toolbar-link" data-workspace-destination="weddings" href="/operations?section=weddings">Weddings</a>
+      <a class="workspace-toolbar-link" data-workspace-destination="commercial" href="/operations?section=commercial">Commercial</a>
+      <a class="workspace-toolbar-link" data-workspace-destination="clients" href="/operations?section=clients">Clients</a>
+    </nav>
+
     <div class="boundary-notice" role="note" aria-labelledby="boundary-heading">
       <div aria-hidden="true" class="notice-mark">i</div>
       <div>
@@ -211,13 +218,12 @@
       </div>
       <nav class="queue-tabs" aria-label="Mission Control views">
         <button type="button" data-queue="attention" aria-pressed="true">Needs attention <span id="attention-count">0</span></button>
-        <button type="button" data-queue="today" aria-pressed="false">Today <span id="today-count">0</span></button>
         <button type="button" data-queue="upcoming" aria-pressed="false">Upcoming <span id="upcoming-count">0</span></button>
         <button type="button" data-queue="completed" aria-pressed="false">Completed <span id="completed-count">0</span></button>
       </nav>
       <div class="operations-layout">
         <section class="queue-panel" aria-labelledby="queue-heading">
-          <h3 id="queue-heading">Today</h3><div id="operations-list" class="operations-list"></div>
+          <h3 id="queue-heading">Upcoming</h3><div id="operations-list" class="operations-list"></div>
         </section>
         <aside id="operations-detail" class="operations-detail" aria-live="polite">
           <div class="empty-detail"><h3>Select an order</h3><p>Open any item to schedule work, assign crew, or prepare its Mission Plan.</p></div>

@@ -36,7 +36,11 @@ describe("P02-M17-A Operations Console browser surface", () => {
 
   it("uses only same-origin static assets, safe DOM construction, and no raw JSON presentation", () => {
     const assetUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
-    expect(assetUrls.filter((url) => !url.startsWith("mailto:"))).toEqual(["/styles.css", "/app.js", "#console-main", "/brand-logo.jpg", "/operations", "/"]);
+    expect(assetUrls.filter((url) => !url.startsWith("mailto:"))).toEqual([
+      "/styles.css", "/app.js", "#console-main", "/brand-logo.jpg",
+      "/operations?section=real-estate", "/operations?section=weddings",
+      "/operations?section=commercial", "/operations?section=clients", "/operations", "/",
+    ]);
     expect(assetUrls.filter((url) => url.startsWith("mailto:"))).toEqual([
       "mailto:solutions@medialab.fyi?subject=Help%20with%20a%20MediaLab%20service%20request",
     ]);
@@ -162,15 +166,29 @@ describe("P02-M17-A Operations Console browser surface", () => {
     expect(javascript).toContain("Recommended for this square footage");
     expect(javascript).toContain("What’s included");
     expect(html).toContain('data-queue="attention"');
+    expect(html).toContain('data-queue="upcoming"');
     expect(html).toContain('data-queue="completed"');
+    expect(html).not.toContain('data-queue="today"');
+    expect(javascript).toContain('const OPERATIONS_QUEUES = ["attention", "upcoming", "completed"]');
+    expect(javascript).toContain('[...(sections?.today || []), ...(sections?.upcoming || [])]');
+    const scheduling = functionBody(javascript, "function schedulingForm", "function appointmentSection");
+    expect(scheduling).toContain('field("Appointment date", "date", "appointmentDate")');
+    expect(scheduling).toContain('field("Start time", "time", "startTime")');
+    expect(scheduling).toContain('field("End time", "time", "endTime")');
+    expect(scheduling).not.toContain('"datetime-local"');
+    expect(scheduling).not.toContain('field("Ends"');
     expect(javascript).toContain("Appointment confirmed. Crew and services are ready.");
     expect(javascript).toContain("Crew assignment saved.");
     expect(javascript).toContain("Save Mission Plan Offline");
     expect(javascript).toContain("Cancel this appointment?");
     expect(javascript).toContain("Get Directions");
-    expect(javascript).toContain("Appointment & Scheduling");
-    expect(javascript).toContain("Order Scope");
-    expect(javascript).toContain("Customer Information");
+    expect(javascript).toContain("listing-overview-card");
+    expect(javascript).toContain("Pending Confirmation");
+    expect(javascript).toContain("overview-services");
+    expect(javascript).toContain("overview-client-actions");
+    expect(javascript).not.toContain('summaryField("Status"');
+    expect(javascript).not.toContain('element("h4", "", "Order Scope")');
+    expect(javascript).not.toContain('element("h4", "", "Client Information")');
     expect(javascript).not.toContain("Property route");
     expect(javascript).toContain("Edit crew");
     expect(javascript).toContain("Live weather is not connected in this nonproduction build.");

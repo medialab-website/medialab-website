@@ -109,7 +109,7 @@ describe('P02-M10-A Capture Session, ingest, and custody foundation', () => {
 
   it('replays thirteen migrations with exact controlled grants, zero PUBLIC authority, and permission-only fixtures', async () => {
     const ledger = await owner.query('SELECT filename FROM medialab_meta.schema_migrations ORDER BY filename');
-    expect(ledger.rows).toHaveLength(26);
+    expect(ledger.rows).toHaveLength(27);
     expect(ledger.rows[22].filename).toBe('0023_runtime_intake_reconciliation_commands.sql');
     expect(ledger.rows[12].filename).toBe('0013_capture_session_ingest_custody_foundation.sql');
     const functions = await owner.query(

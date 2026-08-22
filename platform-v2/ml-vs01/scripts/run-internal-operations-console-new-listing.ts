@@ -43,6 +43,10 @@ import {
   MISSION_PLAN_PERMISSION_SET_PERMISSION_FIXTURES,
 } from "../db/fixtures/mission-plan-foundation-fixtures.js";
 import {
+  MEDIA_ASSET_PERMISSION_FIXTURES,
+  MEDIA_ASSET_PERMISSION_SET_PERMISSION_FIXTURES,
+} from "../db/fixtures/media-asset-identity-lineage-fixtures.js";
+import {
   MEDIA_CAPTURE_PERMISSION_FIXTURES,
   MEDIA_CAPTURE_PERMISSION_SET_PERMISSION_FIXTURES,
 } from "../db/fixtures/capture-session-ingest-custody-fixtures.js";
@@ -60,6 +64,7 @@ import {
 } from "../db/fixtures/returned-editor-review-final-source-fixtures.js";
 import { startOperationsConsole } from "../src/operations-console/server.js";
 import { OperationsConsoleService } from "../src/operations-console/service.js";
+import { ReviewMediaStore } from "../src/operations-console/review-media-store.js";
 import {
   commercialFingerprint,
   OperationsConsoleDatabase,
@@ -190,7 +195,7 @@ function assertEvidencePrivacy(label: string, serialized: string): void {
 
 function exactMigrationLedger(ledger: BootstrapObservation["ledger"]): boolean {
   return Array.isArray(ledger)
-    && ledger.length === 26
+    && ledger.length === 27
     && ledger.every((entry, index) => (
       typeof entry?.filename === "string"
       && entry.filename.startsWith(`${String(index + 1).padStart(4, "0")}_`)
@@ -263,7 +268,18 @@ function assertDirectObservations(
   const authority = observations.authority;
   if (authority.runtimeTableDml !== 0 || authority.runtimeSequenceAuthority !== 0
       || authority.publicTableDml !== 0 || authority.publicFunctionExecution !== 0
-      || authority.runtimeFunctionExecutionCount <= 0 || observations.sensitiveValuesExcluded !== true) {
+      || authority.runtimeFunctionExecutionCount <= 0
+      || authority.actorPermissions["media_capture.read"] !== true
+      || authority.actorPermissions["media_capture.manage"] !== false
+      || authority.actorPermissions["media_cull.read"] !== true
+      || authority.actorPermissions["media_cull.manage"] !== false
+      || authority.actorPermissions["media_editor_handoff.read"] !== true
+      || authority.actorPermissions["media_editor_handoff.manage"] !== false
+      || authority.actorPermissions["media_return_review.read"] !== true
+      || authority.actorPermissions["media_return_review.manage"] !== true
+      || authority.actorPermissions["media_asset.read"] !== true
+      || authority.actorPermissions["media_asset.manage"] !== true
+      || observations.sensitiveValuesExcluded !== true) {
     throw new Error("M17A_OBSERVATIONS_AUTHORITY_FAILURE");
   }
 }
@@ -287,7 +303,7 @@ function directRuntimeSources(
   const http = observations.httpFlow;
   const authority = observations.authority;
 
-  if (id === 5) add("runtime:migration-ledger", "Both fresh reset ledgers contain the exact ordered 0001 through 0026 inventory with matching hashes.");
+  if (id === 5) add("runtime:migration-ledger", "Both fresh reset ledgers contain the exact ordered 0001 through 0027 inventory with matching hashes.");
   if (id === 6) add("runtime:double-reset", `Fresh reset observations 1 and 2 each seeded deterministic rows (${observations.bootstrap.firstReset.seededRows}, ${observations.bootstrap.secondReset.seededRows}).`);
   if (id === 13) add("runtime:loopback-http", "The complete HTTP scenario succeeded on the fixed 127.0.0.1:4317 boundary.");
   if (id === 14) add("runtime:restricted-role", `Business execution used the fixed ${observations.boundary.runtimeRole} role boundary.`);
@@ -599,6 +615,7 @@ async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
     ...SCHEDULING_PERMISSION_FIXTURES,
     ...JOB_SERVICE_PERMISSION_FIXTURES,
     ...MISSION_PLAN_PERMISSION_FIXTURES,
+    ...MEDIA_ASSET_PERMISSION_FIXTURES,
     ...MEDIA_CAPTURE_PERMISSION_FIXTURES,
     ...MEDIA_CULL_PERMISSION_FIXTURES,
     ...MEDIA_EDITOR_HANDOFF_PERMISSION_FIXTURES,
@@ -613,9 +630,13 @@ async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
     ...SCHEDULING_PERMISSION_SET_PERMISSION_FIXTURES,
     ...JOB_SERVICE_PERMISSION_SET_PERMISSION_FIXTURES,
     ...MISSION_PLAN_PERMISSION_SET_PERMISSION_FIXTURES,
-    ...MEDIA_CAPTURE_PERMISSION_SET_PERMISSION_FIXTURES,
-    ...MEDIA_CULL_PERMISSION_SET_PERMISSION_FIXTURES,
-    ...MEDIA_EDITOR_HANDOFF_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...MEDIA_ASSET_PERMISSION_SET_PERMISSION_FIXTURES,
+    ...MEDIA_CAPTURE_PERMISSION_SET_PERMISSION_FIXTURES.filter((binding) =>
+      binding.permission_id === MEDIA_CAPTURE_PERMISSION_FIXTURES.find((permission) => permission.code === "media_capture.read")!.id),
+    ...MEDIA_CULL_PERMISSION_SET_PERMISSION_FIXTURES.filter((binding) =>
+      binding.permission_id === MEDIA_CULL_PERMISSION_FIXTURES.find((permission) => permission.code === "media_cull.read")!.id),
+    ...MEDIA_EDITOR_HANDOFF_PERMISSION_SET_PERMISSION_FIXTURES.filter((binding) =>
+      binding.permission_id === MEDIA_EDITOR_HANDOFF_PERMISSION_FIXTURES.find((permission) => permission.code === "media_editor_handoff.read")!.id),
     ...MEDIA_RETURN_REVIEW_PERMISSION_SET_PERMISSION_FIXTURES,
   ]);
   inserted += await insertRows(client, "membership_permission_sets", MEMBERSHIP_PERMISSION_SET_FIXTURES);
@@ -642,7 +663,7 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
       database: OPERATIONS_CONSOLE_DATABASE.database,
       user: OWNER_ROLE,
     });
-    if (migration.failed || migration.applied.length !== 26 || migration.skipped.length !== 0) {
+    if (migration.failed || migration.applied.length !== 27 || migration.skipped.length !== 0) {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     await client.query("BEGIN");
@@ -657,8 +678,9 @@ export async function resetAndSeedOperationsConsoleDatabase(resetNumber = 1): Pr
     const ledger = await client.query<{ filename: string; sha256: string }>(
       "SELECT filename,sha256 FROM medialab_meta.schema_migrations ORDER BY filename",
     );
-    if (ledger.rows.length !== 26 || !ledger.rows[0]?.filename.startsWith("0001_") ||
-        !ledger.rows[24]?.filename.startsWith("0025_") || !ledger.rows[25]?.filename.startsWith("0026_")) {
+    if (ledger.rows.length !== 27 || !ledger.rows[0]?.filename.startsWith("0001_") ||
+        !ledger.rows[24]?.filename.startsWith("0025_") || !ledger.rows[25]?.filename.startsWith("0026_") ||
+        ledger.rows[26]?.filename !== "0027_contextual_editor_review_mobile_quick_edit_web_bridge.sql") {
       throw new Error("M17A_SETUP_MIGRATION_LEDGER_FAILURE");
     }
     return { ledger: ledger.rows, resetNumber, seededRows };
@@ -842,7 +864,12 @@ async function jsonRequest(url: string, cookie: string | null, method = "GET", b
 
 async function runHttpFlow(context: ServerBoundDevelopmentOperatorContext): Promise<HttpFlowObservation> {
   const database = new OperationsConsoleDatabase();
-  const service = new OperationsConsoleService(database);
+  const reviewMediaRoot = resolve(OPERATIONS_CONSOLE_OUTPUT_ROOT, "review-media-store");
+  await rm(reviewMediaRoot, { recursive: true, force: true });
+  await mkdir(reviewMediaRoot, { recursive: true, mode: 0o700 });
+  const service = new OperationsConsoleService(database, {
+    reviewMediaStore: new ReviewMediaStore({ root: reviewMediaRoot }),
+  });
   const sessions = new DevelopmentOperatorSessionManager({ ttlSeconds: 900 });
   const app = await startOperationsConsole({ service, sessions, developmentOperatorContext: context });
   try {
@@ -937,12 +964,30 @@ async function authorityProof() {
        WHERE n.nspname='medialab_core' AND has_function_privilege($1,p.oid,'EXECUTE')`,
       [RUNTIME_ROLE],
     );
+    const permissionCodes = [
+      "media_capture.read",
+      "media_capture.manage",
+      "media_cull.read",
+      "media_cull.manage",
+      "media_editor_handoff.read",
+      "media_editor_handoff.manage",
+      "media_return_review.read",
+      "media_return_review.manage",
+      "media_asset.read",
+      "media_asset.manage",
+    ] as const;
+    const actorPermissionRows = await client.query<{ code: string; allowed: boolean }>(
+      `SELECT code, medialab_core.actor_has_permission($1,$2,code) AS allowed
+         FROM unnest($3::text[]) AS requested(code)`,
+      [OPERATOR_IDENTITY_ID, OPERATIONS_CONSOLE_ORGANIZATION_ID, permissionCodes],
+    );
     return {
       runtimeTableDml: runtimeTableDml.rows[0]!.count,
       runtimeSequenceAuthority: runtimeSequence.rows[0]!.count,
       publicTableDml: publicTableDml.rows[0]!.count,
       publicFunctionExecution: publicFunctions.rows[0]!.count,
       runtimeFunctionExecutionCount: runtimeFunctions.rows[0]!.count,
+      actorPermissions: Object.fromEntries(actorPermissionRows.rows.map((row) => [row.code, row.allowed])),
     };
   } finally {
     await client.end();
@@ -962,7 +1007,17 @@ export async function runInternalOperationsConsoleNewListing(): Promise<RuntimeO
   const httpFlow = await runHttpFlow(issued.context);
   const authority = await authorityProof();
   if (authority.runtimeTableDml !== 0 || authority.runtimeSequenceAuthority !== 0 ||
-      authority.publicTableDml !== 0 || authority.publicFunctionExecution !== 0) {
+      authority.publicTableDml !== 0 || authority.publicFunctionExecution !== 0 ||
+      authority.actorPermissions["media_capture.read"] !== true ||
+      authority.actorPermissions["media_capture.manage"] !== false ||
+      authority.actorPermissions["media_cull.read"] !== true ||
+      authority.actorPermissions["media_cull.manage"] !== false ||
+      authority.actorPermissions["media_editor_handoff.read"] !== true ||
+      authority.actorPermissions["media_editor_handoff.manage"] !== false ||
+      authority.actorPermissions["media_return_review.read"] !== true ||
+      authority.actorPermissions["media_return_review.manage"] !== true ||
+      authority.actorPermissions["media_asset.read"] !== true ||
+      authority.actorPermissions["media_asset.manage"] !== true) {
     throw new Error("M17A_RUNTIME_AUTHORITY_PROOF_FAILURE");
   }
   const result: RuntimeObservations = {

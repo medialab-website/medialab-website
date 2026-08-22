@@ -33,6 +33,8 @@ import {
   parseMissionPlanWorkstreamSelection,
   parseProposedWindow,
   parseReplacement,
+  parseReviewStart,
+  parseReviewSubmission,
   parseRequestedWindow,
   parseReschedule,
   type AssignmentCandidates,
@@ -49,8 +51,15 @@ import {
   type OperationsActionReceipt,
   type OperationsContext,
   type OperationsHome,
+  type OperationsReviewAttention,
+  type OperationsReviewWorkspace,
   type OperationsWindowInput,
   type ProductionWorkspace,
+  type QuickEditUploadReceipt,
+  type ReviewActionReceipt,
+  type ReviewMediaDownload,
+  type ReviewStartInput,
+  type ReviewSubmissionInput,
   type ReplacementInput,
   type RescheduleAppointmentInput,
 } from "./operations-contracts.js";
@@ -58,6 +67,8 @@ import {
 const publicRoot = join(dirname(fileURLToPath(import.meta.url)), "public");
 const brandAssetsRoot = join(dirname(fileURLToPath(import.meta.url)), "../../../../assets/logos");
 const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9_-]{7,99}$/u;
+const MAXIMUM_REVIEW_IMAGE_BYTES = 25 * 1024 * 1024;
 
 const SECURITY_HEADERS = Object.freeze({
   "cache-control": "no-store, max-age=0",
@@ -90,6 +101,17 @@ export interface OperationsConsoleApplicationService {
   replaceParticipant?(session: ResolvedDevelopmentOperatorSession, orderId: string, appointmentId: string, assignmentId: string, input: ReplacementInput): Promise<OperationsActionReceipt>;
   missionPlanWorkspace?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanWorkspace>;
   productionWorkspace?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<ProductionWorkspace>;
+  reviewAttention?(session: ResolvedDevelopmentOperatorSession): Promise<OperationsReviewAttention>;
+  reviewWorkspace?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<OperationsReviewWorkspace>;
+  startReview?(session: ResolvedDevelopmentOperatorSession, orderId: string,
+    input: ReviewStartInput): Promise<ReviewActionReceipt>;
+  submitReview?(session: ResolvedDevelopmentOperatorSession, orderId: string, reviewBatchId: string,
+    input: ReviewSubmissionInput): Promise<ReviewActionReceipt>;
+  reviewMedia?(session: ResolvedDevelopmentOperatorSession, orderId: string, reviewBatchId: string,
+    reviewItemId: string, purpose: "REVIEW_PREVIEW" | "QUICK_EDIT_DOWNLOAD"): Promise<ReviewMediaDownload>;
+  uploadQuickEditRevision?(session: ResolvedDevelopmentOperatorSession, orderId: string, requestId: string,
+    input: { idempotencyKey: string; filename: string; mediaType: "image/jpeg" | "image/png";
+      body: Buffer | AsyncIterable<Uint8Array> }): Promise<QuickEditUploadReceipt>;
   desktopWorkPacket?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<DesktopWorkPacketDownload>;
   createMissionPlanDraft?(session: ResolvedDevelopmentOperatorSession, orderId: string): Promise<MissionPlanActionReceipt>;
   reviseMissionPlanDraft?(session: ResolvedDevelopmentOperatorSession, orderId: string, missionPlanId: string, sections: MissionPlanSectionInput[]): Promise<MissionPlanActionReceipt>;
@@ -144,6 +166,27 @@ function isoRange(value: string | undefined): string {
   return date.toISOString();
 }
 
+function reviewMediaPurpose(value: string | undefined): "REVIEW_PREVIEW" | "QUICK_EDIT_DOWNLOAD" {
+  if (value === "REVIEW_PREVIEW" || value === "QUICK_EDIT_DOWNLOAD") return value;
+  throw operationsConsoleError("INVALID_REQUEST");
+}
+
+function quickEditUploadQuery(query: { idempotencyKey?: string; filename?: string }): {
+  idempotencyKey: string; filename: string;
+} {
+  if (typeof query.idempotencyKey !== "string" || !IDEMPOTENCY_KEY.test(query.idempotencyKey) ||
+      typeof query.filename !== "string" || query.filename.length === 0 || query.filename.length > 255 ||
+      query.filename !== query.filename.trim() || /[\\/\u0000-\u001f\u007f]/u.test(query.filename)) {
+    throw operationsConsoleError("INVALID_REQUEST");
+  }
+  return { idempotencyKey: query.idempotencyKey, filename: query.filename };
+}
+
+function reviewMediaDisposition(filename: string, purpose: "REVIEW_PREVIEW" | "QUICK_EDIT_DOWNLOAD"): string {
+  const encoded = encodeURIComponent(filename).replaceAll("'", "%27");
+  return `${purpose === "QUICK_EDIT_DOWNLOAD" ? "attachment" : "inline"}; filename*=UTF-8''${encoded}`;
+}
+
 export function createOperationsConsoleApp(options: OperationsConsoleApplicationOptions) {
   const app = Fastify({
     logger: false,
@@ -151,6 +194,8 @@ export function createOperationsConsoleApp(options: OperationsConsoleApplication
     bodyLimit: 65_536,
     requestIdHeader: false,
   });
+
+  app.addContentTypeParser(["image/jpeg", "image/png"], (_request, payload, done) => done(null, payload));
 
   app.addHook("onRequest", async (request) => {
     assertSameOrigin(request);
@@ -237,6 +282,48 @@ export function createOperationsConsoleApp(options: OperationsConsoleApplication
     options.service.missionPlanWorkspace!(authenticated(options.sessions, request), canonicalId(request.params.orderId)));
   app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId/production", async (request) =>
     options.service.productionWorkspace!(authenticated(options.sessions, request), canonicalId(request.params.orderId)));
+  app.get("/api/operations/review-attention", async (request) =>
+    options.service.reviewAttention!(authenticated(options.sessions, request)));
+  app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId/review-workspace", async (request) =>
+    options.service.reviewWorkspace!(authenticated(options.sessions, request), canonicalId(request.params.orderId)));
+  app.post<{ Params: { orderId: string }; Body: unknown }>(
+    "/api/operations/orders/:orderId/reviews/start", async (request) =>
+      options.service.startReview!(authenticated(options.sessions, request), canonicalId(request.params.orderId),
+        parseReviewStart(request.body)));
+  app.post<{ Params: { orderId: string; reviewBatchId: string }; Body: unknown }>(
+    "/api/operations/orders/:orderId/reviews/:reviewBatchId/submit", async (request) =>
+      options.service.submitReview!(authenticated(options.sessions, request), canonicalId(request.params.orderId),
+        canonicalId(request.params.reviewBatchId), parseReviewSubmission(request.body)));
+  app.get<{ Params: { orderId: string; reviewBatchId: string; reviewItemId: string };
+    Querystring: { purpose?: string } }>(
+    "/api/operations/orders/:orderId/review-media/:reviewBatchId/items/:reviewItemId", async (request, reply) => {
+      const purpose = reviewMediaPurpose(request.query.purpose);
+      const media = await options.service.reviewMedia!(authenticated(options.sessions, request),
+        canonicalId(request.params.orderId), canonicalId(request.params.reviewBatchId),
+        canonicalId(request.params.reviewItemId), purpose);
+      return reply.type(media.mediaType)
+        .header("content-disposition", reviewMediaDisposition(media.filename, purpose))
+        .header("content-length", String(media.byteSize))
+        .header("x-content-sha256", media.checksumSha256)
+        .send(media.bytes);
+    });
+  app.post<{ Params: { orderId: string; requestId: string };
+    Querystring: { idempotencyKey?: string; filename?: string }; Body: unknown }>(
+    "/api/operations/orders/:orderId/quick-edit/:requestId/revision",
+    { bodyLimit: MAXIMUM_REVIEW_IMAGE_BYTES },
+    async (request) => {
+      const query = quickEditUploadQuery(request.query);
+      const mediaType = request.headers["content-type"]?.split(";", 1)[0]?.trim();
+      if (mediaType !== "image/jpeg" && mediaType !== "image/png") throw operationsConsoleError("INVALID_REQUEST");
+      const body = request.body;
+      if (body === null || typeof body !== "object" || !(Symbol.asyncIterator in body) && !Buffer.isBuffer(body)) {
+        throw operationsConsoleError("INVALID_REQUEST");
+      }
+      return options.service.uploadQuickEditRevision!(authenticated(options.sessions, request),
+        canonicalId(request.params.orderId), canonicalId(request.params.requestId), {
+          ...query, mediaType, body: body as Buffer | AsyncIterable<Uint8Array>,
+        });
+    });
   app.get<{ Params: { orderId: string } }>("/api/operations/orders/:orderId/desktop-work-packet", async (request, reply) => {
     const download = await options.service.desktopWorkPacket!(authenticated(options.sessions, request), canonicalId(request.params.orderId));
     return reply.type("application/json; charset=utf-8")
