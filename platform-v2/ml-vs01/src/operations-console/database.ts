@@ -24,15 +24,44 @@ import type {
 
 const { Pool } = pg;
 
-export const OPERATIONS_CONSOLE_DATABASE = Object.freeze({
+export interface OperationsConsoleDatabaseBoundary {
+  readonly host: string;
+  readonly port: number;
+  readonly database: string;
+  readonly user: string;
+  readonly applicationName: string;
+}
+
+export const OPERATIONS_CONSOLE_DATABASE: OperationsConsoleDatabaseBoundary = Object.freeze({
   host: "/tmp/mlvs01-p02m17a-pg",
   port: 55448,
   database: "medialab_p02m17a_test",
   user: "medialab_p02m17a_test_app",
+  applicationName: "p02-m17-a-operations-console",
 });
+
+export const CONTROLLED_PILOT_DATABASE: OperationsConsoleDatabaseBoundary = Object.freeze({
+  host: "/tmp/mlvs01-p02m24a-pg",
+  port: 55450,
+  database: "medialab_p02m24a_pilot",
+  user: "medialab_p02m24a_pilot_app",
+  applicationName: "p02-m24-a-controlled-mission-control-pilot",
+});
+
+export type OperationsConsoleDatabaseMode = "ACCEPTED_TEST" | "CONTROLLED_PILOT";
+
+export function operationsConsoleDatabaseBoundary(
+  mode: OperationsConsoleDatabaseMode = "ACCEPTED_TEST",
+): OperationsConsoleDatabaseBoundary {
+  if (mode === "ACCEPTED_TEST") return OPERATIONS_CONSOLE_DATABASE;
+  if (mode === "CONTROLLED_PILOT") return CONTROLLED_PILOT_DATABASE;
+  throw new OperationsConsoleDatabaseError("AUTHORITY", "The Operations Console database mode is invalid.");
+}
 
 export const OPERATIONS_CONSOLE_ORGANIZATION_ID = "6d91cee6-91c1-52ea-937a-77c1ddc51c63";
 export const OPERATIONS_CONSOLE_OPERATOR_PERSON_ID = "d43d9499-efbd-5116-b561-67dd34d1df8d";
+export const OPERATIONS_CONSOLE_OPERATOR_IDENTITY_ID = "87c0043a-334f-548c-95d7-d53939ab054b";
+export const OPERATIONS_CONSOLE_OPERATOR_MEMBERSHIP_ID = "50d8b321-7b99-5bd9-b1a4-cecb924ecc39";
 const SNAPSHOT_NAMESPACE = "bd1c8468-6b68-5cbb-97d2-df8aeb4b3db1";
 const SOURCE_SYSTEM = "INTERNAL_OPERATIONS_CONSOLE";
 type RawOperationsContext = OperationsContext & {
@@ -482,20 +511,25 @@ function ensureCanonicalReadback(
 
 export class OperationsConsoleDatabase {
   readonly pool: pg.Pool;
+  readonly boundary: OperationsConsoleDatabaseBoundary;
 
-  constructor() {
-    const boundary = OPERATIONS_CONSOLE_DATABASE;
-    if (boundary.host !== "/tmp/mlvs01-p02m17a-pg" || boundary.port !== 55448 ||
-        boundary.database !== "medialab_p02m17a_test" || boundary.user !== "medialab_p02m17a_test_app") {
+  constructor(mode: OperationsConsoleDatabaseMode = "ACCEPTED_TEST") {
+    const boundary = operationsConsoleDatabaseBoundary(mode);
+    const acceptedTest = boundary.host === "/tmp/mlvs01-p02m17a-pg" && boundary.port === 55448 &&
+      boundary.database === "medialab_p02m17a_test" && boundary.user === "medialab_p02m17a_test_app";
+    const controlledPilot = boundary.host === "/tmp/mlvs01-p02m24a-pg" && boundary.port === 55450 &&
+      boundary.database === "medialab_p02m24a_pilot" && boundary.user === "medialab_p02m24a_pilot_app";
+    if (!acceptedTest && !controlledPilot) {
       throw new OperationsConsoleDatabaseError("AUTHORITY", "The Operations Console database boundary is invalid.");
     }
+    this.boundary = boundary;
     this.pool = new Pool({
       ...boundary,
       max: 6,
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 3_000,
       statement_timeout: 30_000,
-      application_name: "p02-m17-a-operations-console",
+      application_name: boundary.applicationName,
     });
   }
 
@@ -504,8 +538,8 @@ export class OperationsConsoleDatabase {
       "SELECT current_user AS user_name, current_database() AS database_name, current_setting('port') AS port_number",
     );
     const row = result.rows[0];
-    if (!row || row.user_name !== OPERATIONS_CONSOLE_DATABASE.user || row.database_name !== OPERATIONS_CONSOLE_DATABASE.database ||
-        Number(row.port_number) !== OPERATIONS_CONSOLE_DATABASE.port) {
+    if (!row || row.user_name !== this.boundary.user || row.database_name !== this.boundary.database ||
+        Number(row.port_number) !== this.boundary.port) {
       throw new OperationsConsoleDatabaseError("AUTHORITY", "Restricted runtime identity could not be verified.");
     }
     return { user: row.user_name, database: row.database_name, port: Number(row.port_number) };

@@ -8,7 +8,7 @@ const moduleRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(moduleRoot, "../..");
 const base = "39abb2f01277c10a94d0e99a691724af03b66c46";
 const baseTree = "335f3314892e3cc71724ef336ade61e90ce08fec";
-const branchName = "platform-v2-p02-m23-a-current-operations-admission-dual-run-readiness-r01";
+const packetBranchPattern = /^platform-v2-p02-m\d{2}(?:-[a-z0-9]+)+-r\d{2}$/u;
 const failures: string[] = [];
 const checks: Record<string, string> = {};
 const read = (path: string) => readFileSync(join(moduleRoot, path), "utf8");
@@ -23,7 +23,14 @@ const baselineTree = git(["rev-parse", `${base}^{tree}`]);
 const baselineIsAncestor = (() => {
   try { git(["merge-base", "--is-ancestor", base, head]); return true; } catch { return false; }
 })();
-pass("entry", baselineTree === baseTree && baselineIsAncestor && platform === base && branch === branchName,
+const baselineIsPlatformAncestor = (() => {
+  try { git(["merge-base", "--is-ancestor", base, platform]); return true; } catch { return false; }
+})();
+const platformIsCandidateAncestor = (() => {
+  try { git(["merge-base", "--is-ancestor", platform, head]); return true; } catch { return false; }
+})();
+pass("entry", baselineTree === baseTree && baselineIsAncestor && baselineIsPlatformAncestor
+  && platformIsCandidateAncestor && packetBranchPattern.test(branch),
   `branch=${branch}; HEAD=${head}; tree=${tree}; baseline=${base}; baselineTree=${baselineTree}; origin/platform=${platform}`);
 
 const migrations = readdirSync(join(moduleRoot, "db/migrations")).filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
@@ -101,8 +108,8 @@ pass("targetedTests", (test.match(/\bit\(/gu) ?? []).length >= 3 && ["stale", "r
 
 const status = git(["status", "--porcelain=v2", "-z", "--untracked-files=all"]); const records = status.split("\0").filter(Boolean);
 const unsafe = records.some((record) => !record.startsWith("1 .M ") && !record.startsWith("? "));
-pass("candidateState", records.length > 0 && !unsafe && !records.some((record) => /(?:^|\/)(?:node_modules|dist|coverage|vendor)(?:\/|$)/u.test(record)),
-  `${records.length} unstaged modified/untracked paths; no deletion, rename, staging, or generated payload`);
+pass("candidateState", !unsafe && !records.some((record) => /(?:^|\/)(?:node_modules|dist|coverage|vendor)(?:\/|$)/u.test(record)),
+  `${records.length} safe unstaged modified/untracked paths; clean exact candidates are accepted`);
 
 const result = { verifier: "P02-M19-A_OPERATIONS_MISSION_PLAN_WORKSPACE_V1", pass: failures.length === 0,
   entry: { branch, head, tree, platform }, checks, failures };

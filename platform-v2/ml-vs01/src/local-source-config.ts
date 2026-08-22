@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 export type LocalSourcePathName =
   | "P02_M16_C_SOURCE_VAULT"
   | "P02_M16_D_SOURCE_PATH"
-  | "P02_M16_E_SOURCE_PATH";
+  | "P02_M16_E_SOURCE_PATH"
+  | "P02_M24_A_SOURCE_ROOT"
+  | "P02_M24_A_PILOT_ROOT";
 
 const moduleRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 let localEnvironmentAttempted = false;

@@ -52,6 +52,8 @@
     "verify:current-era-intake-reproof": "tsx scripts/verify-current-era-intake-reproof.ts",
     "run:internal-operations-console-new-listing": "tsx scripts/run-internal-operations-console-new-listing.ts",
     "run:contextual-editor-review-owner-preview": "tsx scripts/run-contextual-editor-review-owner-preview.ts",
+    "run:controlled-mission-control-pilot": "tsx scripts/run-controlled-mission-control-pilot.ts",
+    "verify:controlled-mission-control-pilot": "vitest run --fileParallelism=false tests/controlled-mission-control-pilot.test.ts",
     "verify:internal-operations-console-new-listing": "tsx scripts/verify-internal-operations-console-new-listing.ts",
     "verify:operations-home-scheduling-assignment": "vitest run --fileParallelism=false tests/operations-home-scheduling-assignment.test.ts && tsx scripts/verify-operations-home-scheduling-assignment.ts",
     "verify:operations-mission-plan-workspace": "vitest run --fileParallelism=false tests/operations-mission-plan-workspace.test.ts tests/operations-console-ui.test.ts tests/operations-home-scheduling-assignment.test.ts && tsx scripts/verify-operations-mission-plan-workspace.ts",

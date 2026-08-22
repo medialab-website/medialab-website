@@ -601,7 +601,7 @@ async function insertRows(client: pg.Client, table: string, rows: readonly Recor
   return inserted;
 }
 
-async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
+export async function seedMinimumAcceptedEvidence(client: pg.Client): Promise<number> {
   let inserted = 0;
   inserted += await insertRows(client, "organizations", [ORGANIZATION_FIXTURE]);
   inserted += await insertRows(client, "people", PEOPLE_FIXTURES);

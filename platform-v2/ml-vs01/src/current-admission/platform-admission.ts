@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 import pg from "pg";
 import {
   deterministicSnapshotUuid,
-  OPERATIONS_CONSOLE_DATABASE,
+  operationsConsoleDatabaseBoundary,
+  type OperationsConsoleDatabaseBoundary,
+  type OperationsConsoleDatabaseMode,
   OPERATIONS_CONSOLE_OPERATOR_PERSON_ID,
   OPERATIONS_CONSOLE_ORGANIZATION_ID,
 } from "../operations-console/database.js";
@@ -389,15 +391,14 @@ export function currentHomePackageAdmissionCohort(normalized: CurrentOperationsN
 
 export class CurrentOperationsAdmissionDatabase {
   readonly pool: pg.Pool;
+  readonly boundary: OperationsConsoleDatabaseBoundary;
 
-  constructor(pool?: pg.Pool) {
-    if (OPERATIONS_CONSOLE_DATABASE.host !== "/tmp/mlvs01-p02m17a-pg" || OPERATIONS_CONSOLE_DATABASE.port !== 55448 ||
-        OPERATIONS_CONSOLE_DATABASE.database !== "medialab_p02m17a_test" ||
-        OPERATIONS_CONSOLE_DATABASE.user !== "medialab_p02m17a_test_app") {
-      throw new Error("M23A_AUTHORITY_BOUNDARY_FAILURE: isolated Operations database changed");
-    }
-    this.pool = pool ?? new Pool({ ...OPERATIONS_CONSOLE_DATABASE, max: 4, statement_timeout: 30_000,
-      application_name: "p02-m23-a-current-operations-admission" });
+  constructor(mode: OperationsConsoleDatabaseMode = "ACCEPTED_TEST", pool?: pg.Pool) {
+    this.boundary = operationsConsoleDatabaseBoundary(mode);
+    this.pool = pool ?? new Pool({ ...this.boundary, max: 4, statement_timeout: 30_000,
+      application_name: mode === "CONTROLLED_PILOT"
+        ? "p02-m24-a-current-operations-admission"
+        : "p02-m23-a-current-operations-admission" });
   }
 
   async admitOrder(
@@ -712,7 +713,7 @@ export class CurrentOperationsAdmissionDatabase {
     const runtime = await this.pool.query<{ count: string }>(
       `SELECT count(*)::text FROM information_schema.role_table_grants
        WHERE grantee=$1 AND table_schema='medialab_core' AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE')`,
-      [OPERATIONS_CONSOLE_DATABASE.user],
+      [this.boundary.user],
     );
     const publicTable = await this.pool.query<{ count: string }>(
       `SELECT count(*)::text FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -729,7 +730,7 @@ export class CurrentOperationsAdmissionDatabase {
       runtimeCanonicalTableDmlGrants: Number(runtime.rows[0]!.count),
       publicCanonicalTableDmlGrants: Number(publicTable.rows[0]!.count),
       publicFunctionExecutionGrants: Number(publicFunctions.rows[0]!.count),
-      businessExecutionRole: OPERATIONS_CONSOLE_DATABASE.user,
+      businessExecutionRole: this.boundary.user,
       businessWriteBoundary: "SUPPORTED_SECURITY_DEFINER_COMMANDS_ONLY",
     };
   }
