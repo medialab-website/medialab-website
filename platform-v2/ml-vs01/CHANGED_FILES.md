@@ -1,7 +1,8 @@
 # P02-M23-A Changed Files
 
-The repaired candidate contains this exact 85-path cumulative set relative to accepted predecessor commit `39abb2f01277c10a94d0e99a691724af03b66c46`. Migration `0028` is the sole new migration. Existing migrations `0001`–`0027`, dependencies, and `package-lock.json` remain byte-identical; predecessor verifier/test changes are mechanical exact-ledger rollover or the independent-review repair that moves private source locations into ignored local configuration.
+The repaired candidate contains this exact 86-path cumulative set relative to accepted predecessor commit `39abb2f01277c10a94d0e99a691724af03b66c46`. Migration `0028` is the sole new migration. Existing migrations `0001`–`0027`, dependencies, and `package-lock.json` remain byte-identical; predecessor verifier/test changes are mechanical exact-ledger rollover or the independent-review repair that moves private source locations into ignored local configuration.
 
+- platform-v2/ml-vs01/.gitignore
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md
 - platform-v2/ml-vs01/README.md
