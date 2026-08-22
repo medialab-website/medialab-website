@@ -1,6 +1,6 @@
 # P02-M24-A Changed Files
 
-The repaired candidate contains this exact 18-path set relative to accepted predecessor commit `632a4e402ea89fe1526f1e9f2a3dbac467a7ea32`. Accepted migrations `0001`–`0028`, dependencies, and `package-lock.json` remain byte-identical. No private source, customer record, provider secret, pilot database file, review-media byte, or local receipt is tracked.
+The R05 repaired candidate contains this exact 18-path set relative to accepted predecessor commit `632a4e402ea89fe1526f1e9f2a3dbac467a7ea32`. Accepted migrations `0001`–`0028`, dependencies, and `package-lock.json` remain byte-identical. No private source, customer record, provider secret, pilot database file, review-media byte, or local receipt is tracked.
 
 - platform-v2/ml-vs01/BUILD_STATE.md
 - platform-v2/ml-vs01/CHANGED_FILES.md

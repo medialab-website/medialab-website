@@ -109,7 +109,7 @@ function ownerClient(database = "postgres"): pg.Client {
     port: CONTROLLED_PILOT_DATABASE.port,
     database,
     user: CONTROLLED_PILOT_OWNER_ROLE,
-    application_name: "p02-m24-a-pilot-provisioner",
+    application_name: "p02-m24-a-r05-proof-final-provisioner",
   });
 }
 

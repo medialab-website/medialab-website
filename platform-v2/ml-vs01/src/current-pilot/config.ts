@@ -3,9 +3,9 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { resolveLocalSourcePath } from "../local-source-config.js";
 import { CONTROLLED_PILOT_DATABASE } from "../operations-console/database.js";
 
-export const CONTROLLED_PILOT_OWNER_ROLE = "medialab_p02m24a_pilot_owner" as const;
+export const CONTROLLED_PILOT_OWNER_ROLE = "medialab_p02m24a_r05_proof_final_owner" as const;
 export const CONTROLLED_PILOT_RUNTIME_ROLE = CONTROLLED_PILOT_DATABASE.user;
-export const CONTROLLED_PILOT_ROOT_BASENAME = "PILOT_R01" as const;
+export const CONTROLLED_PILOT_ROOT_BASENAME = "PILOT_R04" as const;
 export const CONTROLLED_PILOT_SOURCE_BASENAME = "ARYEO_API_SNAPSHOT_R01" as const;
 
 export interface ControlledPilotPaths {
@@ -16,6 +16,7 @@ export interface ControlledPilotPaths {
   readonly reviewMediaRoot: string;
   readonly evidenceRoot: string;
   readonly statePath: string;
+  readonly freshAdmissionProofPath: string;
   readonly privateExceptionPath: string;
   readonly postgresLogPath: string;
 }
@@ -83,6 +84,7 @@ export async function resolveControlledPilotPaths(
     reviewMediaRoot: join(pilotRoot, "review-media-store"),
     evidenceRoot: join(pilotRoot, "evidence"),
     statePath: join(pilotRoot, "PILOT_STATE.json"),
+    freshAdmissionProofPath: join(pilotRoot, "evidence", "FRESH_ACCEPTED_COHORT_FAILURE_RETRY_RECEIPT.json"),
     privateExceptionPath: join(pilotRoot, "PRIVATE_EXCEPTION_REGISTER.json"),
     postgresLogPath: join(pilotRoot, "postgres.log"),
   });

@@ -36,18 +36,19 @@ describe("P02-M24-A controlled Mission Control pilot boundaries", () => {
     expect(paths).toMatchObject({
       sourceRoot: roots.sourceRoot,
       pilotRoot: roots.pilotRoot,
-      socketRoot: "/tmp/mlvs01-p02m24a-pg",
+      socketRoot: "/tmp/mlvs01-p02m24a-r05-proof-final-pg",
       statePath: join(roots.pilotRoot, "PILOT_STATE.json"),
+      freshAdmissionProofPath: join(roots.pilotRoot, "evidence", "FRESH_ACCEPTED_COHORT_FAILURE_RETRY_RECEIPT.json"),
       privateExceptionPath: join(roots.pilotRoot, "PRIVATE_EXCEPTION_REGISTER.json"),
     });
     expect(operationsConsoleDatabaseBoundary("ACCEPTED_TEST")).toBe(OPERATIONS_CONSOLE_DATABASE);
     expect(operationsConsoleDatabaseBoundary("CONTROLLED_PILOT")).toBe(CONTROLLED_PILOT_DATABASE);
     expect(CONTROLLED_PILOT_DATABASE).toEqual({
-      host: "/tmp/mlvs01-p02m24a-pg",
-      port: 55450,
-      database: "medialab_p02m24a_pilot",
-      user: "medialab_p02m24a_pilot_app",
-      applicationName: "p02-m24-a-controlled-mission-control-pilot",
+      host: "/tmp/mlvs01-p02m24a-r05-proof-final-pg",
+      port: 55453,
+      database: "medialab_p02m24a_r05_proof_final",
+      user: "medialab_p02m24a_r05_proof_final_app",
+      applicationName: "p02-m24-a-r05-proof-final-controlled-mission-control-pilot",
     });
   });
 
@@ -56,7 +57,7 @@ describe("P02-M24-A controlled Mission Control pilot boundaries", () => {
     await expect(resolveControlledPilotPaths({
       sourceRoot: roots.sourceRoot,
       pilotRoot: join(dirname(roots.pilotRoot), "wrong-pilot-name"),
-    })).rejects.toThrow(/pilot root must end in PILOT_R01/);
+    })).rejects.toThrow(/pilot root must end in PILOT_R04/);
 
     const aliasParent = await realpath(await mkdtemp(join(tmpdir(), "m24a-source-alias-")));
     const alias = join(aliasParent, CONTROLLED_PILOT_SOURCE_BASENAME);
@@ -93,6 +94,17 @@ describe("P02-M24-A controlled Mission Control pilot boundaries", () => {
     expect(persistence).toContain("rolcanlogin,rolinherit,rolreplication,rolbypassrls");
     expect(persistence).toContain("pg_auth_members");
     expect(admission).toContain("providerMutationCount: 0");
+    expect(admission).toContain('contract: "FreshAcceptedCohortFailureRetryReceiptV1"');
+    expect(admission).toContain("completeCanonicalStateVector");
+    expect(admission).toContain("contentSha256");
+    expect(admission).toContain("targetAbsentBeforeAttempt: true");
+    expect(admission).toContain("targetAbsentAfterFailure: true");
+    expect(admission).toContain("rollbackExactAcrossEveryCanonicalTable: true");
+    expect(admission).toContain('stage === "after_first_appointment"');
+    expect(admission).toContain("cohort.slice(1)");
+    expect(admission.indexOf('stage === "after_first_appointment"'))
+      .toBeLessThan(admission.indexOf("cohort.slice(1)"));
+    expect(admission).not.toContain('stage === "after_property"');
     expect(admission).toContain("runtimeCanonicalSequenceGrants === 0");
     expect(admission).toContain("runtimeRoleMembershipCount === 0");
     expect(admission).toContain("containsCustomerPii: false");
@@ -111,5 +123,7 @@ describe("P02-M24-A controlled Mission Control pilot boundaries", () => {
     expect(launcher).toContain('contract: "ControlledPilotMissionControlQueueReceiptV1"');
     expect(launcher).toContain("opaqueUpcomingOrderHashes");
     expect(launcher).toContain("missionControlQueueReceiptSha256");
+    expect(persistence).not.toContain("medialab_p02m24a_pilot_owner");
+    expect(launcher).not.toContain("PILOT_R01");
   });
 });

@@ -73,6 +73,13 @@ const safeSummary = {
   exactAdmittedOrderTotalCents: state.exactAdmittedOrderTotalCents,
   replaySafe: state.checks.sequentialReplayStable && state.checks.concurrentReplayStable,
   rollbackSafe: state.checks.injectedFailureRolledBack && state.checks.injectedFailureRetryStable,
+  freshAcceptedCohortFailureTarget: state.checks.freshAcceptedCohortFailureTarget,
+  freshAdmissionProofReceiptVerified: state.checks.freshAdmissionProofReceiptVerified,
+  freshAdmissionProofReceiptSha256: state.freshAdmissionProof.receiptSha256,
+  completeStateVectorTableCount: state.freshAdmissionProof.completeStateVectorTableCount,
+  baselineStateVectorSha256: state.freshAdmissionProof.baselineStateVectorSha256,
+  postFailureStateVectorSha256: state.freshAdmissionProof.postFailureStateVectorSha256,
+  postRetryStateVectorSha256: state.freshAdmissionProof.postRetryStateVectorSha256,
   exactRuntimeRole: state.authority.runtimeRoleCanLogin && !state.authority.runtimeRoleInherit &&
     !state.authority.runtimeRoleSuperuser && !state.authority.runtimeRoleCreateDatabase &&
     !state.authority.runtimeRoleCreateRole && !state.authority.runtimeRoleReplication &&
@@ -135,6 +142,7 @@ if (prepareOnly) {
       opaqueNeedsAttentionOrderHashes: attentionHashes,
       attentionCodes: [...new Set(home.sections.needsAttention.flatMap((item) => item.attention))].sort(),
       exactOwnerValidatedQueueMatch: true,
+      freshAdmissionProofReceiptSha256: state.freshAdmissionProof.receiptSha256,
       containsCustomerPii: false,
       containsProviderSecret: false,
       providerMutationCount: 0,

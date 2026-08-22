@@ -41,11 +41,11 @@ export const OPERATIONS_CONSOLE_DATABASE: OperationsConsoleDatabaseBoundary = Ob
 });
 
 export const CONTROLLED_PILOT_DATABASE: OperationsConsoleDatabaseBoundary = Object.freeze({
-  host: "/tmp/mlvs01-p02m24a-pg",
-  port: 55450,
-  database: "medialab_p02m24a_pilot",
-  user: "medialab_p02m24a_pilot_app",
-  applicationName: "p02-m24-a-controlled-mission-control-pilot",
+  host: "/tmp/mlvs01-p02m24a-r05-proof-final-pg",
+  port: 55453,
+  database: "medialab_p02m24a_r05_proof_final",
+  user: "medialab_p02m24a_r05_proof_final_app",
+  applicationName: "p02-m24-a-r05-proof-final-controlled-mission-control-pilot",
 });
 
 export type OperationsConsoleDatabaseMode = "ACCEPTED_TEST" | "CONTROLLED_PILOT";
@@ -517,8 +517,9 @@ export class OperationsConsoleDatabase {
     const boundary = operationsConsoleDatabaseBoundary(mode);
     const acceptedTest = boundary.host === "/tmp/mlvs01-p02m17a-pg" && boundary.port === 55448 &&
       boundary.database === "medialab_p02m17a_test" && boundary.user === "medialab_p02m17a_test_app";
-    const controlledPilot = boundary.host === "/tmp/mlvs01-p02m24a-pg" && boundary.port === 55450 &&
-      boundary.database === "medialab_p02m24a_pilot" && boundary.user === "medialab_p02m24a_pilot_app";
+    const controlledPilot = boundary.host === "/tmp/mlvs01-p02m24a-r05-proof-final-pg" && boundary.port === 55453 &&
+      boundary.database === "medialab_p02m24a_r05_proof_final" &&
+      boundary.user === "medialab_p02m24a_r05_proof_final_app";
     if (!acceptedTest && !controlledPilot) {
       throw new OperationsConsoleDatabaseError("AUTHORITY", "The Operations Console database boundary is invalid.");
     }
